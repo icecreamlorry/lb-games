@@ -635,17 +635,18 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      :root { --cell-px: 34px; --grid-gap: 3px; }
+      :root { --cell-px: 34px; --grid-gap: 3px; } /* JS overrides --cell-px at runtime */
       body  { padding: 6px 8px 8px; gap: 6px; }
-      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 6px; }
+      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 3px; } /* padding=gap so all cells have equal dark border */
       #side-col { display: none; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
+      .subtitle { display: none; }
       #help-panel { padding: 20px 16px 18px; }
       .help-row { grid-template-columns: 70px 1fr; }
     }
     @media (max-width: 380px) {
-      :root { --cell-px: 30px; }
+      :root { --cell-px: 30px; } /* JS fallback if not yet computed */
     }
   </style>
 </head>
@@ -747,14 +748,14 @@
     ];
 
     const SHAPES = [
-      'polygon(15px 0%, calc(100% - 15px) 0%, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0% calc(100% - 15px), 0% 15px)',
+      'polygon(29% 0%, 71% 0%, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0% 71%, 0% 29%)',
       'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
       'polygon(33% 0%, 67% 0%, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0% 67%, 0% 33%, 33% 33%)',
       'polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%)',
       'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
       'polygon(50% 0%, 100% 22%, 82% 100%, 18% 100%, 0% 22%)',
       'polygon(0% 100%, 0% 50%, 17% 0%, 33% 50%, 50% 0%, 67% 50%, 83% 0%, 100% 50%, 100% 100%)',
-      'polygon(0% 0%, calc(100% - 20px) 0%, calc(100% - 20px) 10px, 100% 10px, 100% 100%, 20px 100%, 20px calc(100% - 10px), 0% calc(100% - 10px))',
+      'polygon(0% 0%, 62% 0%, 62% 19%, 100% 19%, 100% 100%, 38% 100%, 38% 81%, 0% 81%)',
       'polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%)',
       'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
     ];
@@ -766,15 +767,23 @@
     function initLayout() {
       if (window.innerWidth <= 760) {
         COLS = 8; ROWS = 12;
+        // Compute cell size to fill viewport height without scrolling.
+        // 225 = fixed UI overhead (body padding + header + score-bar + controls +
+        //       status + best-score + board-col gaps) + grid non-cell height
+        //       (11 row-gaps × 3px + 6px grid padding) + 20px safety margin.
+        const cellPx = Math.min(52, Math.max(28, Math.floor((window.innerHeight - 225) / ROWS)));
+        document.documentElement.style.setProperty('--cell-px', cellPx + 'px');
       } else {
         COLS = 12; ROWS = 10;
+        document.documentElement.style.removeProperty('--cell-px');
       }
     }
 
     function getCellStride() {
-      if (window.innerWidth <= 380) return 33; // 30px cell + 3px gap
-      if (window.innerWidth <= 760) return 37; // 34px cell + 3px gap
-      return 58; // 52px cell + 6px gap
+      const s    = getComputedStyle(document.documentElement);
+      const cell = parseFloat(s.getPropertyValue('--cell-px')) || 52;
+      const gap  = parseFloat(s.getPropertyValue('--grid-gap')) || 6;
+      return cell + gap;
     }
 
     // ── special items registry ─────────────────────────────────────────────
