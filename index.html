@@ -552,6 +552,37 @@
       to   { transform: translateY(0); opacity: 1; }
     }
 
+    /* ── special items ───────────────────────────────────────────────────── */
+    .special-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .cell.bomb-exploding {
+      animation: bomb-pulse 0.32s ease-out;
+      z-index: 5;
+    }
+
+    @keyframes bomb-pulse {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.55); filter: brightness(3) drop-shadow(0 0 14px #ff8844); }
+      100% { transform: scale(1.2);  filter: brightness(2) drop-shadow(0 0 8px #ff6622); }
+    }
+
+    .cell.bomb-victim {
+      animation: bomb-victim-flash 0.32s ease;
+    }
+
+    @keyframes bomb-victim-flash {
+      0%, 100% { filter: none; }
+      50%       { filter: brightness(1.8) drop-shadow(0 0 8px #ff8844); }
+    }
+
     /* ── help button & modal ─────────────────────────────────────────────── */
     #help-btn {
       width: 28px;
@@ -842,8 +873,45 @@
       return 58; // 52px cell + 6px gap
     }
 
+    // ── special items registry ─────────────────────────────────────────────
+    const BOMB_SPAWN_THRESHOLD = 6;
+
+    const SPECIALS = {
+      bomb: {
+        animDuration: 320,
+
+        renderIcon() {
+          const el = document.createElement('div');
+          el.className = 'special-icon';
+          el.innerHTML = '<svg viewBox="0 0 24 24" width="54%" height="54%" style="filter:drop-shadow(0 0 3px rgba(255,255,255,0.85))"><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="2.5"/><line x1="12" y1="3" x2="12" y2="21" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/></svg>';
+          return el;
+        },
+
+        expandPop(bombIdx, poppedSet) {
+          const r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) poppedSet.add(idx(nr, nc));
+            }
+          }
+        },
+
+        animate(bombEl, victimEls) {
+          bombEl.classList.add('bomb-exploding');
+          victimEls.forEach(el => el.classList.add('bomb-victim'));
+        }
+      }
+    };
+
+    function getSpawnType(groupSize) {
+      if (groupSize >= BOMB_SPAWN_THRESHOLD) return 'bomb';
+      return null;
+    }
+
     // ── state ──────────────────────────────────────────────────────────────
-    // Each entry: { frontColor, backColor, shape, flipped }
+    // Each entry: { frontColor, backColor, shape, flipped, special }
     let state       = [];
     let score       = 0;
     let isAnimating = false;
@@ -864,7 +932,12 @@
       const frontColor = pick(COLORS, null);
       const backColor  = pick(COLORS, frontColor);
       const shape      = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-      return { frontColor, backColor, shape, flipped: false };
+      return { frontColor, backColor, shape, flipped: false, special: null };
+    }
+
+    function newBombCell(color) {
+      const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+      return { frontColor: color, backColor: color, shape, flipped: false, special: { type: 'bomb' } };
     }
 
     function idx(r, c)  { return r * COLS + c; }
@@ -912,26 +985,55 @@
     }
 
     // ── pop & drop ─────────────────────────────────────────────────────────
-    async function popAndDrop(indices) {
+    async function popAndDrop(indices, originIdx) {
       if (isAnimating) return;
       isAnimating = true;
 
       const cellEls = [...document.querySelectorAll('.cell')];
 
+      // ── trigger any specials present in the group ───────────────────────
+      const poppedSet = new Set(indices);
+      let specialDelay = 0;
+
+      for (const i of indices) {
+        const spec = state[i].special;
+        if (!spec || !SPECIALS[spec.type]) continue;
+        SPECIALS[spec.type].expandPop(i, poppedSet);
+        specialDelay = Math.max(specialDelay, SPECIALS[spec.type].animDuration);
+      }
+
+      if (specialDelay > 0) {
+        const origSet = new Set(indices);
+        for (const i of indices) {
+          const spec = state[i].special;
+          if (!spec || !SPECIALS[spec.type]) continue;
+          const victimEls = [...poppedSet]
+            .filter(ni => !origSet.has(ni))
+            .map(ni => cellEls[ni]).filter(Boolean);
+          SPECIALS[spec.type].animate(cellEls[i], victimEls);
+        }
+        await new Promise(r => setTimeout(r, specialDelay));
+      }
+
       // animate pop (on the cell, so the card's flip transform is untouched)
-      indices.forEach(i => cellEls[i].classList.add('popping'));
+      [...poppedSet].forEach(i => cellEls[i].classList.add('popping'));
       await new Promise(r => setTimeout(r, 340));
 
-      // tally score
+      // tally score (original group only — bomb-triggered bonus cells are free)
       const pts = calcScore(indices.length);
       score += pts;
       document.getElementById('score-val').textContent = score;
       showDelta(`+${pts}`);
 
+      // ── determine bomb spawn ────────────────────────────────────────────
+      const spawnType = getSpawnType(indices.length);
+      const bombColor = spawnType
+        ? (state[originIdx].flipped ? state[originIdx].backColor : state[originIdx].frontColor)
+        : null;
+      const originCol = colOf(originIdx);
+
       // compact state column by column, recording drop distances
-      const poppedSet = new Set(indices);
-      // dropInfo[newIdx] = rows dropped (>0 means fell down)
-      const dropInfo  = new Map();
+      const dropInfo = new Map();
 
       for (let c = 0; c < COLS; c++) {
         // gather survivors top→bottom with their original row
@@ -940,15 +1042,23 @@
           if (!poppedSet.has(idx(r, c))) survivors.push({ origRow: r, data: state[idx(r, c)] });
         }
         const missing = ROWS - survivors.length;
-        // prepend new cells (they originate above the grid)
+        // prepend new cells — first prepend (k=0) lands deepest, closest to click
+        let bombPlaced = false;
         for (let k = 0; k < missing; k++) {
-          survivors.unshift({ origRow: -(missing - k), data: newCell() });
+          let data;
+          if (!bombPlaced && spawnType && c === originCol && k === 0) {
+            data = newBombCell(bombColor);
+            bombPlaced = true;
+          } else {
+            data = newCell();
+          }
+          survivors.unshift({ origRow: -(missing - k), data });
         }
         // survivors is now ROWS long, ordered top→bottom
         for (let r = 0; r < ROWS; r++) {
           const { origRow, data } = survivors[r];
           const ni     = idx(r, c);
-          const fallen = r - origRow; // rows it fell (positive = fell down)
+          const fallen = r - origRow;
           state[ni] = data;
           if (fallen !== 0) dropInfo.set(ni, fallen);
         }
@@ -1004,6 +1114,12 @@
         backEl.className = 'card-face card-back';
         backEl.style.background = s.backColor.hex;
         backEl.style.clipPath   = s.shape;
+
+        if (s.special && SPECIALS[s.special.type]) {
+          const icon = SPECIALS[s.special.type].renderIcon();
+          frontEl.appendChild(icon);
+          backEl.appendChild(icon.cloneNode(true));
+        }
 
         card.appendChild(frontEl);
         card.appendChild(backEl);
@@ -1069,7 +1185,7 @@
       if (isAnimating || phase !== 'playing') return;
       const group = floodFill(i);
       if (group.length >= 4) {
-        popAndDrop(group);
+        popAndDrop(group, i);
       } else {
         card.classList.remove('no-match');
         void card.offsetWidth;
