@@ -125,8 +125,9 @@
       font-weight: 800;
       color: var(--cyan);
       text-shadow: 0 0 10px var(--cyan);
-      min-width: 64px;
+      min-width: 80px;
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     #timer.warn {
@@ -156,6 +157,8 @@
       color: var(--cyan);
       text-shadow: 0 0 10px var(--cyan);
       transition: color 0.15s;
+      min-width: 170px;
+      font-variant-numeric: tabular-nums;
     }
 
     #score-delta {
@@ -681,6 +684,10 @@
       .help-heading { padding-bottom: 4px; }
       #help-got-it { padding: 8px 24px; font-size: 0.75rem; }
       .help-row { grid-template-columns: 70px 1fr; }
+      #score-bar { overflow: hidden; }
+      #score-val { font-size: 1.2rem; min-width: 115px; }
+      #timer { font-size: 1.2rem; min-width: 62px; }
+      #score-delta { display: none; }
     }
     @media (max-width: 380px) {
       :root { --cell-px: 30px; }
