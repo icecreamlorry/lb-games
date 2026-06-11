@@ -538,14 +538,14 @@
     }
 
     .cell.bomb-victim {
-      animation: bomb-victim-flash 0.45s ease-out;
+      animation: bomb-victim-flash 0.32s ease-in forwards;
     }
 
     @keyframes bomb-victim-flash {
-      0%   { transform: scale(1);    filter: none; }
-      30%  { transform: scale(1.32); filter: brightness(3.5) drop-shadow(0 0 14px #ff8844) drop-shadow(0 0 6px #ff4400); }
-      65%  { transform: scale(1.15); filter: brightness(2.2) drop-shadow(0 0 8px #ff6622); }
-      100% { transform: scale(1);    filter: none; }
+      0%   { transform: scale(1);    filter: none; opacity: 1; }
+      25%  { transform: scale(1.28); filter: brightness(3.5) drop-shadow(0 0 14px #ff8844) drop-shadow(0 0 6px #ff4400); opacity: 1; }
+      65%  { transform: scale(0.9);  filter: brightness(1.5); opacity: 0.6; }
+      100% { transform: scale(0);    filter: none; opacity: 0; }
     }
 
     /* ── help button & modal ─────────────────────────────────────────────── */
@@ -827,6 +827,7 @@
     let COLS = 12, ROWS = 10;
     const PRESS_MS = 500;
     const TIME_MS  = 120000; // 2-minute run
+    const DEBUG    = true;   // TEMPORARY — set false (or delete debug block below) to remove debug UI
 
     function initLayout() {
       if (window.innerWidth <= 760) {
@@ -1034,8 +1035,9 @@
         await new Promise(r => setTimeout(r, specialDelay));
       }
 
-      // animate pop (on the cell, so the card's flip transform is untouched)
-      [...poppedSet].forEach(i => cellEls[i].classList.add('popping'));
+      // animate pop; bomb victims disappear via bomb-victim-flash so exclude them
+      const victimSet = new Set(waveData.flatMap(w => w.victims));
+      [...poppedSet].forEach(i => { if (!victimSet.has(i)) cellEls[i].classList.add('popping'); });
       await new Promise(r => setTimeout(r, 340));
 
       // tally score (original group only — bomb-triggered bonus cells are free)
@@ -1466,6 +1468,28 @@
         }
       } catch {}
     });
+
+    // ── TEMPORARY DEBUG UI ────────────────────────────────────────────────────
+    // Remove this block (or set DEBUG = false above) when done testing bombs.
+    if (DEBUG) {
+      const debugBtn = document.createElement('button');
+      debugBtn.textContent = 'DEBUG: ADD BOMBS';
+      debugBtn.style.cssText = [
+        'position:fixed', 'bottom:12px', 'right:12px', 'z-index:999',
+        'font-size:0.65rem', 'padding:5px 10px', 'opacity:0.75',
+        'border-color:#ff4400', 'color:#ff4400',
+      ].join(';');
+      document.body.appendChild(debugBtn);
+      debugBtn.addEventListener('click', () => {
+        if (phase !== 'playing' || isAnimating) return;
+        const indices = [...Array(state.length).keys()]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 10);
+        indices.forEach(i => { state[i] = newBombCell(pick(COLORS, null)); });
+        buildGrid();
+      });
+    }
+    // ── END TEMPORARY DEBUG UI ────────────────────────────────────────────────
 
     goIdle();
   </script>
