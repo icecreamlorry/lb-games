@@ -1040,8 +1040,8 @@
       [...poppedSet].forEach(i => { if (!victimSet.has(i)) cellEls[i].classList.add('popping'); });
       await new Promise(r => setTimeout(r, 340));
 
-      // tally score (original group only — bomb-triggered bonus cells are free)
-      const pts = calcScore(indices.length);
+      // tally score across all cleared tiles: initial group + bomb victims + chain reactions
+      const pts = calcScore(poppedSet.size);
       score += pts;
       document.getElementById('score-val').textContent = score;
       showDelta(`+${pts}`);
