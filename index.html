@@ -219,6 +219,7 @@
       -webkit-user-select: none;
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
+      position: relative;
     }
 
     .cell--empty { cursor: default; }
@@ -564,23 +565,44 @@
     }
 
     .cell.bomb-exploding {
-      animation: bomb-pulse 0.32s ease-out;
+      animation: bomb-pulse 0.45s ease-out;
       z-index: 5;
     }
 
     @keyframes bomb-pulse {
-      0%   { transform: scale(1); }
-      35%  { transform: scale(1.55); filter: brightness(3) drop-shadow(0 0 14px #ff8844); }
-      100% { transform: scale(1.2);  filter: brightness(2) drop-shadow(0 0 8px #ff6622); }
+      0%   { transform: scale(1);    filter: none; }
+      15%  { transform: scale(0.72); filter: brightness(6) drop-shadow(0 0 16px #fff); }
+      45%  { transform: scale(2.2);  filter: brightness(7) drop-shadow(0 0 32px #ff8800) drop-shadow(0 0 64px #ff4400); }
+      75%  { transform: scale(1.9);  filter: brightness(4) drop-shadow(0 0 20px #ff6600); }
+      100% { transform: scale(1.65); filter: brightness(2.5) drop-shadow(0 0 12px #ff8844); }
+    }
+
+    .bomb-ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 136, 50, 0.95);
+      box-shadow: 0 0 12px rgba(255, 100, 20, 0.8), inset 0 0 10px rgba(255, 100, 20, 0.4);
+      pointer-events: none;
+      animation: bomb-ring-expand 0.45s ease-out forwards;
+      z-index: 20;
+    }
+
+    @keyframes bomb-ring-expand {
+      0%   { transform: scale(0.2); opacity: 1; }
+      55%  { opacity: 0.85; }
+      100% { transform: scale(5.0); opacity: 0; }
     }
 
     .cell.bomb-victim {
-      animation: bomb-victim-flash 0.32s ease;
+      animation: bomb-victim-flash 0.45s ease-out;
     }
 
     @keyframes bomb-victim-flash {
-      0%, 100% { filter: none; }
-      50%       { filter: brightness(1.8) drop-shadow(0 0 8px #ff8844); }
+      0%   { transform: scale(1);    filter: none; }
+      30%  { transform: scale(1.32); filter: brightness(3.5) drop-shadow(0 0 14px #ff8844) drop-shadow(0 0 6px #ff4400); }
+      65%  { transform: scale(1.15); filter: brightness(2.2) drop-shadow(0 0 8px #ff6622); }
+      100% { transform: scale(1);    filter: none; }
     }
 
     /* ── help button & modal ─────────────────────────────────────────────── */
@@ -875,10 +897,11 @@
 
     // ── special items registry ─────────────────────────────────────────────
     const BOMB_SPAWN_THRESHOLD = 6;
+    const CHAIN_STAGGER_MS     = 180;
 
     const SPECIALS = {
       bomb: {
-        animDuration: 320,
+        animDuration: 450,
 
         renderIcon() {
           const el = document.createElement('div');
@@ -888,18 +911,27 @@
         },
 
         expandPop(bombIdx, poppedSet) {
+          const added = [];
           const r = rowOf(bombIdx), c = colOf(bombIdx);
           for (let dr = -1; dr <= 1; dr++) {
             for (let dc = -1; dc <= 1; dc++) {
               if (dr === 0 && dc === 0) continue;
               const nr = r + dr, nc = c + dc;
-              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) poppedSet.add(idx(nr, nc));
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
             }
           }
+          return added;
         },
 
         animate(bombEl, victimEls) {
           bombEl.classList.add('bomb-exploding');
+          const ring = document.createElement('div');
+          ring.className = 'bomb-ring';
+          bombEl.appendChild(ring);
+          ring.addEventListener('animationend', () => ring.remove(), { once: true });
           victimEls.forEach(el => el.classList.add('bomb-victim'));
         }
       }
@@ -991,26 +1023,51 @@
 
       const cellEls = [...document.querySelectorAll('.cell')];
 
-      // ── trigger any specials present in the group ───────────────────────
+      // ── BFS chain reaction ──────────────────────────────────────────────
       const poppedSet = new Set(indices);
-      let specialDelay = 0;
+      const firedBombs = new Set();
+      const waveData = []; // [{ bombs: [cellIdx...], victims: [cellIdx...] }]
 
-      for (const i of indices) {
-        const spec = state[i].special;
-        if (!spec || !SPECIALS[spec.type]) continue;
-        SPECIALS[spec.type].expandPop(i, poppedSet);
-        specialDelay = Math.max(specialDelay, SPECIALS[spec.type].animDuration);
+      {
+        const wave0 = indices.filter(i => state[i].special && SPECIALS[state[i].special.type]);
+        if (wave0.length > 0) {
+          wave0.forEach(i => firedBombs.add(i));
+          waveData.push({ bombs: wave0, victims: [] });
+
+          let wi = 0;
+          while (wi < waveData.length) {
+            const nextBombs = [];
+            for (const bombIdx of waveData[wi].bombs) {
+              const newCells = SPECIALS[state[bombIdx].special.type].expandPop(bombIdx, poppedSet);
+              for (const ni of newCells) {
+                const niSpec = state[ni].special;
+                if (niSpec && SPECIALS[niSpec.type] && !firedBombs.has(ni)) {
+                  firedBombs.add(ni);
+                  nextBombs.push(ni);
+                } else {
+                  waveData[wi].victims.push(ni);
+                }
+              }
+            }
+            if (nextBombs.length > 0) waveData.push({ bombs: nextBombs, victims: [] });
+            wi++;
+          }
+        }
       }
 
-      if (specialDelay > 0) {
-        const origSet = new Set(indices);
-        for (const i of indices) {
-          const spec = state[i].special;
-          if (!spec || !SPECIALS[spec.type]) continue;
-          const victimEls = [...poppedSet]
-            .filter(ni => !origSet.has(ni))
-            .map(ni => cellEls[ni]).filter(Boolean);
-          SPECIALS[spec.type].animate(cellEls[i], victimEls);
+      let specialDelay = 0;
+      if (waveData.length > 0) {
+        specialDelay = (waveData.length - 1) * CHAIN_STAGGER_MS + SPECIALS.bomb.animDuration;
+        for (let w = 0; w < waveData.length; w++) {
+          const { bombs, victims } = waveData[w];
+          const doAnimate = () => {
+            const victimEls = victims.map(ni => cellEls[ni]).filter(Boolean);
+            for (const bombIdx of bombs) {
+              SPECIALS[state[bombIdx].special.type].animate(cellEls[bombIdx], victimEls);
+            }
+          };
+          if (w === 0) doAnimate();
+          else setTimeout(doAnimate, w * CHAIN_STAGGER_MS);
         }
         await new Promise(r => setTimeout(r, specialDelay));
       }
