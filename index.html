@@ -33,7 +33,10 @@
       font-family: 'Share Tech Mono', monospace;
       color: var(--cyan);
       gap: 12px;
+      overscroll-behavior: none;
     }
+
+    body.playing { touch-action: none; }
 
     #stage {
       display: flex;
@@ -393,7 +396,7 @@
 
     .hs-row {
       display: grid;
-      grid-template-columns: 30px 1fr auto;
+      grid-template-columns: 30px 1fr;
       gap: 10px;
       align-items: baseline;
       font-size: 0.82rem;
@@ -406,11 +409,6 @@
       text-shadow: 0 0 6px var(--yellow);
       font-family: 'Orbitron', monospace;
       font-size: 0.72rem;
-    }
-    .hs-name {
-      color: var(--cyan);
-      letter-spacing: 0.18em;
-      text-shadow: 0 0 6px rgba(0,245,255,0.5);
     }
     .hs-score {
       color: #fff;
@@ -432,44 +430,6 @@
       letter-spacing: 0.2em;
       padding: 8px;
     }
-
-    #score-entry {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      border-top: 1px solid rgba(0,245,255,0.12);
-      padding-top: 10px;
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
-      color: rgba(0,245,255,0.7);
-    }
-    #score-entry.hidden { display: none; }
-
-    #hs-entry-score {
-      color: var(--yellow);
-      font-family: 'Orbitron', monospace;
-      text-shadow: 0 0 6px var(--yellow);
-    }
-
-    #hs-name {
-      width: 64px;
-      background: rgba(0,0,0,0.45);
-      border: 1px solid var(--cyan);
-      border-radius: 2px;
-      color: var(--cyan);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 0.95rem;
-      letter-spacing: 0.25em;
-      text-align: center;
-      text-transform: uppercase;
-      padding: 4px 2px;
-      outline: none;
-    }
-    #hs-name:focus { box-shadow: 0 0 10px rgba(0,245,255,0.5); }
-
-    #hs-save { padding: 5px 14px; font-size: 0.62rem; }
 
     /* ── overlays (start screen + game over) ──────────────────────────── */
     .hidden { display: none !important; }
@@ -591,7 +551,7 @@
     @keyframes bomb-ring-expand {
       0%   { transform: scale(0.2); opacity: 1; }
       55%  { opacity: 0.85; }
-      100% { transform: scale(5.0); opacity: 0; }
+      100% { transform: scale(3.3); opacity: 0; }
     }
 
     .cell.bomb-victim {
@@ -782,14 +742,8 @@
       <div id="legend"></div>
 
       <div id="highscore-panel">
-        <div class="hs-title">// TOP RUNS //</div>
+        <div class="hs-title">// BEST //</div>
         <div id="hs-list"></div>
-        <div id="score-entry" class="hidden">
-          <span>NEW RECORD</span>
-          <span id="hs-entry-score"></span>
-          <input id="hs-name" maxlength="3" placeholder="ID" autocomplete="off" spellcheck="false">
-          <button id="hs-save">SAVE</button>
-        </div>
       </div>
     </div>
   </div>
@@ -900,10 +854,8 @@
     const TIME_MS  = 120000; // 2 minute run
 
     function initLayout() {
-      if (window.innerWidth <= 380) {
+      if (window.innerWidth <= 760) {
         COLS = 8; ROWS = 8;
-      } else if (window.innerWidth <= 760) {
-        COLS = 8; ROWS = 10;
       } else {
         COLS = 12; ROWS = 10;
       }
@@ -1378,6 +1330,7 @@
       initLayout();
       stopClock();
       phase = 'idle';
+      document.body.classList.remove('playing');
       score = 0;
       document.getElementById('score-val').textContent = '0';
       document.getElementById('timer').classList.remove('warn', 'danger', 'over');
@@ -1393,6 +1346,7 @@
       if (phase === 'playing') return;
       initLayout();
       phase = 'playing';
+      document.body.classList.add('playing');
       score = 0;
       document.getElementById('score-val').textContent = '0';
       document.getElementById('timer').classList.remove('warn', 'danger', 'over');
@@ -1417,6 +1371,7 @@
     async function endGame() {
       if (phase !== 'playing') return;
       phase = 'over';
+      document.body.classList.remove('playing');
       stopClock();
       renderTimer(0);
       document.getElementById('timer').classList.add('over');
@@ -1428,14 +1383,13 @@
       gameoverOverlay.classList.remove('hidden');
       updateStatus();
       // submit the finished run to the high score table
-      if (isHighScore(score)) showScoreEntry(score);
+      if (isHighScore(score)) autoSaveScore(score);
     }
 
     // ── high scores (persisted in localStorage) ───────────────────────────
     const HS_KEY = 'chromagrid.highscores';
-    const HS_MAX = 10;
+    const HS_MAX = 1;
     let highScores  = [];
-    let pendingScore = 0;
 
     function loadHighScores() {
       try {
@@ -1466,13 +1420,10 @@
         const rank = document.createElement('span');
         rank.className = 'hs-rank';
         rank.textContent = String(i + 1).padStart(2, '0');
-        const name = document.createElement('span');
-        name.className = 'hs-name';
-        name.textContent = entry.name || 'AAA';
         const sc   = document.createElement('span');
         sc.className = 'hs-score';
         sc.textContent = entry.score.toLocaleString();
-        row.append(rank, name, sc);
+        row.append(rank, sc);
         list.appendChild(row);
       });
     }
@@ -1484,52 +1435,26 @@
       return s > highScores[highScores.length - 1].score;
     }
 
-    function showScoreEntry(s) {
-      pendingScore = s;
-      document.getElementById('hs-entry-score').textContent = s.toLocaleString();
-      document.getElementById('score-entry').classList.remove('hidden');
-      const input = document.getElementById('hs-name');
-      input.value = '';
-      input.focus();
-    }
-
-    function commitScoreEntry() {
-      if (pendingScore <= 0) return;
-      let name = (document.getElementById('hs-name').value || '')
-        .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
-      if (!name) name = 'AAA';
+    function autoSaveScore(s) {
       const ts = Date.now();
-      highScores.push({ name, score: pendingScore, ts });
+      highScores.push({ score: s, ts });
       highScores.sort((a, b) => b.score - a.score);
       highScores = highScores.slice(0, HS_MAX);
       saveHighScores();
-      pendingScore = 0;
-      document.getElementById('score-entry').classList.add('hidden');
       renderHighScores(ts);
     }
-
-    document.getElementById('hs-save').addEventListener('click', commitScoreEntry);
-    document.getElementById('hs-name').addEventListener('keydown', e => {
-      if (e.key === 'Enter') commitScoreEntry();
-    });
 
     highScores = loadHighScores();
     renderHighScores();
 
     document.getElementById('btn-reset').addEventListener('click', () => {
       if (isAnimating) return;
-      if (pendingScore > 0) commitScoreEntry(); // finalize any unsaved entry first
-      // If the clock is still running this is an early abandon — record the run.
-      // (When the game is already over endGame() has already submitted it.)
-      if (phase === 'playing' && isHighScore(score)) showScoreEntry(score);
+      if (phase === 'playing' && isHighScore(score)) autoSaveScore(score);
       goIdle();
     });
 
     document.getElementById('btn-start').addEventListener('click', startGame);
-    document.getElementById('btn-play-again').addEventListener('click', () => {
-      if (pendingScore > 0) commitScoreEntry(); // bank the record before a new run
-      startGame();
-    });
+    document.getElementById('btn-play-again').addEventListener('click', startGame);
 
     // ── help modal ─────────────────────────────────────────────────────────
     const helpModal = document.getElementById('help-modal');
