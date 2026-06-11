@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CHROMAGRID // SYS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cyan:    #00f5ff;
+      --magenta: #ff00c8;
+      --yellow:  #ffe600;
+      --dark:    #04040f;
+      --panel:   #07071a;
+    }
+
+    body {
+      background-color: var(--dark);
+      background-image:
+        linear-gradient(rgba(0,245,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 16px 16px;
+      min-height: 100vh;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--cyan);
+      gap: 12px;
+    }
+
+    #stage {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    #board-col {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    #side-col {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 280px;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.15) 3px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow:
+        0 0 6px var(--cyan),
+        0 0 20px var(--cyan),
+        0 0 50px rgba(0,245,255,0.4);
+      animation: flicker 8s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 95%, 97%, 100% { opacity: 1; }
+      96%                 { opacity: 0.7; }
+    }
+
+    .subtitle {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: var(--magenta);
+      text-shadow: 0 0 8px var(--magenta);
+      text-transform: uppercase;
+    }
+
+    #score-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: rgba(0,245,255,0.6);
+    }
+
+    #timer-label { margin-left: auto; }
+
+    #timer {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      min-width: 64px;
+      text-align: right;
+    }
+
+    #timer.warn {
+      color: var(--yellow);
+      text-shadow: 0 0 12px var(--yellow);
+    }
+
+    #timer.danger {
+      color: #ff4040;
+      text-shadow: 0 0 14px #ff4040;
+      animation: timer-pulse 1s steps(2, start) infinite;
+    }
+
+    #timer.over {
+      color: var(--magenta);
+      text-shadow: 0 0 14px var(--magenta);
+    }
+
+    @keyframes timer-pulse {
+      0%   { opacity: 1;   }
+      100% { opacity: 0.35; }
+    }
+
+    #score-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      transition: color 0.15s;
+    }
+
+    #score-delta {
+      font-size: 0.85rem;
+      color: var(--yellow);
+      text-shadow: 0 0 8px var(--yellow);
+      opacity: 0;
+      transform: translateY(0px);
+      transition: opacity 0.4s, transform 0.4s;
+      min-width: 70px;
+    }
+
+    #score-delta.show {
+      opacity: 1;
+      transform: translateY(-6px);
+    }
+
+    #legend {
+      display: flex;
+      gap: 10px 16px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      border: 1px solid rgba(0,245,255,0.15);
+      border-radius: 4px;
+      padding: 10px 14px;
+      background: rgba(0,245,255,0.03);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: rgba(0,245,255,0.7);
+    }
+
+    .legend-swatch {
+      width: 16px;
+      height: 16px;
+    }
+
+    #grid-wrap { position: relative; }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(12, 52px);
+      gap: 6px;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.18);
+      border-radius: 4px;
+      box-shadow:
+        0 0 30px rgba(0,245,255,0.07),
+        inset 0 0 60px rgba(0,0,0,0.5);
+    }
+
+    .cell {
+      width: 52px;
+      height: 52px;
+      perspective: 500px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .cell--empty { cursor: default; }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transition: filter 0.2s;
+    }
+
+    .cell:hover .card-face {
+      filter:
+        drop-shadow(0 0 3px rgba(0,245,255,0.9))
+        drop-shadow(0 0 8px rgba(0,245,255,0.5));
+    }
+
+    .cell:hover .card:not(.flipped) {
+      transform: rotateY(18deg) scale(1.1);
+    }
+
+    .cell:hover .card.flipped {
+      transform: rotateY(198deg) scale(1.1);
+    }
+
+    /* override hover tilt while charging for long press */
+    .cell.pressing:hover .card:not(.flipped) {
+      transform: none;
+    }
+    .cell.pressing:hover .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-back {
+      transform: rotateY(180deg) scaleX(-1);
+    }
+
+    /* Long-press charge ring */
+    .cell.pressing .card-face {
+      animation: press-charge 0.5s linear forwards;
+    }
+
+    @keyframes press-charge {
+      0%   { filter: drop-shadow(0 0 2px rgba(0,245,255,0.4)); }
+      100% { filter: drop-shadow(0 0 8px var(--cyan)) drop-shadow(0 0 20px var(--cyan)) brightness(1.6); }
+    }
+
+    /* Pop animation — applied to the CELL, not the card, so the card's
+       rotateY(180deg) flip transform is never touched and the back face
+       (current color) keeps showing throughout the pop. */
+    .cell.popping {
+      pointer-events: none;
+      animation: pop-out 0.32s ease-in forwards;
+    }
+
+    @keyframes pop-out {
+      0%   { transform: scale(1)    rotate(0deg);  opacity: 1; }
+      35%  { transform: scale(1.28) rotate(4deg);  opacity: 1; }
+      100% { transform: scale(0)    rotate(-8deg); opacity: 0; }
+    }
+
+    /* Drop animation — also applied to the CELL for the same reason. */
+    .cell.dropping {
+      animation: drop-fall 0.3s cubic-bezier(0.2, 0, 0.4, 1) forwards;
+    }
+
+    @keyframes drop-fall {
+      from { transform: translateY(var(--drop-y)); }
+      to   { transform: translateY(0); }
+    }
+
+    /* No-match flash */
+    .card.no-match .card-face {
+      animation: no-match-flash 0.38s ease;
+    }
+
+    @keyframes no-match-flash {
+      0%, 100% { filter: none; }
+      40%      { filter: drop-shadow(0 0 6px #ff4040) brightness(1.5); }
+    }
+
+    /* Highlight group on hover during long press */
+    .cell.in-group .card-face {
+      filter: drop-shadow(0 0 5px var(--cyan)) brightness(1.3);
+    }
+
+    #controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    button {
+      background: transparent;
+      color: var(--magenta);
+      border: 1px solid var(--magenta);
+      border-radius: 2px;
+      padding: 8px 20px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      text-transform: uppercase;
+      text-shadow: 0 0 8px var(--magenta);
+      box-shadow: 0 0 8px rgba(255,0,200,0.2), inset 0 0 10px rgba(255,0,200,0.05);
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(255,0,200,0.1);
+      box-shadow: 0 0 18px rgba(255,0,200,0.5), inset 0 0 16px rgba(255,0,200,0.08);
+      color: #fff;
+    }
+
+    button:active { transform: scale(0.96); }
+
+    button:disabled,
+    button:disabled:hover {
+      opacity: 0.3;
+      color: var(--magenta);
+      background: transparent;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .status-bar {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: rgba(0,245,255,0.3);
+    }
+
+    /* ── high score table ─────────────────────────────────────────────── */
+    #highscore-panel {
+      width: 100%;
+      max-width: 360px;
+      border: 1px solid rgba(0,245,255,0.18);
+      border-radius: 4px;
+      background: rgba(0,245,255,0.03);
+      padding: 12px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
+    }
+
+    .hs-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.22em;
+      color: var(--magenta);
+      text-shadow: 0 0 8px var(--magenta);
+      text-align: center;
+    }
+
+    #hs-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .hs-row {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      gap: 10px;
+      align-items: baseline;
+      font-size: 0.82rem;
+      padding: 3px 6px;
+      border-radius: 2px;
+    }
+
+    .hs-rank {
+      color: var(--yellow);
+      text-shadow: 0 0 6px var(--yellow);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.72rem;
+    }
+    .hs-name {
+      color: var(--cyan);
+      letter-spacing: 0.18em;
+      text-shadow: 0 0 6px rgba(0,245,255,0.5);
+    }
+    .hs-score {
+      color: #fff;
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 7px var(--cyan);
+      justify-self: end;
+    }
+
+    .hs-row.fresh { animation: hs-flash 1.4s ease; }
+    @keyframes hs-flash {
+      0%, 100% { background: transparent; }
+      25%      { background: rgba(255,230,0,0.18); }
+    }
+
+    .hs-empty {
+      text-align: center;
+      color: rgba(0,245,255,0.3);
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      padding: 8px;
+    }
+
+    #score-entry {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-top: 1px solid rgba(0,245,255,0.12);
+      padding-top: 10px;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      color: rgba(0,245,255,0.7);
+    }
+    #score-entry.hidden { display: none; }
+
+    #hs-entry-score {
+      color: var(--yellow);
+      font-family: 'Orbitron', monospace;
+      text-shadow: 0 0 6px var(--yellow);
+    }
+
+    #hs-name {
+      width: 64px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid var(--cyan);
+      border-radius: 2px;
+      color: var(--cyan);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      letter-spacing: 0.25em;
+      text-align: center;
+      text-transform: uppercase;
+      padding: 4px 2px;
+      outline: none;
+    }
+    #hs-name:focus { box-shadow: 0 0 10px rgba(0,245,255,0.5); }
+
+    #hs-save { padding: 5px 14px; font-size: 0.62rem; }
+
+    /* ── overlays (start screen + game over) ──────────────────────────── */
+    .hidden { display: none !important; }
+
+    #start-overlay,
+    #gameover-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: 4px;
+    }
+
+    #start-overlay { background: rgba(4,4,15,0.55); }
+
+    #gameover-overlay {
+      background: rgba(4,4,15,0.82);
+      -webkit-backdrop-filter: blur(2px) grayscale(0.5);
+      backdrop-filter: blur(2px) grayscale(0.5);
+      animation: ov-fade 0.4s ease;
+    }
+    @keyframes ov-fade { from { opacity: 0; } to { opacity: 1; } }
+
+    .ov-tag {
+      font-size: 0.68rem;
+      letter-spacing: 0.3em;
+      color: var(--magenta);
+      text-shadow: 0 0 8px var(--magenta);
+    }
+
+    #btn-start,
+    #btn-play-again {
+      font-size: 1rem;
+      padding: 14px 42px;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 16px rgba(0,245,255,0.3), inset 0 0 14px rgba(0,245,255,0.06);
+    }
+    #btn-start:hover,
+    #btn-play-again:hover {
+      background: rgba(0,245,255,0.12);
+      box-shadow: 0 0 24px rgba(0,245,255,0.6), inset 0 0 18px rgba(0,245,255,0.1);
+      color: #fff;
+    }
+
+    .go-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 2.1rem;
+      letter-spacing: 0.16em;
+      color: var(--magenta);
+      text-shadow: 0 0 12px var(--magenta), 0 0 34px rgba(255,0,200,0.5);
+    }
+    .go-score-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: rgba(0,245,255,0.6);
+      margin-top: 4px;
+    }
+    #go-score {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 2.3rem;
+      color: var(--cyan);
+      text-shadow: 0 0 14px var(--cyan);
+      margin-bottom: 6px;
+    }
+
+    /* ── first-fill intro drop (on the cell, so the flip stays intact) ── */
+    .cell.intro {
+      animation: intro-drop 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+    }
+    @keyframes intro-drop {
+      from { transform: translateY(-60px); opacity: 0; }
+      60%  { opacity: 1; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>CHROMAGRID</h1>
+    <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
+  </header>
+
+  <div id="stage">
+    <div id="board-col">
+      <div id="score-bar">
+        SCORE &nbsp;<span id="score-val">0</span>
+        <span id="score-delta"></span>
+        <span id="timer-label">TIME</span>
+        <span id="timer">2:00</span>
+      </div>
+
+      <div id="grid-wrap">
+        <div id="grid"></div>
+
+        <div id="start-overlay">
+          <div class="ov-tag">// SYSTEM READY //</div>
+          <button id="btn-start">START</button>
+        </div>
+
+        <div id="gameover-overlay" class="hidden">
+          <div class="go-title">GAME OVER</div>
+          <div class="go-score-label">SCORE</div>
+          <div id="go-score">0</div>
+          <button id="btn-play-again">PLAY AGAIN</button>
+        </div>
+      </div>
+
+      <div id="controls">
+        <button id="btn-flip-all">[ FLIP ALL ]</button>
+        <button id="btn-reset">[ RESET ]</button>
+      </div>
+
+      <div class="status-bar" id="status"></div>
+    </div>
+
+    <div id="side-col">
+      <div id="legend"></div>
+
+      <div id="highscore-panel">
+        <div class="hs-title">// TOP RUNS //</div>
+        <div id="hs-list"></div>
+        <div id="score-entry" class="hidden">
+          <span>NEW RECORD</span>
+          <span id="hs-entry-score"></span>
+          <input id="hs-name" maxlength="3" placeholder="ID" autocomplete="off" spellcheck="false">
+          <button id="hs-save">SAVE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = [
+      { name: 'PLASMA',  hex: '#D4A800' },  // dirty amber-gold — L 0.420
+      { name: 'HOLO',    hex: '#00AACC' },  // dirty teal-cyan  — L 0.331
+      { name: 'SYNTH',   hex: '#CC0066' },  // muted raspberry  — L 0.138
+      { name: 'MATRIX',  hex: '#2255CC' },  // cobalt blue      — L 0.112
+      { name: 'VOID',    hex: '#662299' },  // dark purple      — L 0.063
+    ];
+
+    const SHAPES = [
+      'polygon(15px 0%, calc(100% - 15px) 0%, 100% 15px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 15px 100%, 0% calc(100% - 15px), 0% 15px)',
+      'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+      'polygon(33% 0%, 67% 0%, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0% 67%, 0% 33%, 33% 33%)',
+      'polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%)',
+      'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+      'polygon(50% 0%, 100% 22%, 82% 100%, 18% 100%, 0% 22%)',
+      'polygon(0% 100%, 0% 50%, 17% 0%, 33% 50%, 50% 0%, 67% 50%, 83% 0%, 100% 50%, 100% 100%)',
+      'polygon(0% 0%, calc(100% - 20px) 0%, calc(100% - 20px) 10px, 100% 10px, 100% 100%, 20px 100%, 20px calc(100% - 10px), 0% calc(100% - 10px))',
+      'polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%)',
+      'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
+    ];
+
+    const COLS        = 12;
+    const ROWS        = 10;
+    const CELL_PX     = 58;   // 52px tile + 6px gap
+    const PRESS_MS    = 500;
+    const TIME_MS     = 120000; // 2 minute run
+
+    // ── state ──────────────────────────────────────────────────────────────
+    // Each entry: { frontColor, backColor, shape, flipped }
+    let state       = [];
+    let score       = 0;
+    let isAnimating = false;
+
+    // 'idle' (start screen, empty board) | 'playing' | 'over'
+    let phase         = 'idle';
+    let timerDeadline = 0;
+    let timerInterval = null;
+
+    function pick(arr, exclude) {
+      let v;
+      do { v = arr[Math.floor(Math.random() * arr.length)]; }
+      while (v === exclude);
+      return v;
+    }
+
+    function newCell() {
+      const frontColor = pick(COLORS, null);
+      const backColor  = pick(COLORS, frontColor);
+      const shape      = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+      return { frontColor, backColor, shape, flipped: false };
+    }
+
+    function idx(r, c)  { return r * COLS + c; }
+    function rowOf(i)   { return Math.floor(i / COLS); }
+    function colOf(i)   { return i % COLS; }
+    function visColor(s){ return s.flipped ? s.backColor : s.frontColor; }
+
+    // ── flood fill ─────────────────────────────────────────────────────────
+    function floodFill(startIdx) {
+      const target  = visColor(state[startIdx]);
+      const visited = new Set([startIdx]);
+      const queue   = [startIdx];
+      while (queue.length) {
+        const cur = queue.shift();
+        const r = rowOf(cur), c = colOf(cur);
+        for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const ni = idx(nr, nc);
+          if (!visited.has(ni) && visColor(state[ni]) === target) {
+            visited.add(ni);
+            queue.push(ni);
+          }
+        }
+      }
+      return [...visited];
+    }
+
+    // ── scoring ────────────────────────────────────────────────────────────
+    // 4 cells = 100 pts; quadratic bonus for larger groups
+    function calcScore(n) {
+      return Math.round(n * n * 6.25);
+    }
+
+    // ── score display ──────────────────────────────────────────────────────
+    let deltaClearTimer = null;
+    function showDelta(text) {
+      const el = document.getElementById('score-delta');
+      el.textContent = text;
+      el.classList.remove('show');
+      void el.offsetWidth; // reflow to restart transition
+      el.classList.add('show');
+      clearTimeout(deltaClearTimer);
+      deltaClearTimer = setTimeout(() => el.classList.remove('show'), 1100);
+    }
+
+    // ── pop & drop ─────────────────────────────────────────────────────────
+    async function popAndDrop(indices) {
+      if (isAnimating) return;
+      isAnimating = true;
+
+      const cellEls = [...document.querySelectorAll('.cell')];
+
+      // animate pop (on the cell, so the card's flip transform is untouched)
+      indices.forEach(i => cellEls[i].classList.add('popping'));
+      await new Promise(r => setTimeout(r, 340));
+
+      // tally score
+      const pts = calcScore(indices.length);
+      score += pts;
+      document.getElementById('score-val').textContent = score;
+      showDelta(`+${pts}`);
+
+      // compact state column by column, recording drop distances
+      const poppedSet = new Set(indices);
+      // dropInfo[newIdx] = rows dropped (>0 means fell down)
+      const dropInfo  = new Map();
+
+      for (let c = 0; c < COLS; c++) {
+        // gather survivors top→bottom with their original row
+        const survivors = [];
+        for (let r = 0; r < ROWS; r++) {
+          if (!poppedSet.has(idx(r, c))) survivors.push({ origRow: r, data: state[idx(r, c)] });
+        }
+        const missing = ROWS - survivors.length;
+        // prepend new cells (they originate above the grid)
+        for (let k = 0; k < missing; k++) {
+          survivors.unshift({ origRow: -(missing - k), data: newCell() });
+        }
+        // survivors is now ROWS long, ordered top→bottom
+        for (let r = 0; r < ROWS; r++) {
+          const { origRow, data } = survivors[r];
+          const ni     = idx(r, c);
+          const fallen = r - origRow; // rows it fell (positive = fell down)
+          state[ni] = data;
+          if (fallen !== 0) dropInfo.set(ni, fallen);
+        }
+      }
+
+      // rebuild DOM and animate drops
+      buildGrid(dropInfo);
+      isAnimating = false;
+    }
+
+    // Empty placeholder board for the idle / start screen (keeps the grid
+    // sized so the START overlay sits centred over it).
+    function buildEmptyGrid() {
+      const gridEl = document.getElementById('grid');
+      gridEl.innerHTML = '';
+      for (let i = 0; i < ROWS * COLS; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell cell--empty';
+        gridEl.appendChild(cell);
+      }
+    }
+
+    // ── build grid ─────────────────────────────────────────────────────────
+    function buildGrid(dropInfo = new Map(), intro = false) {
+      const gridEl = document.getElementById('grid');
+      gridEl.innerHTML = '';
+
+      for (let i = 0; i < ROWS * COLS; i++) {
+        const s = state[i];
+
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+
+        // first-fill cascade: each tile drops in, staggered by row + column
+        if (intro) {
+          cell.classList.add('intro');
+          cell.style.animationDelay = (rowOf(i) * 0.03 + colOf(i) * 0.012) + 's';
+          cell.addEventListener('animationend', () => {
+            cell.classList.remove('intro');
+            cell.style.animationDelay = '';
+          }, { once: true });
+        }
+
+        const card = document.createElement('div');
+        card.className = 'card' + (s.flipped ? ' flipped' : '');
+
+        const frontEl = document.createElement('div');
+        frontEl.className = 'card-face card-front';
+        frontEl.style.background = s.frontColor.hex;
+        frontEl.style.clipPath   = s.shape;
+
+        const backEl = document.createElement('div');
+        backEl.className = 'card-face card-back';
+        backEl.style.background = s.backColor.hex;
+        backEl.style.clipPath   = s.shape;
+
+        card.appendChild(frontEl);
+        card.appendChild(backEl);
+        cell.appendChild(card);
+
+        // drop animation (on the cell, so the card's flip transform is untouched)
+        if (dropInfo.has(i)) {
+          const fallen = dropInfo.get(i);
+          cell.style.setProperty('--drop-y', `${-fallen * CELL_PX}px`);
+          cell.classList.add('dropping');
+          cell.addEventListener('animationend', () => {
+            cell.classList.remove('dropping');
+            cell.style.removeProperty('--drop-y');
+          }, { once: true });
+        }
+
+        // ── input handling ───────────────────────────────────────────────
+        let pressTimer = null;
+        let longFired  = false;
+        let startX, startY;
+
+        cell.addEventListener('pointerdown', e => {
+          if (isAnimating || phase !== 'playing') return;
+          longFired = false;
+          startX    = e.clientX;
+          startY    = e.clientY;
+          cell.setPointerCapture(e.pointerId);
+          cell.classList.add('pressing');
+
+          pressTimer = setTimeout(() => {
+            longFired = true;
+            cell.classList.remove('pressing');
+            onLongPress(i, cell, card);
+          }, PRESS_MS);
+        });
+
+        const cancelPress = () => {
+          clearTimeout(pressTimer);
+          cell.classList.remove('pressing');
+        };
+
+        cell.addEventListener('pointermove', e => {
+          if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) cancelPress();
+        });
+
+        cell.addEventListener('pointerup',     cancelPress);
+        cell.addEventListener('pointercancel', cancelPress);
+
+        cell.addEventListener('click', () => {
+          if (longFired || isAnimating || phase !== 'playing') return;
+          state[i].flipped = !state[i].flipped;
+          card.classList.toggle('flipped');
+          updateStatus();
+        });
+
+        gridEl.appendChild(cell);
+      }
+
+      updateStatus();
+    }
+
+    function onLongPress(i, cell, card) {
+      if (isAnimating || phase !== 'playing') return;
+      const group = floodFill(i);
+      if (group.length >= 4) {
+        popAndDrop(group);
+      } else {
+        card.classList.remove('no-match');
+        void card.offsetWidth;
+        card.classList.add('no-match');
+        card.addEventListener('animationend', () => card.classList.remove('no-match'), { once: true });
+      }
+    }
+
+    // ── status bar ──────────────────────────────────────────────────────────
+    function updateStatus() {
+      const el = document.getElementById('status');
+      if (phase === 'idle') {
+        el.textContent = 'SYS_STANDBY > AWAITING INITIALIZATION';
+        return;
+      }
+      if (phase === 'over') {
+        el.textContent = `SYS_HALT > TIME EXPIRED > FINAL SCORE ${score.toLocaleString()}`;
+        return;
+      }
+      const total   = ROWS * COLS;
+      const flipped = state.filter(s => s.flipped).length;
+      el.textContent =
+        `SYS_ACTIVE > ${total} TILES > ${flipped} FLIPPED > ${total - flipped} FACE-UP`;
+    }
+
+    // ── legend ──────────────────────────────────────────────────────────────
+    const legendEl = document.getElementById('legend');
+    COLORS.forEach(c => {
+      const item   = document.createElement('div');
+      item.className = 'legend-item';
+      const swatch = document.createElement('div');
+      swatch.className = 'legend-swatch';
+      swatch.style.cssText = `background:${c.hex};clip-path:${SHAPES[0]};filter:drop-shadow(0 0 4px ${c.hex});`;
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(c.name));
+      legendEl.appendChild(item);
+    });
+
+    // Wait for every in-flight grid animation/transition (pops, drops, flips)
+    // to finish. Excludes infinite animations (e.g. the title flicker) so it
+    // can never hang.
+    function waitForGridAnimations() {
+      const grid = document.getElementById('grid');
+      const anims = document.getAnimations().filter(a => {
+        const target = a.effect && a.effect.target;
+        if (!target || !grid.contains(target)) return false;
+        return a.effect.getComputedTiming().iterations !== Infinity;
+      });
+      return Promise.allSettled(anims.map(a => a.finished));
+    }
+
+    const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+
+    const btnFlipAll = document.getElementById('btn-flip-all');
+
+    async function flipAll() {
+      if (isAnimating || phase !== 'playing') return;
+      isAnimating = true;          // blocks tile clicks/long-press and reset
+      btnFlipAll.disabled = true;  // grey out so it can't be interrupted
+
+      // 1. let anything already running (e.g. a drop) finish first
+      await waitForGridAnimations();
+
+      // 2. flip every card via the CSS transition (no rebuild = it animates)
+      const target = state.some(s => !s.flipped); // any face-up -> flip all down
+      const cards  = [...document.querySelectorAll('.card')];
+      state.forEach((s, i) => {
+        if (s.flipped !== target) {
+          s.flipped = target;
+          cards[i].classList.toggle('flipped', target);
+        }
+      });
+
+      // 3. wait for the flip transition to complete
+      await nextFrame();              // ensure the transitions have registered
+      await waitForGridAnimations();
+
+      updateStatus();
+      isAnimating = false;
+      // if the clock ran out mid-flip, keep the button disabled
+      btnFlipAll.disabled = (phase !== 'playing');
+    }
+
+    btnFlipAll.addEventListener('click', flipAll);
+
+    // ── countdown timer ───────────────────────────────────────────────────
+    function renderTimer(ms) {
+      const total = Math.ceil(ms / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      const el = document.getElementById('timer');
+      el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      el.classList.toggle('warn',   total <= 30 && total > 10);
+      el.classList.toggle('danger', total <= 10 && phase === 'playing');
+    }
+
+    function tickTimer() {
+      const remaining = Math.max(0, timerDeadline - Date.now());
+      renderTimer(remaining);
+      if (remaining <= 0) endGame();
+    }
+
+    function stopClock() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    // ── game flow: idle (start screen) → playing → over ─────────────────
+    const startOverlay    = document.getElementById('start-overlay');
+    const gameoverOverlay = document.getElementById('gameover-overlay');
+
+    function goIdle() {
+      stopClock();
+      phase = 'idle';
+      score = 0;
+      document.getElementById('score-val').textContent = '0';
+      document.getElementById('timer').classList.remove('warn', 'danger', 'over');
+      renderTimer(TIME_MS);
+      buildEmptyGrid();
+      startOverlay.classList.remove('hidden');
+      gameoverOverlay.classList.add('hidden');
+      btnFlipAll.disabled = true;   // nothing to flip yet
+      updateStatus();
+    }
+
+    async function startGame() {
+      if (phase === 'playing') return;
+      phase = 'playing';
+      score = 0;
+      document.getElementById('score-val').textContent = '0';
+      document.getElementById('timer').classList.remove('warn', 'danger', 'over');
+      renderTimer(TIME_MS);
+      startOverlay.classList.add('hidden');
+      gameoverOverlay.classList.add('hidden');
+      btnFlipAll.disabled = false;
+
+      // fill the board with the intro cascade
+      state = Array.from({ length: ROWS * COLS }, newCell);
+      buildGrid(new Map(), true);
+
+      // the clock starts once the tiles have finished dropping in
+      await nextFrame();
+      await waitForGridAnimations();
+      if (phase !== 'playing') return; // reset during the cascade
+      timerDeadline = Date.now() + TIME_MS;
+      tickTimer();
+      timerInterval = setInterval(tickTimer, 200);
+    }
+
+    async function endGame() {
+      if (phase !== 'playing') return;
+      phase = 'over';
+      stopClock();
+      renderTimer(0);
+      document.getElementById('timer').classList.add('over');
+      btnFlipAll.disabled = true;     // lock board actions
+      // let an in-flight pop/drop finish so the final score is settled
+      while (isAnimating) await new Promise(r => setTimeout(r, 50));
+      // dim the board and show the final score
+      document.getElementById('go-score').textContent = score.toLocaleString();
+      gameoverOverlay.classList.remove('hidden');
+      updateStatus();
+      // submit the finished run to the high score table
+      if (isHighScore(score)) showScoreEntry(score);
+    }
+
+    // ── high scores (persisted in localStorage) ───────────────────────────
+    const HS_KEY = 'chromagrid.highscores';
+    const HS_MAX = 10;
+    let highScores  = [];
+    let pendingScore = 0;
+
+    function loadHighScores() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(HS_KEY) || '[]');
+        return Array.isArray(arr)
+          ? arr.filter(e => e && typeof e.score === 'number').slice(0, HS_MAX)
+          : [];
+      } catch { return []; }
+    }
+
+    function saveHighScores() {
+      try { localStorage.setItem(HS_KEY, JSON.stringify(highScores)); } catch {}
+    }
+
+    function renderHighScores(freshTs) {
+      const list = document.getElementById('hs-list');
+      list.innerHTML = '';
+      if (!highScores.length) {
+        const empty = document.createElement('div');
+        empty.className = 'hs-empty';
+        empty.textContent = 'NO RECORDS YET';
+        list.appendChild(empty);
+        return;
+      }
+      highScores.forEach((entry, i) => {
+        const row  = document.createElement('div');
+        row.className = 'hs-row' + (entry.ts === freshTs ? ' fresh' : '');
+        const rank = document.createElement('span');
+        rank.className = 'hs-rank';
+        rank.textContent = String(i + 1).padStart(2, '0');
+        const name = document.createElement('span');
+        name.className = 'hs-name';
+        name.textContent = entry.name || 'AAA';
+        const sc   = document.createElement('span');
+        sc.className = 'hs-score';
+        sc.textContent = entry.score.toLocaleString();
+        row.append(rank, name, sc);
+        list.appendChild(row);
+      });
+    }
+
+    // Does this score earn a place on the board?
+    function isHighScore(s) {
+      if (s <= 0) return false;
+      if (highScores.length < HS_MAX) return true;
+      return s > highScores[highScores.length - 1].score;
+    }
+
+    function showScoreEntry(s) {
+      pendingScore = s;
+      document.getElementById('hs-entry-score').textContent = s.toLocaleString();
+      document.getElementById('score-entry').classList.remove('hidden');
+      const input = document.getElementById('hs-name');
+      input.value = '';
+      input.focus();
+    }
+
+    function commitScoreEntry() {
+      if (pendingScore <= 0) return;
+      let name = (document.getElementById('hs-name').value || '')
+        .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
+      if (!name) name = 'AAA';
+      const ts = Date.now();
+      highScores.push({ name, score: pendingScore, ts });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, HS_MAX);
+      saveHighScores();
+      pendingScore = 0;
+      document.getElementById('score-entry').classList.add('hidden');
+      renderHighScores(ts);
+    }
+
+    document.getElementById('hs-save').addEventListener('click', commitScoreEntry);
+    document.getElementById('hs-name').addEventListener('keydown', e => {
+      if (e.key === 'Enter') commitScoreEntry();
+    });
+
+    highScores = loadHighScores();
+    renderHighScores();
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (isAnimating) return;
+      if (pendingScore > 0) commitScoreEntry(); // finalize any unsaved entry first
+      // If the clock is still running this is an early abandon — record the run.
+      // (When the game is already over endGame() has already submitted it.)
+      if (phase === 'playing' && isHighScore(score)) showScoreEntry(score);
+      goIdle();
+    });
+
+    document.getElementById('btn-start').addEventListener('click', startGame);
+    document.getElementById('btn-play-again').addEventListener('click', () => {
+      if (pendingScore > 0) commitScoreEntry(); // bank the record before a new run
+      startGame();
+    });
+
+    goIdle();
+  </script>
+</body>
+</html>
