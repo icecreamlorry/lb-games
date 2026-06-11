@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
     :root {
       --cyan:    #00f5ff;
@@ -375,11 +375,39 @@
       font-size: 0.6rem;
       letter-spacing: 0.2em;
       color: rgba(0,245,255,0.35);
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     #best-val {
       color: rgba(0,245,255,0.65);
       transition: color 0.3s;
+    }
+    .score-action-btn {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-color: rgba(0,245,255,0.22);
+      color: rgba(0,245,255,0.4);
+      text-shadow: none;
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+    .score-action-btn:hover {
+      background: rgba(0,245,255,0.07);
+      border-color: rgba(0,245,255,0.55);
+      color: var(--cyan);
+      box-shadow: 0 0 8px rgba(0,245,255,0.25);
+    }
+    .score-action-btn.copied {
+      color: var(--yellow);
+      border-color: rgba(255,230,0,0.5);
+      box-shadow: 0 0 8px rgba(255,230,0,0.3);
     }
 
     /* ── overlays (start screen + game over) ──────────────────────────── */
@@ -697,7 +725,22 @@
       </div>
 
       <div class="status-bar" id="status"></div>
-      <div id="best-score-bar">HIGH SCORE &nbsp;<span id="best-val">—</span></div>
+      <div id="best-score-bar">
+        <span>HIGH SCORE &nbsp;<span id="best-val">—</span></span>
+        <button class="score-action-btn" id="btn-copy" title="Copy link">
+          <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="8" height="10" rx="1"/>
+            <rect x="5" y="1" width="8" height="10" rx="1"/>
+          </svg>
+        </button>
+        <button class="score-action-btn" id="btn-share" title="Share game">
+          <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="7" y1="9" x2="7" y2="2"/>
+            <polyline points="4,5 7,2 10,5"/>
+            <path d="M2 11v2h10v-2"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div id="side-col">
@@ -740,6 +783,10 @@
         <div class="help-row">
           <span class="help-key">RESET</span>
           <span class="help-val">Abandon the run</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">⧉ / ↑</span>
+          <span class="help-val">Copy or share the game link</span>
         </div>
       </div>
 
@@ -1385,6 +1432,30 @@
     document.getElementById('help-got-it').addEventListener('click', () => helpModal.classList.add('hidden'));
     helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.classList.add('hidden'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') helpModal.classList.add('hidden'); });
+
+    const SITE_URL = 'https://icecreamlorry.github.io/chromagrid/';
+
+    document.getElementById('btn-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(SITE_URL);
+        const btn = document.getElementById('btn-copy');
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      } catch {}
+    });
+
+    document.getElementById('btn-share').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-share');
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'CHROMAGRID', text: 'Cyberpunk tile-matching game — 2 minutes, beat your high score.', url: SITE_URL });
+        } else {
+          await navigator.clipboard.writeText(SITE_URL);
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 1500);
+        }
+      } catch {}
+    });
 
     goIdle();
   </script>
