@@ -636,17 +636,26 @@
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
       :root { --cell-px: 34px; --grid-gap: 3px; } /* JS overrides --cell-px at runtime */
-      body  { padding: 6px 8px 8px; gap: 6px; }
-      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 3px; } /* padding=gap so all cells have equal dark border */
+      body  { padding: 6px 12px 8px; gap: 6px; }
+      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 3px; }
       #side-col { display: none; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
       .subtitle { display: none; }
-      #help-panel { padding: 20px 16px 18px; }
+      #help-modal { padding: 10px; }
+      #help-panel {
+        padding: 14px 14px 12px;
+        gap: 10px;
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+        overflow-y: auto;
+      }
+      .help-heading { padding-bottom: 4px; }
+      #help-got-it { padding: 8px 24px; font-size: 0.75rem; }
       .help-row { grid-template-columns: 70px 1fr; }
     }
     @media (max-width: 380px) {
-      :root { --cell-px: 30px; } /* JS fallback if not yet computed */
+      :root { --cell-px: 30px; }
     }
   </style>
 </head>
@@ -767,11 +776,18 @@
     function initLayout() {
       if (window.innerWidth <= 760) {
         COLS = 8; ROWS = 12;
-        // Compute cell size to fill viewport height without scrolling.
-        // 225 = fixed UI overhead (body padding + header + score-bar + controls +
-        //       status + best-score + board-col gaps) + grid non-cell height
-        //       (11 row-gaps × 3px + 6px grid padding) + 20px safety margin.
-        const cellPx = Math.min(52, Math.max(28, Math.floor((window.innerHeight - 225) / ROWS)));
+        const gapPx    = 3;
+        const bodyPadX = 12; // each side, matches CSS padding: 6px 12px
+        const gridPadX = 3;  // each side, matches #grid padding: 3px
+        // Width: fit COLS cols + gaps + grid padding within body content area
+        const cellByW = Math.floor(
+          (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * gapPx) / COLS
+        );
+        // Height: fill remaining vertical space after fixed UI.
+        // 225 ≈ body-pad(14) + h1(26) + score-bar(31) + controls(36) + status(14)
+        //      + best-score(14) + 5×board-col-gap(30) + grid-pad-v(6) + 11×row-gap(33) + margin(21)
+        const cellByH = Math.floor((window.innerHeight - 225) / ROWS);
+        const cellPx  = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
         document.documentElement.style.setProperty('--cell-px', cellPx + 'px');
       } else {
         COLS = 12; ROWS = 10;
