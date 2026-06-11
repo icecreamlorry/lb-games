@@ -551,6 +551,126 @@
       60%  { opacity: 1; }
       to   { transform: translateY(0); opacity: 1; }
     }
+
+    /* ── help button & modal ─────────────────────────────────────────────── */
+    #help-btn {
+      position: fixed;
+      top: 14px;
+      right: 16px;
+      z-index: 500;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 0.9rem;
+      letter-spacing: 0;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 8px var(--cyan);
+      box-shadow: 0 0 10px rgba(0,245,255,0.25), inset 0 0 8px rgba(0,245,255,0.05);
+    }
+    #help-btn:hover {
+      background: rgba(0,245,255,0.12);
+      box-shadow: 0 0 18px rgba(0,245,255,0.5), inset 0 0 14px rgba(0,245,255,0.1);
+      color: #fff;
+    }
+    #help-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4,4,15,0.88);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      padding: 20px;
+      overflow-y: auto;
+      animation: ov-fade 0.3s ease;
+    }
+    #help-panel {
+      position: relative;
+      max-width: 480px;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 4px;
+      padding: 28px 28px 24px;
+      box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #help-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border-radius: 2px;
+      font-size: 0.7rem;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    .help-heading {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,245,255,0.15);
+    }
+    .help-section { display: flex; flex-direction: column; gap: 6px; }
+    .help-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      color: var(--magenta);
+      text-shadow: 0 0 6px var(--magenta);
+    }
+    .help-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .help-key {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.58rem;
+      color: var(--yellow);
+      text-shadow: 0 0 5px var(--yellow);
+    }
+    .help-val {
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.75);
+      letter-spacing: 0.05em;
+      line-height: 1.5;
+    }
+    .help-note {
+      font-size: 0.7rem;
+      color: rgba(0,245,255,0.5);
+      letter-spacing: 0.05em;
+      line-height: 1.6;
+    }
+    #help-got-it {
+      font-size: 0.82rem;
+      padding: 11px 30px;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+      align-self: center;
+    }
+    #help-got-it:hover {
+      background: rgba(0,245,255,0.12);
+      box-shadow: 0 0 22px rgba(0,245,255,0.5), inset 0 0 16px rgba(0,245,255,0.1);
+      color: #fff;
+    }
+
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
       :root { --cell-px: 40px; --grid-gap: 4px; }
@@ -559,6 +679,9 @@
       #side-col { width: 100%; }
       #highscore-panel { max-width: none; }
       h1 { font-size: 1.2rem; }
+      #help-btn { top: 10px; right: 12px; }
+      #help-panel { padding: 24px 18px 20px; }
+      .help-row { grid-template-columns: 80px 1fr; }
     }
     @media (max-width: 380px) {
       :root { --cell-px: 36px; }
@@ -566,6 +689,8 @@
   </style>
 </head>
 <body>
+
+  <button id="help-btn" title="How to play">?</button>
 
   <header>
     <h1>CHROMAGRID</h1>
@@ -618,6 +743,65 @@
           <button id="hs-save">SAVE</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div id="help-modal">
+    <div id="help-panel">
+      <button id="help-close">✕</button>
+      <div class="help-heading">// HOW TO PLAY //</div>
+
+      <div class="help-section">
+        <div class="help-label">OBJECTIVE</div>
+        <div class="help-note">Clear colour groups to score points before the 2-minute timer runs out. Bigger groups score exponentially more.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">CONTROLS</div>
+        <div class="help-row">
+          <span class="help-key">TAP / CLICK</span>
+          <span class="help-val">Flip a tile — reveals its hidden face colour</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">HOLD 0.5s</span>
+          <span class="help-val">Activate a group — hold any tile to check its connected same-colour region</span>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">CLEARING</div>
+        <div class="help-note">A connected group of 4+ tiles showing the same colour clears on a long press. New tiles fall from above to fill the gaps.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">SCORING</div>
+        <div class="help-row">
+          <span class="help-key">4 tiles</span>
+          <span class="help-val">100 pts</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">8 tiles</span>
+          <span class="help-val">400 pts</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">12 tiles</span>
+          <span class="help-val">900 pts &nbsp;—&nbsp; formula: n² × 6.25</span>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">BUTTONS</div>
+        <div class="help-row">
+          <span class="help-key">[ FLIP ALL ]</span>
+          <span class="help-val">Flip every tile to the same face at once</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">[ RESET ]</span>
+          <span class="help-val">Abandon the run and return to start</span>
+        </div>
+      </div>
+
+      <button id="help-got-it">GOT IT</button>
     </div>
   </div>
 
@@ -1158,6 +1342,14 @@
       if (pendingScore > 0) commitScoreEntry(); // bank the record before a new run
       startGame();
     });
+
+    // ── help modal ─────────────────────────────────────────────────────────
+    const helpModal = document.getElementById('help-modal');
+    document.getElementById('help-btn').addEventListener('click',    () => helpModal.classList.remove('hidden'));
+    document.getElementById('help-close').addEventListener('click',  () => helpModal.classList.add('hidden'));
+    document.getElementById('help-got-it').addEventListener('click', () => helpModal.classList.add('hidden'));
+    helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.classList.add('hidden'); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') helpModal.classList.add('hidden'); });
 
     goIdle();
   </script>
