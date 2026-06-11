@@ -508,16 +508,16 @@
     }
 
     .cell.bomb-exploding {
-      animation: bomb-pulse 0.45s ease-out;
+      animation: bomb-pulse 0.45s ease-out forwards;
       z-index: 5;
     }
 
     @keyframes bomb-pulse {
-      0%   { transform: scale(1);    filter: none; }
-      15%  { transform: scale(0.72); filter: brightness(6) drop-shadow(0 0 16px #fff); }
-      45%  { transform: scale(2.2);  filter: brightness(7) drop-shadow(0 0 32px #ff8800) drop-shadow(0 0 64px #ff4400); }
-      75%  { transform: scale(1.9);  filter: brightness(4) drop-shadow(0 0 20px #ff6600); }
-      100% { transform: scale(1.65); filter: brightness(2.5) drop-shadow(0 0 12px #ff8844); }
+      0%   { transform: scale(1);    filter: none; opacity: 1; }
+      15%  { transform: scale(0.72); filter: brightness(6) drop-shadow(0 0 16px #fff); opacity: 1; }
+      45%  { transform: scale(2.2);  filter: brightness(7) drop-shadow(0 0 32px #ff8800) drop-shadow(0 0 64px #ff4400); opacity: 1; }
+      75%  { transform: scale(1.9);  filter: brightness(4) drop-shadow(0 0 20px #ff6600); opacity: 0.9; }
+      100% { transform: scale(1.5);  filter: brightness(1.5) drop-shadow(0 0 6px #ff8844); opacity: 0; }
     }
 
     .bomb-ring {
@@ -527,14 +527,14 @@
       border: 3px solid rgba(255, 136, 50, 0.95);
       box-shadow: 0 0 12px rgba(255, 100, 20, 0.8), inset 0 0 10px rgba(255, 100, 20, 0.4);
       pointer-events: none;
-      animation: bomb-ring-expand 0.45s ease-out forwards;
+      animation: bomb-ring-expand 0.6s ease-out forwards;
       z-index: 20;
     }
 
     @keyframes bomb-ring-expand {
       0%   { transform: scale(0.2); opacity: 1; }
-      55%  { opacity: 0.85; }
-      100% { transform: scale(3.3); opacity: 0; }
+      40%  { opacity: 0.85; }
+      100% { transform: scale(3.8); opacity: 0; }
     }
 
     .cell.bomb-victim {
@@ -864,7 +864,7 @@
 
     const SPECIALS = {
       bomb: {
-        animDuration: 450,
+        animDuration: 600,
 
         renderIcon() {
           const el = document.createElement('div');
