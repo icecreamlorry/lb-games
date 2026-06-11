@@ -1018,9 +1018,11 @@
         }
       }
 
-      let specialDelay = 0;
+      // Original non-bomb cells pop immediately — don't wait for the bomb chain
+      indices.forEach(i => { if (!firedBombs.has(i)) cellEls[i].classList.add('popping'); });
+
       if (waveData.length > 0) {
-        specialDelay = (waveData.length - 1) * CHAIN_STAGGER_MS + SPECIALS.bomb.animDuration;
+        const specialDelay = (waveData.length - 1) * CHAIN_STAGGER_MS + SPECIALS.bomb.animDuration;
         for (let w = 0; w < waveData.length; w++) {
           const { bombs, victims } = waveData[w];
           const doAnimate = () => {
@@ -1032,13 +1034,12 @@
           if (w === 0) doAnimate();
           else setTimeout(doAnimate, w * CHAIN_STAGGER_MS);
         }
+        // specialDelay >= animDuration (600ms) > pop-out (320ms), so original
+        // cells have already finished before this resolves.
         await new Promise(r => setTimeout(r, specialDelay));
+      } else {
+        await new Promise(r => setTimeout(r, 340));
       }
-
-      // animate pop; bomb victims disappear via bomb-victim-flash so exclude them
-      const victimSet = new Set(waveData.flatMap(w => w.victims));
-      [...poppedSet].forEach(i => { if (!victimSet.has(i)) cellEls[i].classList.add('popping'); });
-      await new Promise(r => setTimeout(r, 340));
 
       // tally score across all cleared tiles: initial group + bomb victims + chain reactions
       const pts = calcScore(poppedSet.size);
