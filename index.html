@@ -369,66 +369,17 @@
       color: rgba(0,245,255,0.3);
     }
 
-    /* ── high score table ─────────────────────────────────────────────── */
-    #highscore-panel {
-      width: 100%;
-      max-width: 360px;
-      border: 1px solid rgba(0,245,255,0.18);
-      border-radius: 4px;
-      background: rgba(0,245,255,0.03);
-      padding: 12px 16px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      box-shadow: inset 0 0 40px rgba(0,0,0,0.4);
-    }
-
-    .hs-title {
+    /* ── best score bar ──────────────────────────────────────────────── */
+    #best-score-bar {
       font-family: 'Orbitron', monospace;
-      font-size: 0.72rem;
-      letter-spacing: 0.22em;
-      color: var(--magenta);
-      text-shadow: 0 0 8px var(--magenta);
-      text-align: center;
-    }
-
-    #hs-list { display: flex; flex-direction: column; gap: 2px; }
-
-    .hs-row {
-      display: grid;
-      grid-template-columns: 30px 1fr;
-      gap: 10px;
-      align-items: baseline;
-      font-size: 0.82rem;
-      padding: 3px 6px;
-      border-radius: 2px;
-    }
-
-    .hs-rank {
-      color: var(--yellow);
-      text-shadow: 0 0 6px var(--yellow);
-      font-family: 'Orbitron', monospace;
-      font-size: 0.72rem;
-    }
-    .hs-score {
-      color: #fff;
-      font-family: 'Orbitron', monospace;
-      text-shadow: 0 0 7px var(--cyan);
-      justify-self: end;
-    }
-
-    .hs-row.fresh { animation: hs-flash 1.4s ease; }
-    @keyframes hs-flash {
-      0%, 100% { background: transparent; }
-      25%      { background: rgba(255,230,0,0.18); }
-    }
-
-    .hs-empty {
-      text-align: center;
-      color: rgba(0,245,255,0.3);
-      font-size: 0.75rem;
+      font-size: 0.6rem;
       letter-spacing: 0.2em;
-      padding: 8px;
+      color: rgba(0,245,255,0.35);
+      text-align: center;
+    }
+    #best-val {
+      color: rgba(0,245,255,0.65);
+      transition: color 0.3s;
     }
 
     /* ── overlays (start screen + game over) ──────────────────────────── */
@@ -684,17 +635,17 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      :root { --cell-px: 40px; --grid-gap: 4px; }
-      body  { padding: 10px 12px 14px; gap: 10px; }
-      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 8px; }
-      #side-col { width: 100%; }
-      #highscore-panel { max-width: none; }
-      h1 { font-size: 1.2rem; }
-      #help-panel { padding: 24px 18px 20px; }
-      .help-row { grid-template-columns: 80px 1fr; }
+      :root { --cell-px: 34px; --grid-gap: 3px; }
+      body  { padding: 6px 8px 8px; gap: 6px; }
+      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 6px; }
+      #side-col { display: none; }
+      #board-col { gap: 6px; }
+      h1 { font-size: 1.1rem; }
+      #help-panel { padding: 20px 16px 18px; }
+      .help-row { grid-template-columns: 70px 1fr; }
     }
     @media (max-width: 380px) {
-      :root { --cell-px: 36px; }
+      :root { --cell-px: 30px; }
     }
   </style>
 </head>
@@ -736,90 +687,49 @@
       </div>
 
       <div class="status-bar" id="status"></div>
+      <div id="best-score-bar">HIGH SCORE &nbsp;<span id="best-val">—</span></div>
     </div>
 
     <div id="side-col">
       <div id="legend"></div>
-
-      <div id="highscore-panel">
-        <div class="hs-title">// BEST //</div>
-        <div id="hs-list"></div>
-      </div>
     </div>
   </div>
 
   <div id="help-modal">
     <div id="help-panel">
       <button id="help-close">✕</button>
-      <div class="help-heading">// HOW TO PLAY //</div>
+      <div class="help-heading">// CHROMAGRID //</div>
 
       <div class="help-section">
-        <div class="help-label">OBJECTIVE</div>
-        <div class="help-note">Clear colour groups to score points before the 2-minute timer runs out. Bigger groups score exponentially more.</div>
+        <div class="help-note">2 minutes. Flip tiles, match colours, pop groups. Score exponentially more for bigger combos.</div>
       </div>
 
       <div class="help-section">
         <div class="help-label">CONTROLS</div>
         <div class="help-row">
-          <span class="help-key">TAP / CLICK</span>
-          <span class="help-val">Flip a tile — reveals its hidden face colour</span>
+          <span class="help-key">TAP</span>
+          <span class="help-val">Flip a tile</span>
         </div>
         <div class="help-row">
           <span class="help-key">HOLD 0.5s</span>
-          <span class="help-val">Activate a group — hold any tile to check its connected same-colour region</span>
+          <span class="help-val">Pop a connected group of 4+ same-colour tiles</span>
         </div>
       </div>
 
       <div class="help-section">
-        <div class="help-label">CLEARING</div>
-        <div class="help-note">A connected group of 4+ tiles showing the same colour clears on a long press. New tiles fall from above to fill the gaps.</div>
-      </div>
-
-      <div class="help-section">
-        <div class="help-label">SCORING</div>
-        <div class="help-row">
-          <span class="help-key">4 tiles</span>
-          <span class="help-val">100 pts</span>
-        </div>
-        <div class="help-row">
-          <span class="help-key">8 tiles</span>
-          <span class="help-val">400 pts</span>
-        </div>
-        <div class="help-row">
-          <span class="help-key">12 tiles</span>
-          <span class="help-val">900 pts &nbsp;—&nbsp; formula: n² × 6.25</span>
-        </div>
-      </div>
-
-      <div class="help-section">
-        <div class="help-label">SPECIAL: BOMB ⊕</div>
-        <div class="help-row">
-          <span class="help-key">SPAWNS</span>
-          <span class="help-val">Clear a group of 6+ tiles — a bomb drops into that column, coloured to match the cleared group</span>
-        </div>
-        <div class="help-row">
-          <span class="help-key">TRIGGER</span>
-          <span class="help-val">Include the bomb tile in any 4+ group you pop</span>
-        </div>
-        <div class="help-row">
-          <span class="help-key">EFFECT</span>
-          <span class="help-val">Destroys all 8 surrounding tiles regardless of colour</span>
-        </div>
-        <div class="help-row">
-          <span class="help-key">CHAINS</span>
-          <span class="help-val">If the blast reaches another bomb, it detonates too — cascades fire in sequence</span>
-        </div>
+        <div class="help-label">BOMB ⊕</div>
+        <div class="help-note">Pop 6+ tiles to spawn a bomb. Pop it as part of any group to obliterate all 8 surrounding tiles — and chain-detonate any bombs caught in the blast.</div>
       </div>
 
       <div class="help-section">
         <div class="help-label">BUTTONS</div>
         <div class="help-row">
-          <span class="help-key">[ FLIP ALL ]</span>
-          <span class="help-val">Flip every tile to the same face at once</span>
+          <span class="help-key">FLIP ALL</span>
+          <span class="help-val">Flip every tile at once</span>
         </div>
         <div class="help-row">
-          <span class="help-key">[ RESET ]</span>
-          <span class="help-val">Abandon the run and return to start</span>
+          <span class="help-key">RESET</span>
+          <span class="help-val">Abandon the run</span>
         </div>
       </div>
 
@@ -855,15 +765,15 @@
 
     function initLayout() {
       if (window.innerWidth <= 760) {
-        COLS = 8; ROWS = 8;
+        COLS = 8; ROWS = 12;
       } else {
         COLS = 12; ROWS = 10;
       }
     }
 
     function getCellStride() {
-      if (window.innerWidth <= 380) return 40; // 36px cell + 4px gap
-      if (window.innerWidth <= 760) return 44; // 40px cell + 4px gap
+      if (window.innerWidth <= 380) return 33; // 30px cell + 3px gap
+      if (window.innerWidth <= 760) return 37; // 34px cell + 3px gap
       return 58; // 52px cell + 6px gap
     }
 
@@ -1404,28 +1314,15 @@
       try { localStorage.setItem(HS_KEY, JSON.stringify(highScores)); } catch {}
     }
 
-    function renderHighScores(freshTs) {
-      const list = document.getElementById('hs-list');
-      list.innerHTML = '';
-      if (!highScores.length) {
-        const empty = document.createElement('div');
-        empty.className = 'hs-empty';
-        empty.textContent = 'NO RECORDS YET';
-        list.appendChild(empty);
-        return;
+    function renderBestScore(flash) {
+      const el = document.getElementById('best-val');
+      if (!el) return;
+      if (!highScores.length) { el.textContent = '—'; return; }
+      el.textContent = highScores[0].score.toLocaleString();
+      if (flash) {
+        el.style.color = 'var(--yellow)';
+        setTimeout(() => { el.style.color = ''; }, 1200);
       }
-      highScores.forEach((entry, i) => {
-        const row  = document.createElement('div');
-        row.className = 'hs-row' + (entry.ts === freshTs ? ' fresh' : '');
-        const rank = document.createElement('span');
-        rank.className = 'hs-rank';
-        rank.textContent = String(i + 1).padStart(2, '0');
-        const sc   = document.createElement('span');
-        sc.className = 'hs-score';
-        sc.textContent = entry.score.toLocaleString();
-        row.append(rank, sc);
-        list.appendChild(row);
-      });
     }
 
     // Does this score earn a place on the board?
@@ -1441,11 +1338,11 @@
       highScores.sort((a, b) => b.score - a.score);
       highScores = highScores.slice(0, HS_MAX);
       saveHighScores();
-      renderHighScores(ts);
+      renderBestScore(true);
     }
 
     highScores = loadHighScores();
-    renderHighScores();
+    renderBestScore();
 
     document.getElementById('btn-reset').addEventListener('click', () => {
       if (isAnimating) return;
