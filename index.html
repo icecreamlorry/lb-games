@@ -1266,7 +1266,8 @@
       btnFlipAll.disabled = true;  // grey out so it can't be interrupted
 
       // 1. let anything already running (e.g. a drop) finish first
-      await waitForGridAnimations();
+      // timeout guards against paused animations (backgrounded tab) hanging forever
+      await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 400))]);
 
       // 2. flip every card via the CSS transition (no rebuild = it animates)
       const target = state.some(s => !s.flipped); // any face-up -> flip all down
@@ -1280,7 +1281,7 @@
 
       // 3. wait for the flip transition to complete
       await nextFrame();              // ensure the transitions have registered
-      await waitForGridAnimations();
+      await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 700))]);
 
       updateStatus();
       isAnimating = false;
@@ -1343,16 +1344,21 @@
       renderTimer(TIME_MS);
       startOverlay.classList.add('hidden');
       gameoverOverlay.classList.add('hidden');
-      btnFlipAll.disabled = false;
-
       // fill the board with the intro cascade
       state = Array.from({ length: ROWS * COLS }, newCell);
       buildGrid(new Map(), true);
 
-      // the clock starts once the tiles have finished dropping in
-      await nextFrame();
-      await waitForGridAnimations();
+      // wait for the staggered intro drop to finish (time-based so it's immune
+      // to background-tab animation pausing that hangs WAAPI .finished promises)
+      const cascadeMs = (ROWS - 1) * 30 + (COLS - 1) * 12 + 420 + 150;
+      await new Promise(r => setTimeout(r, cascadeMs));
       if (phase !== 'playing') return; // reset during the cascade
+      // clean up any intro state that didn't self-remove (backgrounded tab)
+      document.querySelectorAll('.cell.intro').forEach(c => {
+        c.classList.remove('intro');
+        c.style.removeProperty('animation-delay');
+      });
+      btnFlipAll.disabled = false;     // enable only after cascade finishes
       timerDeadline = Date.now() + TIME_MS;
       tickTimer();
       timerInterval = setInterval(tickTimer, 200);
