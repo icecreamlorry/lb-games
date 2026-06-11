@@ -635,7 +635,7 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      :root { --cell-px: 34px; --grid-gap: 3px; } /* JS overrides --cell-px at runtime */
+      :root { --cell-px: 34px; --grid-gap: 4px; } /* JS overrides --cell-px at runtime */
       body  { padding: 6px 12px 8px; gap: 6px; }
       #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 3px; }
       #side-col { display: none; }
@@ -776,7 +776,7 @@
     function initLayout() {
       if (window.innerWidth <= 760) {
         COLS = 8; ROWS = 12;
-        const gapPx    = 3;
+        const gapPx    = 4;
         const bodyPadX = 12; // each side, matches CSS padding: 6px 12px
         const gridPadX = 3;  // each side, matches #grid padding: 3px
         // Width: fit COLS cols + gaps + grid padding within body content area
