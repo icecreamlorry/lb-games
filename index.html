@@ -1269,16 +1269,11 @@
       // 600 ms > 450 ms transition; guards against backgrounded-tab hangs
       await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 600))]);
 
-      // 2. flip all cards toward the direction the MAJORITY of tiles need to move,
-      // so FLIP ALL always causes significant visible change (never just undoes recent flips)
-      const faceUpCount = state.filter(s => !s.flipped).length;
-      const target = faceUpCount * 2 >= state.length; // majority/tied face-up → flip all face-down
-      const cards  = [...document.querySelectorAll('.card')];
+      // 2. toggle every tile to its opposite state — every tile animates, none sit still
+      const cards = [...document.querySelectorAll('.card')];
       state.forEach((s, i) => {
-        if (s.flipped !== target) {
-          s.flipped = target;
-          cards[i].classList.toggle('flipped', target);
-        }
+        s.flipped = !s.flipped;
+        cards[i].classList.toggle('flipped');
       });
 
       // 3. release game lock immediately (state committed); keep button disabled
