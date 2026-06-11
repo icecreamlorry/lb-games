@@ -554,20 +554,18 @@
 
     /* ── help button & modal ─────────────────────────────────────────────── */
     #help-btn {
-      position: fixed;
-      top: 14px;
-      right: 16px;
-      z-index: 500;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       padding: 0;
       border-radius: 50%;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
       letter-spacing: 0;
       color: var(--cyan);
       border-color: var(--cyan);
       text-shadow: 0 0 8px var(--cyan);
       box-shadow: 0 0 10px rgba(0,245,255,0.25), inset 0 0 8px rgba(0,245,255,0.05);
+      flex-shrink: 0;
+      align-self: center;
     }
     #help-btn:hover {
       background: rgba(0,245,255,0.12);
@@ -679,7 +677,6 @@
       #side-col { width: 100%; }
       #highscore-panel { max-width: none; }
       h1 { font-size: 1.2rem; }
-      #help-btn { top: 10px; right: 12px; }
       #help-panel { padding: 24px 18px 20px; }
       .help-row { grid-template-columns: 80px 1fr; }
     }
@@ -689,8 +686,6 @@
   </style>
 </head>
 <body>
-
-  <button id="help-btn" title="How to play">?</button>
 
   <header>
     <h1>CHROMAGRID</h1>
@@ -704,6 +699,7 @@
         <span id="score-delta"></span>
         <span id="timer-label">TIME</span>
         <span id="timer">2:00</span>
+        <button id="help-btn" title="How to play">?</button>
       </div>
 
       <div id="grid-wrap">
