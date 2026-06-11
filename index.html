@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CHROMAGRID // SYS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -337,6 +337,7 @@
       border: 1px solid var(--magenta);
       border-radius: 2px;
       padding: 8px 20px;
+      touch-action: manipulation;
       font-family: 'Orbitron', monospace;
       font-size: 0.72rem;
       font-weight: 600;
@@ -1439,6 +1440,8 @@
     document.getElementById('help-got-it').addEventListener('click', () => helpModal.classList.add('hidden'));
     helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.classList.add('hidden'); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') helpModal.classList.add('hidden'); });
+    document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+    document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
 
     const SITE_URL = 'https://icecreamlorry.github.io/chromagrid/';
 
