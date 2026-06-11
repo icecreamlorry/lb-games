@@ -15,6 +15,8 @@
       --yellow:  #ffe600;
       --dark:    #04040f;
       --panel:   #07071a;
+      --cell-px: 52px;
+      --grid-gap: 6px;
     }
 
     body {
@@ -197,8 +199,8 @@
 
     #grid {
       display: grid;
-      grid-template-columns: repeat(12, 52px);
-      gap: 6px;
+      grid-template-columns: repeat(12, var(--cell-px));
+      gap: var(--grid-gap);
       padding: 12px;
       background: var(--panel);
       border: 1px solid rgba(0,245,255,0.18);
@@ -209,12 +211,14 @@
     }
 
     .cell {
-      width: 52px;
-      height: 52px;
+      width: var(--cell-px);
+      height: var(--cell-px);
       perspective: 500px;
       cursor: pointer;
       user-select: none;
       -webkit-user-select: none;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .cell--empty { cursor: default; }
@@ -547,6 +551,18 @@
       60%  { opacity: 1; }
       to   { transform: translateY(0); opacity: 1; }
     }
+    /* ── mobile layout ──────────────────────────────────────────────────── */
+    @media (max-width: 760px) {
+      :root { --cell-px: 40px; --grid-gap: 4px; }
+      body  { padding: 10px 12px 14px; gap: 10px; }
+      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 8px; }
+      #side-col { width: 100%; }
+      #highscore-panel { max-width: none; }
+      h1 { font-size: 1.2rem; }
+    }
+    @media (max-width: 380px) {
+      :root { --cell-px: 36px; }
+    }
   </style>
 </head>
 <body>
@@ -627,11 +643,25 @@
       'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
     ];
 
-    const COLS        = 12;
-    const ROWS        = 10;
-    const CELL_PX     = 58;   // 52px tile + 6px gap
-    const PRESS_MS    = 500;
-    const TIME_MS     = 120000; // 2 minute run
+    let COLS = 12, ROWS = 10;
+    const PRESS_MS = 500;
+    const TIME_MS  = 120000; // 2 minute run
+
+    function initLayout() {
+      if (window.innerWidth <= 380) {
+        COLS = 8; ROWS = 8;
+      } else if (window.innerWidth <= 760) {
+        COLS = 8; ROWS = 10;
+      } else {
+        COLS = 12; ROWS = 10;
+      }
+    }
+
+    function getCellStride() {
+      if (window.innerWidth <= 380) return 40; // 36px cell + 4px gap
+      if (window.innerWidth <= 760) return 44; // 40px cell + 4px gap
+      return 58; // 52px cell + 6px gap
+    }
 
     // ── state ──────────────────────────────────────────────────────────────
     // Each entry: { frontColor, backColor, shape, flipped }
@@ -803,7 +833,7 @@
         // drop animation (on the cell, so the card's flip transform is untouched)
         if (dropInfo.has(i)) {
           const fallen = dropInfo.get(i);
-          cell.style.setProperty('--drop-y', `${-fallen * CELL_PX}px`);
+          cell.style.setProperty('--drop-y', `${-fallen * getCellStride()}px`);
           cell.classList.add('dropping');
           cell.addEventListener('animationend', () => {
             cell.classList.remove('dropping');
@@ -973,6 +1003,7 @@
     const gameoverOverlay = document.getElementById('gameover-overlay');
 
     function goIdle() {
+      initLayout();
       stopClock();
       phase = 'idle';
       score = 0;
@@ -988,6 +1019,7 @@
 
     async function startGame() {
       if (phase === 'playing') return;
+      initLayout();
       phase = 'playing';
       score = 0;
       document.getElementById('score-val').textContent = '0';
