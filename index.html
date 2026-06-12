@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v41</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v42</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -906,7 +906,7 @@
       if (charge) {
         const t = Math.min(1, (now - charge.start) / POP_MS);
         active = true;
-        sc *= 1 + Math.sin(t * Math.PI * 6) * 0.12 * easeOutCubic(t);
+        sc *= 1 + Math.sin(t * Math.PI * 3) * 0.12 * easeOutCubic(t);
         glowColor = 'rgba(255,100,0,0.9)';
         glowBlur = 6 + 24 * easeOutCubic(t);
         if (t > 0.8) white = easeOutCubic((t - 0.8) / 0.2) * 0.75;
