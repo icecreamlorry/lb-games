@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v45</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v46</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -1297,8 +1297,10 @@
               const [bx, by] = cellCenter(bi);
               const dist = Math.hypot(vx - bx, vy - by);
               const maxD = bombMaxDist.get(bi);
-              const ratio = dist / maxD;
-              minDelay = Math.min(minDelay, ratio * RING_MS);
+              const maxSc = (maxD / (CELL / 2)) * 1.15;
+              const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.15) / maxSc));
+              const waveT = 1 - Math.cbrt(1 - ratio);
+              minDelay = Math.min(minDelay, waveT * RING_MS);
             }
             setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
           });
