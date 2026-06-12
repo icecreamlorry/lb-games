@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v44</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v45</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -1376,7 +1376,6 @@
       const stride = CELL + GAP;
       const c = Math.floor(x / stride), r = Math.floor(y / stride);
       if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
-      if (x - c * stride > CELL || y - r * stride > CELL) return -1; // in a gap
       return idx(r, c);
     }
 
