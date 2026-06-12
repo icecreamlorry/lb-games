@@ -499,6 +499,8 @@
       color: #fff;
     }
 
+    #start-cbm-row { width: 200px; }
+
     /* ── colour-blind toggle ────────────────────────────────────────────── */
     .cbm-row {
       display: flex;
@@ -596,6 +598,13 @@
         <div id="start-overlay">
           <div class="ov-tag">// SYSTEM READY //</div>
           <button id="btn-start">START</button>
+          <div class="cbm-row" id="start-cbm-row">
+            <span class="cbm-label">Colour-blind mode</span>
+            <label class="cbm-toggle">
+              <input type="checkbox" id="cbm-start">
+              <span class="cbm-slider"></span>
+            </label>
+          </div>
         </div>
 
         <div id="gameover-overlay" class="hidden">
@@ -1762,12 +1771,17 @@
     document.getElementById('help-got-it').addEventListener('click', () => helpModal.classList.add('hidden'));
     helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.classList.add('hidden'); });
     const cbmCheck = document.getElementById('cbm-check');
-    cbmCheck.checked = colourBlindMode;
-    cbmCheck.addEventListener('change', () => {
-      colourBlindMode = cbmCheck.checked;
-      localStorage.setItem('chromagrid-cbm', colourBlindMode ? '1' : '0');
+    const cbmStart = document.getElementById('cbm-start');
+    function setCBM(val) {
+      colourBlindMode = val;
+      cbmCheck.checked = val;
+      cbmStart.checked = val;
+      localStorage.setItem('chromagrid-cbm', val ? '1' : '0');
       invalidate();
-    });
+    }
+    setCBM(colourBlindMode);
+    cbmCheck.addEventListener('change', () => setCBM(cbmCheck.checked));
+    cbmStart.addEventListener('change', () => setCBM(cbmStart.checked));
     document.addEventListener('keydown', e => { if (e.key === 'Escape') helpModal.classList.add('hidden'); });
     document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
     document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
