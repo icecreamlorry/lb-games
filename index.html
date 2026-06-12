@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v39</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v40</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -751,6 +751,7 @@
       drops:     new Map(),  // {start, fromPx}
       intro:     new Map(),  // {start, delay}
       bombPulse: new Map(),
+      bombCharge: new Map(),
       victims:   new Map(),
       noMatch:   new Map(),
       rings:     [],         // {cx, cy, start}
@@ -899,6 +900,16 @@
         active = true;
         sc    *= kf(t, [[0, 1], [0.35, 1.45], [1, 0]]);
         alpha *= kf(t, [[0, 1], [0.35, 0.9], [1, 0]]);
+      }
+
+      const charge = fx.bombCharge.get(i);
+      if (charge) {
+        const t = Math.min(1, (now - charge.start) / POP_MS);
+        active = true;
+        sc *= 1 + Math.sin(t * Math.PI * 7) * 0.12 * easeOutCubic(t);
+        glowColor = 'rgba(255,100,0,0.9)';
+        glowBlur = 6 + 24 * easeOutCubic(t);
+        if (t > 0.8) white = easeOutCubic((t - 0.8) / 0.2) * 0.75;
       }
 
       const pulse = fx.bombPulse.get(i);
@@ -1115,37 +1126,44 @@
       invalidate();
 
       if (waveData.length > 0) {
-        const specialDelay = (waveData.length - 1) * CHAIN_STAGGER_MS + SPECIALS.bomb.animDuration;
-        for (let w = 0; w < waveData.length; w++) {
+        // Charge wave-0 bombs while the original pops play out
+        waveData[0].bombs.forEach(b => { fx.bombCharge.set(b, { start: t0 }); fx.flips.delete(b); });
+        invalidate();
+
+        const fireWave = w => {
           const { bombs, victims } = waveData[w];
-          const fire = () => {
-            const t = performance.now();
-            for (const bombIdx of bombs) {
-              fx.bombPulse.set(bombIdx, { start: t });
-              const [cx, cy] = cellCenter(bombIdx);
-              fx.rings.push({ cx, cy, start: t });
+          const t = performance.now();
+          for (const bombIdx of bombs) {
+            fx.bombCharge.delete(bombIdx);
+            fx.bombPulse.set(bombIdx, { start: t });
+            const [cx, cy] = cellCenter(bombIdx);
+            fx.rings.push({ cx, cy, start: t });
+          }
+          victims.forEach(vi => {
+            fx.flips.delete(vi);
+            // schedule victim pop to coincide with the blast ring reaching that cell
+            const [vx, vy] = cellCenter(vi);
+            let minDelay = Infinity;
+            for (const bi of bombs) {
+              const [bx, by] = cellCenter(bi);
+              const dist = Math.hypot(vx - bx, vy - by);
+              const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.2) / 3.6));
+              const waveT = 1 - Math.cbrt(1 - ratio);
+              minDelay = Math.min(minDelay, waveT * RING_MS);
             }
-            victims.forEach(vi => {
-              fx.flips.delete(vi);
-              // schedule victim pop to coincide with the blast ring reaching that cell
-              const [vx, vy] = cellCenter(vi);
-              let minDelay = Infinity;
-              for (const bi of bombs) {
-                const [bx, by] = cellCenter(bi);
-                const dist = Math.hypot(vx - bx, vy - by);
-                const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.2) / 3.6));
-                const waveT = 1 - Math.cbrt(1 - ratio);
-                minDelay = Math.min(minDelay, waveT * RING_MS);
-              }
-              setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
-            });
-            invalidate();
-          };
-          if (w === 0) fire();
-          else setTimeout(fire, w * CHAIN_STAGGER_MS);
-        }
-        // specialDelay >= ring (600ms) > pop (320ms): original cells are done first
-        await sleep(specialDelay);
+            setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
+          });
+          invalidate();
+        };
+
+        // Wave 0 fires after pops finish; each subsequent wave staggers from there
+        setTimeout(() => {
+          fireWave(0);
+          for (let w = 1; w < waveData.length; w++) setTimeout(() => fireWave(w), w * CHAIN_STAGGER_MS);
+        }, POP_MS);
+
+        const totalDelay = POP_MS + (waveData.length - 1) * CHAIN_STAGGER_MS + RING_MS + VICTIM_MS;
+        await sleep(totalDelay);
       } else {
         await sleep(340);
       }
@@ -1194,7 +1212,7 @@
       }
 
       // swap pop/explosion effects for drop animations on the compacted board
-      fx.pops.clear(); fx.victims.clear(); fx.bombPulse.clear(); fx.flips.clear();
+      fx.pops.clear(); fx.victims.clear(); fx.bombPulse.clear(); fx.bombCharge.clear(); fx.flips.clear();
       const t1 = performance.now();
       dropInfo.forEach((fallen, ni) => fx.drops.set(ni, { start: t1, fromPx: fallen * (CELL + GAP) }));
       invalidate();
