@@ -581,7 +581,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v56</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v57</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -1792,8 +1792,12 @@
     const SITE_URL = 'https://icecreamlorry.github.io/chromagrid/';
 
     document.getElementById('btn-copy').addEventListener('click', async () => {
+      const best = highScores.length ? highScores[0].score : null;
+      const text = best
+        ? `scored ${best.toLocaleString()} on CHROMAGRID — can you beat it?\n${SITE_URL}`
+        : `playing CHROMAGRID — 2 minutes, beat your high score.\n${SITE_URL}`;
       try {
-        await navigator.clipboard.writeText(SITE_URL);
+        await navigator.clipboard.writeText(text);
         const btn = document.getElementById('btn-copy');
         btn.classList.add('copied');
         setTimeout(() => btn.classList.remove('copied'), 1500);
@@ -1803,10 +1807,14 @@
     document.getElementById('btn-share').addEventListener('click', async () => {
       const btn = document.getElementById('btn-share');
       try {
+        const best = highScores.length ? highScores[0].score : null;
+        const shareText = best
+          ? `scored ${best.toLocaleString()} on CHROMAGRID — can you beat it?`
+          : 'CHROMAGRID — 2 minutes, beat your high score.';
         if (navigator.share) {
-          await navigator.share({ title: 'CHROMAGRID', text: 'Cyberpunk tile-matching game — 2 minutes, beat your high score.', url: SITE_URL });
+          await navigator.share({ title: 'CHROMAGRID', text: shareText, url: SITE_URL });
         } else {
-          await navigator.clipboard.writeText(SITE_URL);
+          await navigator.clipboard.writeText(shareText + '\n' + SITE_URL);
           btn.classList.add('copied');
           setTimeout(() => btn.classList.remove('copied'), 1500);
         }
