@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v37</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v38</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -669,9 +669,9 @@
     const POP_MS     = 320;
     const DROP_MS    = 300;
     const INTRO_MS   = 420;
-    const BOMB_MS    = 320;       // bomb-pulse
-    const RING_MS    = 600;       // expanding blast ring
-    const VICTIM_MS  = 320;
+    const BOMB_MS    = 160;       // bomb-pulse
+    const RING_MS    = 300;       // expanding blast ring
+    const VICTIM_MS  = 160;
     const NOMATCH_MS = 380;
     const TIME_MS    = 120000;    // 2-minute run
     const DEBUG      = false;     // TEMPORARY — set false (or delete debug block below) to remove debug UI
@@ -967,7 +967,7 @@
 
     // ── special items registry ─────────────────────────────────────────────
     const BOMB_SPAWN_THRESHOLD = 6;
-    const CHAIN_STAGGER_MS     = 180;
+    const CHAIN_STAGGER_MS     = 90;
 
     const SPECIALS = {
       bomb: {
