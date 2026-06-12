@@ -708,7 +708,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v33</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v34</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -1292,32 +1292,32 @@
       updateStatus();
       isAnimating = false;
 
-      // Stagger rows top-to-bottom so the last row finishes at ~2 s
-      const rowStagger = Math.round((2000 - FLIP_MS) / (ROWS - 1));
+      // Stagger columns left-to-right so the last column finishes at ~1 s
+      const colStagger = Math.round((1000 - FLIP_MS) / (COLS - 1));
 
-      for (let row = 0; row < ROWS; row++) {
-        const t    = row * rowStagger;
-        const cols = Array.from({ length: COLS }, (_, c) => idx(row, c));
+      for (let col = 0; col < COLS; col++) {
+        const t    = col * colStagger;
+        const rows = Array.from({ length: ROWS }, (_, r) => idx(r, col));
 
         setTimeout(() => {
-          cols.forEach(i => cards[i].classList.add(
+          rows.forEach(i => cards[i].classList.add(
             state[i].flipped ? 'flipping-to-back' : 'flipping-to-front'
           ));
         }, t);
 
         setTimeout(() => {
-          cols.forEach(i => {
+          rows.forEach(i => {
             cards[i].style.background = visColor(state[i]).hex;
             cards[i].classList.toggle('mirrored', state[i].flipped);
           });
         }, t + FLIP_MS / 2);
 
         setTimeout(() => {
-          cols.forEach(i => cards[i].classList.remove('flipping-to-back', 'flipping-to-front'));
+          rows.forEach(i => cards[i].classList.remove('flipping-to-back', 'flipping-to-front'));
         }, t + FLIP_MS);
       }
 
-      const totalMs = (ROWS - 1) * rowStagger + FLIP_MS;
+      const totalMs = (COLS - 1) * colStagger + FLIP_MS;
       setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, totalMs + 50);
     }
 
