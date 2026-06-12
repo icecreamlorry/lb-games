@@ -15,8 +15,6 @@
       --yellow:  #ffe600;
       --dark:    #04040f;
       --panel:   #07071a;
-      --cell-px: 52px;
-      --grid-gap: 6px;
     }
 
     body {
@@ -204,9 +202,6 @@
     #grid-wrap { position: relative; }
 
     #grid {
-      display: grid;
-      grid-template-columns: repeat(12, var(--cell-px));
-      gap: var(--grid-gap);
       padding: 12px;
       background: var(--panel);
       border: 1px solid rgba(0,245,255,0.18);
@@ -214,123 +209,16 @@
       box-shadow:
         0 0 30px rgba(0,245,255,0.07),
         inset 0 0 60px rgba(0,0,0,0.5);
+      line-height: 0; /* no stray inline gap under the canvas */
     }
 
-    .cell {
-      width: var(--cell-px);
-      height: var(--cell-px);
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
+    /* The whole board renders into this one canvas — tiles, flips, pops,
+       drops and bomb effects are all drawn per-frame in JS. One layer for
+       the compositor regardless of how many tiles are animating. */
+    #grid-canvas {
+      display: block;
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
-      position: relative;
-    }
-
-    .cell--empty { cursor: default; }
-
-    /* Single-layer tile: one element carries the colour + clip-path.
-       A flip is a transform-only keyframe spin; JS swaps the colour while
-       the tile is edge-on (front/back share shape + icon, so this is
-       pixel-equivalent to a two-faced 3D flip). No preserve-3d, no
-       backface-visibility, no per-cell 3D context — half the layers. */
-    /* .mirrored drives the resting scaleX(-1) for flipped cards. A plain
-       class transform is compositor-safe; a CSS variable in transform is
-       not (it's resolved on the main thread every frame). */
-    .card {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      transform: perspective(500px);
-      transition: filter 0.2s;
-    }
-    .card.mirrored { transform: perspective(500px) scaleX(-1); }
-
-    .card.flipping-to-back  { animation: card-flip-to-back  0.45s forwards; }
-    .card.flipping-to-front { animation: card-flip-to-front 0.45s forwards; }
-
-    @keyframes card-flip-to-back {
-      0%    { transform: perspective(500px) scaleX(1) rotateY(0deg);
-              animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.6); }
-      49.9% { transform: perspective(500px) scaleX(1) rotateY(90deg); }
-      50.1% { transform: perspective(500px) scaleX(-1) rotateY(-90deg);
-              animation-timing-function: cubic-bezier(0.2, 0.4, 0.2, 1); }
-      100%  { transform: perspective(500px) scaleX(-1) rotateY(0deg); }
-    }
-
-    @keyframes card-flip-to-front {
-      0%    { transform: perspective(500px) scaleX(-1) rotateY(0deg);
-              animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.6); }
-      49.9% { transform: perspective(500px) scaleX(-1) rotateY(90deg); }
-      50.1% { transform: perspective(500px) scaleX(1) rotateY(-90deg);
-              animation-timing-function: cubic-bezier(0.2, 0.4, 0.2, 1); }
-      100%  { transform: perspective(500px) scaleX(1) rotateY(0deg); }
-    }
-
-    /* hover effects only on devices with a real pointer — on touch they
-       just cause sticky-hover filter repaints after every tap */
-    @media (hover: hover) {
-      .cell:hover .card {
-        filter:
-          drop-shadow(0 0 3px rgba(0,245,255,0.9))
-          drop-shadow(0 0 8px rgba(0,245,255,0.5));
-        transform: perspective(500px) rotateY(18deg) scale(1.1);
-      }
-      .cell:hover .card.mirrored {
-        transform: perspective(500px) scaleX(-1) rotateY(18deg) scale(1.1);
-      }
-
-      /* override hover tilt while charging for long press */
-      .cell.pressing:hover .card         { transform: perspective(500px); }
-      .cell.pressing:hover .card.mirrored { transform: perspective(500px) scaleX(-1); }
-    }
-
-    /* Long-press charge ring */
-    .cell.pressing .card {
-      animation: press-charge 0.5s linear forwards;
-    }
-
-    @keyframes press-charge {
-      0%   { filter: drop-shadow(0 0 2px rgba(0,245,255,0.4)); }
-      100% { filter: drop-shadow(0 0 8px var(--cyan)) drop-shadow(0 0 20px var(--cyan)) brightness(1.6); }
-    }
-
-    /* Pop animation — applied to the CELL, not the card, so it can never
-       fight an in-flight flip animation on the card. */
-    .cell.popping {
-      pointer-events: none;
-      animation: pop-out 0.32s ease-in forwards;
-    }
-
-    @keyframes pop-out {
-      0%   { transform: scale(1)    rotate(0deg);  opacity: 1; }
-      35%  { transform: scale(1.28) rotate(4deg);  opacity: 1; }
-      100% { transform: scale(0)    rotate(-8deg); opacity: 0; }
-    }
-
-    /* Drop animation — also applied to the CELL for the same reason. */
-    .cell.dropping {
-      animation: drop-fall 0.3s cubic-bezier(0.2, 0, 0.4, 1) forwards;
-    }
-
-    @keyframes drop-fall {
-      from { transform: translateY(var(--drop-y)); }
-      to   { transform: translateY(0); }
-    }
-
-    /* No-match flash */
-    .card.no-match {
-      animation: no-match-flash 0.38s ease;
-    }
-
-    @keyframes no-match-flash {
-      0%, 100% { filter: none; }
-      40%      { filter: drop-shadow(0 0 6px #ff4040) brightness(1.5); }
-    }
-
-    /* Highlight group on hover during long press */
-    .cell.in-group .card {
-      filter: drop-shadow(0 0 5px var(--cyan)) brightness(1.3);
     }
 
     #controls {
@@ -494,68 +382,6 @@
       margin-bottom: 6px;
     }
 
-    /* ── first-fill intro drop (on the cell, so the flip stays intact) ── */
-    .cell.intro {
-      animation: intro-drop 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
-    }
-    @keyframes intro-drop {
-      from { transform: translateY(-60px); opacity: 0; }
-      60%  { opacity: 1; }
-      to   { transform: translateY(0); opacity: 1; }
-    }
-
-    /* ── special items ───────────────────────────────────────────────────── */
-    .special-icon {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .cell.bomb-exploding {
-      animation: bomb-pulse 0.45s ease-out forwards;
-      z-index: 5;
-    }
-
-    @keyframes bomb-pulse {
-      0%   { transform: scale(1);    filter: none; opacity: 1; }
-      15%  { transform: scale(0.72); filter: brightness(6) drop-shadow(0 0 16px #fff); opacity: 1; }
-      45%  { transform: scale(2.2);  filter: brightness(7) drop-shadow(0 0 32px #ff8800) drop-shadow(0 0 64px #ff4400); opacity: 1; }
-      75%  { transform: scale(1.9);  filter: brightness(4) drop-shadow(0 0 20px #ff6600); opacity: 0.9; }
-      100% { transform: scale(1.5);  filter: brightness(1.5) drop-shadow(0 0 6px #ff8844); opacity: 0; }
-    }
-
-    .bomb-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 3px solid rgba(255, 136, 50, 0.95);
-      box-shadow: 0 0 12px rgba(255, 100, 20, 0.8), inset 0 0 10px rgba(255, 100, 20, 0.4);
-      pointer-events: none;
-      animation: bomb-ring-expand 0.6s ease-out forwards;
-      z-index: 20;
-    }
-
-    @keyframes bomb-ring-expand {
-      0%   { transform: scale(0.2); opacity: 1; }
-      40%  { opacity: 0.85; }
-      100% { transform: scale(3.8); opacity: 0; }
-    }
-
-    .cell.bomb-victim {
-      animation: bomb-victim-flash 0.32s ease-in forwards;
-    }
-
-    @keyframes bomb-victim-flash {
-      0%   { transform: scale(1);    filter: none; opacity: 1; }
-      25%  { transform: scale(1.28); filter: brightness(3.5) drop-shadow(0 0 14px #ff8844) drop-shadow(0 0 6px #ff4400); opacity: 1; }
-      65%  { transform: scale(0.9);  filter: brightness(1.5); opacity: 0.6; }
-      100% { transform: scale(0);    filter: none; opacity: 0; }
-    }
-
     /* ── help button & modal ─────────────────────────────────────────────── */
     #help-btn {
       width: 28px;
@@ -675,9 +501,8 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      :root { --cell-px: 34px; --grid-gap: 4px; } /* JS overrides --cell-px at runtime */
       body  { padding: 6px 12px 8px; gap: 6px; }
-      #grid { grid-template-columns: repeat(8, var(--cell-px)); padding: 3px; }
+      #grid { padding: 3px; }
       #side-col { display: none; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
@@ -698,9 +523,6 @@
       #timer { font-size: 1.2rem; min-width: 62px; }
       #score-delta { display: none; }
     }
-    @media (max-width: 380px) {
-      :root { --cell-px: 30px; }
-    }
   </style>
 </head>
 <body>
@@ -708,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v34</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v35</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -720,7 +542,7 @@
       </div>
 
       <div id="grid-wrap">
-        <div id="grid"></div>
+        <div id="grid"><canvas id="grid-canvas"></canvas></div>
 
         <div id="start-overlay">
           <div class="ov-tag">// SYSTEM READY //</div>
@@ -787,7 +609,7 @@
 
       <div class="help-section">
         <div class="help-label">BOMB ⊕</div>
-        <div class="help-note">Pop 6+ tiles to spawn a bomb. Pop it as part of any group to obliterate all 8 surrounding tiles — and chain-detonate any bombs caught in the blast.</div>
+        <div class="help-note">Pop 6+ tiles to spawn a bomb — the spiked one. It's the same colour on both sides, so it never flips. Pop it as part of any group to obliterate all 8 surrounding tiles — and chain-detonate any bombs caught in the blast.</div>
       </div>
 
       <div class="help-section">
@@ -826,45 +648,321 @@
       'polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%)',
       'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
       'polygon(50% 0%, 100% 22%, 82% 100%, 18% 100%, 0% 22%)',
-      'polygon(0% 100%, 0% 50%, 17% 0%, 33% 50%, 50% 0%, 67% 50%, 83% 0%, 100% 50%, 100% 100%)',
+      'polygon(38% 0%, 100% 0%, 72% 36%, 100% 36%, 30% 100%, 48% 52%, 0% 52%)',
       'polygon(0% 0%, 62% 0%, 62% 19%, 100% 19%, 100% 100%, 38% 100%, 38% 81%, 0% 81%)',
       'polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%)',
       'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
     ];
 
+    // parse 'polygon(x% y%, ...)' into [[x,y], ...] in 0..1 space
+    const SHAPE_PTS = SHAPES.map(str =>
+      str.match(/[\d.]+%\s+[\d.]+%/g).map(pair => {
+        const [x, y] = pair.match(/[\d.]+/g).map(Number);
+        return [x / 100, y / 100];
+      })
+    );
+
     let COLS = 12, ROWS = 10;
-    const PRESS_MS = 500;
-    const FLIP_MS  = 450; // must match the card-flip animation duration in CSS
-    const TIME_MS  = 120000; // 2-minute run
-    const DEBUG    = false;   // TEMPORARY — set false (or delete debug block below) to remove debug UI
+    let CELL = 52, GAP = 6;       // logical px, set by initLayout()
+    const PRESS_MS   = 500;
+    const FLIP_MS    = 450;
+    const POP_MS     = 320;
+    const DROP_MS    = 300;
+    const INTRO_MS   = 420;
+    const BOMB_MS    = 450;       // bomb-pulse
+    const RING_MS    = 600;       // expanding blast ring
+    const VICTIM_MS  = 320;
+    const NOMATCH_MS = 380;
+    const TIME_MS    = 120000;    // 2-minute run
+    const DEBUG      = false;     // TEMPORARY — set false (or delete debug block below) to remove debug UI
 
     function initLayout() {
       if (window.innerWidth <= 760) {
-        COLS = 8; ROWS = 12;
-        const gapPx    = 4;
+        COLS = 8; ROWS = 12; GAP = 4;
         const bodyPadX = 12; // each side, matches CSS padding: 6px 12px
         const gridPadX = 3;  // each side, matches #grid padding: 3px
-        // Width: fit COLS cols + gaps + grid padding within body content area
         const cellByW = Math.floor(
-          (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * gapPx) / COLS
+          (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * GAP) / COLS
         );
-        // Height: fill remaining vertical space after fixed UI.
-        // 225 ≈ body-pad(14) + h1(26) + score-bar(31) + controls(36) + status(14)
-        //      + best-score(14) + 5×board-col-gap(30) + grid-pad-v(6) + 11×row-gap(33) + margin(21)
+        // Height: fill remaining vertical space after fixed UI (see git history)
         const cellByH = Math.floor((window.innerHeight - 225) / ROWS);
-        const cellPx  = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
-        document.documentElement.style.setProperty('--cell-px', cellPx + 'px');
+        CELL = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
       } else {
-        COLS = 12; ROWS = 10;
-        document.documentElement.style.removeProperty('--cell-px');
+        COLS = 12; ROWS = 10; GAP = 6; CELL = 52;
       }
     }
 
-    function getCellStride() {
-      const s    = getComputedStyle(document.documentElement);
-      const cell = parseFloat(s.getPropertyValue('--cell-px')) || 52;
-      const gap  = parseFloat(s.getPropertyValue('--grid-gap')) || 6;
-      return cell + gap;
+    // ── canvas renderer ────────────────────────────────────────────────────
+    const canvas = document.getElementById('grid-canvas');
+    const ctx    = canvas.getContext('2d');
+    let boardW = 0, boardH = 0;
+    let shapePaths = []; // Path2D per shape, centred on (0,0) at current CELL
+
+    function sizeCanvas() {
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      boardW = COLS * CELL + (COLS - 1) * GAP;
+      boardH = ROWS * CELL + (ROWS - 1) * GAP;
+      canvas.width  = Math.round(boardW * dpr);
+      canvas.height = Math.round(boardH * dpr);
+      canvas.style.width  = boardW + 'px';
+      canvas.style.height = boardH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      shapePaths = SHAPE_PTS.map(pts => {
+        const p = new Path2D();
+        pts.forEach(([x, y], k) => {
+          const px = (x - 0.5) * CELL, py = (y - 0.5) * CELL;
+          k === 0 ? p.moveTo(px, py) : p.lineTo(px, py);
+        });
+        p.closePath();
+        return p;
+      });
+    }
+
+    // The bomb is its own canvas-drawn shape — a spiked mine with a reticle
+    // core. Same colour on both faces, so it has no flip side.
+    function drawBomb(g, colorHex) {
+      const R   = CELL * 0.30;
+      const TIP = CELL * 0.47;
+      g.fillStyle = colorHex;
+      g.beginPath();
+      for (let k = 0; k < 8; k++) {
+        const a = k * Math.PI / 4 + Math.PI / 8;
+        const w = 0.22;
+        g.moveTo(Math.cos(a - w) * R * 0.92, Math.sin(a - w) * R * 0.92);
+        g.lineTo(Math.cos(a) * TIP,          Math.sin(a) * TIP);
+        g.lineTo(Math.cos(a + w) * R * 0.92, Math.sin(a + w) * R * 0.92);
+      }
+      g.fill();
+      g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.92)';
+      g.lineWidth = Math.max(1.5, CELL * 0.045);
+      g.beginPath(); g.arc(0, 0, R * 0.6, 0, 2 * Math.PI); g.stroke();
+      g.lineWidth = Math.max(1, CELL * 0.03);
+      g.beginPath();
+      g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
+      g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
+      g.stroke();
+    }
+
+    // ── animation channels (tile index → {start, ...}, times from performance.now) ──
+    const fx = {
+      flips:     new Map(),
+      pops:      new Map(),
+      drops:     new Map(),  // {start, fromPx}
+      intro:     new Map(),  // {start, delay}
+      bombPulse: new Map(),
+      victims:   new Map(),
+      noMatch:   new Map(),
+      rings:     [],         // {cx, cy, start}
+    };
+    let press    = null;     // {i, start} while a long-press is charging
+    let hoverIdx = -1;
+
+    function clearFx() {
+      Object.values(fx).forEach(ch => ch.clear ? ch.clear() : (fx.rings.length = 0));
+      press = null;
+    }
+
+    // run the rAF loop only while something is animating
+    let rafId = 0;
+    function invalidate() { if (!rafId) rafId = requestAnimationFrame(frame); }
+    function frame(now) {
+      rafId = 0;
+      if (render(now)) invalidate();
+    }
+
+    // ── easing / keyframe helpers ──────────────────────────────────────────
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+    const easeOutQuad  = t => 1 - (1 - t) * (1 - t);
+    const smoothstep   = t => t * t * (3 - 2 * t);
+
+    function kf(t, stops) {
+      if (t <= stops[0][0]) return stops[0][1];
+      for (let k = 1; k < stops.length; k++) {
+        if (t <= stops[k][0]) {
+          const [t0, v0] = stops[k - 1], [t1, v1] = stops[k];
+          return v0 + (v1 - v0) * ((t - t0) / (t1 - t0));
+        }
+      }
+      return stops[stops.length - 1][1];
+    }
+
+    // flip: ease-in to edge-on, ease-out coming back — 0..PI over FLIP_MS
+    function flipAngle(t) {
+      if (t < 0.5) { const u = t / 0.5; return (u * u) * Math.PI / 2; }
+      const u = (t - 0.5) / 0.5;
+      return Math.PI / 2 + easeOutCubic(u) * Math.PI / 2;
+    }
+
+    function cellCenter(i) {
+      return [
+        colOf(i) * (CELL + GAP) + CELL / 2,
+        rowOf(i) * (CELL + GAP) + CELL / 2,
+      ];
+    }
+
+    function render(now) {
+      ctx.clearRect(0, 0, boardW, boardH);
+      if (phase === 'idle' || !state.length) return false;
+
+      let active = false;
+      const bombsOnTop = [];
+
+      for (let i = 0; i < state.length; i++) {
+        const isExploding = fx.bombPulse.has(i);
+        if (isExploding) { bombsOnTop.push(i); continue; }
+        if (drawTile(now, i)) active = true;
+      }
+      for (const i of bombsOnTop) if (drawTile(now, i)) active = true;
+
+      // blast rings on top of everything
+      for (let k = fx.rings.length - 1; k >= 0; k--) {
+        const ring = fx.rings[k];
+        const t = (now - ring.start) / RING_MS;
+        if (t >= 1) { fx.rings.splice(k, 1); continue; }
+        active = true;
+        const scale = 0.2 + 3.6 * easeOutCubic(t);
+        const alpha = kf(t, [[0, 1], [0.4, 0.85], [1, 0]]);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = 'rgba(255,136,50,0.95)';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = 'rgba(255,100,20,0.8)';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(ring.cx, ring.cy, (CELL / 2) * scale, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (press) active = true;
+      return active;
+    }
+
+    // draws one tile, returns true if it still has a live animation
+    function drawTile(now, i) {
+      const s = state[i];
+      if (!s) return false;
+
+      let [cx, cy] = cellCenter(i);
+      let alpha = 1, sc = 1, rot = 0, dy = 0;
+      let white = 0, glowColor = null, glowBlur = 0;
+      let sx = (s.flipped && !s.special) ? -1 : 1;
+      let color = visColor(s).hex;
+      let active = false;
+
+      const intro = fx.intro.get(i);
+      if (intro) {
+        const t = (now - intro.start - intro.delay) / INTRO_MS;
+        if (t >= 1) fx.intro.delete(i);
+        else {
+          active = true;
+          if (t < 0) return true; // not arrived yet
+          dy    = -60 * (1 - easeOutCubic(t));
+          alpha = Math.min(1, t / 0.6);
+        }
+      }
+
+      const drop = fx.drops.get(i);
+      if (drop) {
+        const t = (now - drop.start) / DROP_MS;
+        if (t >= 1) fx.drops.delete(i);
+        else { active = true; dy = -drop.fromPx * (1 - smoothstep(t)); }
+      }
+
+      const flip = fx.flips.get(i);
+      if (flip) {
+        const t = (now - flip.start) / FLIP_MS;
+        if (t >= 1) fx.flips.delete(i);
+        else {
+          active = true;
+          const angle = flipAngle(t);
+          sx = (s.flipped ? 1 : -1) * Math.cos(angle);
+          color = (t < 0.5 ? (s.flipped ? s.frontColor : s.backColor) : visColor(s)).hex;
+        }
+      }
+
+      const pop = fx.pops.get(i);
+      if (pop) {
+        const t = (now - pop.start) / POP_MS;
+        if (t >= 1) return false; // popped & gone, waiting for the board compact
+        active = true;
+        sc   *= kf(t, [[0, 1], [0.35, 1.28], [1, 0]]);
+        rot   = kf(t, [[0, 0], [0.35, 4], [1, -8]]) * Math.PI / 180;
+        alpha *= kf(t, [[0, 1], [0.35, 1], [1, 0]]);
+      }
+
+      const vic = fx.victims.get(i);
+      if (vic) {
+        const t = (now - vic.start) / VICTIM_MS;
+        if (t >= 1) return false; // obliterated, waiting for compact
+        active = true;
+        sc    *= kf(t, [[0, 1], [0.25, 1.28], [0.65, 0.9], [1, 0]]);
+        alpha *= kf(t, [[0, 1], [0.25, 1], [0.65, 0.6], [1, 0]]);
+        white  = kf(t, [[0, 0], [0.25, 0.6], [0.65, 0.15], [1, 0]]);
+        glowColor = 'rgba(255,136,68,0.9)'; glowBlur = 14 * (1 - t);
+      }
+
+      const pulse = fx.bombPulse.get(i);
+      if (pulse) {
+        const t = easeOutQuad(Math.min(1, (now - pulse.start) / BOMB_MS));
+        if (t >= 1) return false; // exploded, waiting for compact
+        active = true;
+        sc    *= kf(t, [[0, 1], [0.15, 0.72], [0.45, 2.2], [0.75, 1.9], [1, 1.5]]);
+        alpha *= kf(t, [[0, 1], [0.45, 1], [0.75, 0.9], [1, 0]]);
+        white  = kf(t, [[0, 0], [0.15, 0.85], [0.45, 0.9], [0.75, 0.5], [1, 0.15]]);
+        glowColor = 'rgba(255,136,0,0.9)'; glowBlur = 32 * kf(t, [[0, 0], [0.45, 1], [1, 0.2]]);
+      }
+
+      const nm = fx.noMatch.get(i);
+      if (nm) {
+        const t = (now - nm.start) / NOMATCH_MS;
+        if (t >= 1) fx.noMatch.delete(i);
+        else {
+          active = true;
+          const k2 = kf(t, [[0, 0], [0.4, 1], [1, 0]]);
+          glowColor = 'rgba(255,64,64,0.9)'; glowBlur = 8 * k2;
+          white = 0.25 * k2;
+        }
+      }
+
+      if (press && press.i === i) {
+        const t = Math.min(1, (now - press.start) / PRESS_MS);
+        glowColor = 'rgba(0,245,255,0.9)'; glowBlur = 2 + 18 * t;
+        white = Math.max(white, 0.22 * t);
+      } else if (hoverIdx === i && !press && phase === 'playing' && !isAnimating) {
+        sc *= 1.1; sx *= 0.95; // echo of the old rotateY(18deg) hover tilt
+        glowColor = 'rgba(0,245,255,0.7)'; glowBlur = 8;
+      }
+
+      if (alpha <= 0 || sc <= 0) return active;
+
+      ctx.save();
+      ctx.translate(cx, cy + dy);
+      if (rot) ctx.rotate(rot);
+      ctx.scale(sc * sx, sc);
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = glowBlur; }
+
+      if (s.special) {
+        drawBomb(ctx, color);
+        if (white > 0) {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(255,255,255,${white})`;
+          ctx.beginPath(); ctx.arc(0, 0, CELL * 0.47, 0, 2 * Math.PI); ctx.fill();
+        }
+      } else {
+        const path = shapePaths[s.shape];
+        ctx.fillStyle = color;
+        ctx.fill(path);
+        if (white > 0) {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(255,255,255,${white})`;
+          ctx.fill(path);
+        }
+      }
+      ctx.restore();
+      return active;
     }
 
     // ── special items registry ─────────────────────────────────────────────
@@ -873,14 +971,7 @@
 
     const SPECIALS = {
       bomb: {
-        animDuration: 600,
-
-        renderIcon() {
-          const el = document.createElement('div');
-          el.className = 'special-icon';
-          el.innerHTML = '<svg viewBox="0 0 24 24" width="54%" height="54%" style="filter:drop-shadow(0 0 3px rgba(255,255,255,0.85))"><circle cx="12" cy="12" r="7" fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="2.5"/><line x1="12" y1="3" x2="12" y2="21" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/><line x1="3" y1="12" x2="21" y2="12" stroke="rgba(255,255,255,0.92)" stroke-width="1.5"/></svg>';
-          return el;
-        },
+        animDuration: RING_MS,
 
         expandPop(bombIdx, poppedSet) {
           const added = [];
@@ -897,15 +988,6 @@
           }
           return added;
         },
-
-        animate(bombEl, victimEls) {
-          bombEl.classList.add('bomb-exploding');
-          const ring = document.createElement('div');
-          ring.className = 'bomb-ring';
-          bombEl.appendChild(ring);
-          ring.addEventListener('animationend', () => ring.remove(), { once: true });
-          victimEls.forEach(el => el.classList.add('bomb-victim'));
-        }
       }
     };
 
@@ -915,7 +997,7 @@
     }
 
     // ── state ──────────────────────────────────────────────────────────────
-    // Each entry: { frontColor, backColor, shape, flipped, special }
+    // Each entry: { frontColor, backColor, shape (index), flipped, special }
     let state       = [];
     let score       = 0;
     let isAnimating = false;
@@ -935,13 +1017,13 @@
     function newCell() {
       const frontColor = pick(COLORS, null);
       const backColor  = pick(COLORS, frontColor);
-      const shape      = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+      const shape      = Math.floor(Math.random() * SHAPES.length);
       return { frontColor, backColor, shape, flipped: false, special: null };
     }
 
     function newBombCell(color) {
-      const shape = SHAPES[Math.floor(Math.random() * SHAPES.length)];
-      return { frontColor: color, backColor: color, shape, flipped: false, special: { type: 'bomb' } };
+      // bombs have one face: same colour both sides, custom drawn shape
+      return { frontColor: color, backColor: color, shape: 0, flipped: false, special: { type: 'bomb' } };
     }
 
     function idx(r, c)  { return r * COLS + c; }
@@ -988,12 +1070,12 @@
       deltaClearTimer = setTimeout(() => el.classList.remove('show'), 1100);
     }
 
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
     // ── pop & drop ─────────────────────────────────────────────────────────
     async function popAndDrop(indices, originIdx) {
       if (isAnimating) return;
       isAnimating = true;
-
-      const cellEls = [...document.querySelectorAll('.cell')];
 
       // ── BFS chain reaction ──────────────────────────────────────────────
       const poppedSet = new Set(indices);
@@ -1028,26 +1110,33 @@
       }
 
       // Original non-bomb cells pop immediately — don't wait for the bomb chain
-      indices.forEach(i => { if (!firedBombs.has(i)) cellEls[i].classList.add('popping'); });
+      const t0 = performance.now();
+      indices.forEach(i => {
+        if (!firedBombs.has(i)) { fx.pops.set(i, { start: t0 }); fx.flips.delete(i); }
+      });
+      invalidate();
 
       if (waveData.length > 0) {
         const specialDelay = (waveData.length - 1) * CHAIN_STAGGER_MS + SPECIALS.bomb.animDuration;
         for (let w = 0; w < waveData.length; w++) {
           const { bombs, victims } = waveData[w];
-          const doAnimate = () => {
-            const victimEls = victims.map(ni => cellEls[ni]).filter(Boolean);
+          const fire = () => {
+            const t = performance.now();
             for (const bombIdx of bombs) {
-              SPECIALS[state[bombIdx].special.type].animate(cellEls[bombIdx], victimEls);
+              fx.bombPulse.set(bombIdx, { start: t });
+              const [cx, cy] = cellCenter(bombIdx);
+              fx.rings.push({ cx, cy, start: t });
             }
+            victims.forEach(vi => { fx.victims.set(vi, { start: t }); fx.flips.delete(vi); });
+            invalidate();
           };
-          if (w === 0) doAnimate();
-          else setTimeout(doAnimate, w * CHAIN_STAGGER_MS);
+          if (w === 0) fire();
+          else setTimeout(fire, w * CHAIN_STAGGER_MS);
         }
-        // specialDelay >= animDuration (600ms) > pop-out (320ms), so original
-        // cells have already finished before this resolves.
-        await new Promise(r => setTimeout(r, specialDelay));
+        // specialDelay >= ring (600ms) > pop (320ms): original cells are done first
+        await sleep(specialDelay);
       } else {
-        await new Promise(r => setTimeout(r, 340));
+        await sleep(340);
       }
 
       // tally score across all cleared tiles: initial group + bomb victims + chain reactions
@@ -1058,9 +1147,7 @@
 
       // ── determine bomb spawn ────────────────────────────────────────────
       const spawnType = getSpawnType(indices.length);
-      const bombColor = spawnType
-        ? (state[originIdx].flipped ? state[originIdx].backColor : state[originIdx].frontColor)
-        : null;
+      const bombColor = spawnType ? visColor(state[originIdx]) : null;
       const originCol = colOf(originIdx);
 
       // compact state column by column, recording drop distances
@@ -1095,139 +1182,97 @@
         }
       }
 
-      // rebuild DOM and animate drops
-      buildGrid(dropInfo);
+      // swap pop/explosion effects for drop animations on the compacted board
+      fx.pops.clear(); fx.victims.clear(); fx.bombPulse.clear(); fx.flips.clear();
+      const t1 = performance.now();
+      dropInfo.forEach((fallen, ni) => fx.drops.set(ni, { start: t1, fromPx: fallen * (CELL + GAP) }));
+      invalidate();
+      updateStatus();
       isAnimating = false;
     }
 
-    // Empty placeholder board for the idle / start screen (keeps the grid
-    // sized so the START overlay sits centred over it).
-    function buildEmptyGrid() {
-      const gridEl = document.getElementById('grid');
-      gridEl.innerHTML = '';
-      for (let i = 0; i < ROWS * COLS; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell cell--empty';
-        gridEl.appendChild(cell);
-      }
+    // ── input (one set of listeners on the canvas) ─────────────────────────
+    function cellAt(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      const stride = CELL + GAP;
+      const c = Math.floor(x / stride), r = Math.floor(y / stride);
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
+      if (x - c * stride > CELL || y - r * stride > CELL) return -1; // in a gap
+      return idx(r, c);
     }
 
-    // ── build grid ─────────────────────────────────────────────────────────
-    function buildGrid(dropInfo = new Map(), intro = false) {
-      const gridEl = document.getElementById('grid');
-      gridEl.innerHTML = '';
+    let pressTimer = null, longFired = false, downX = 0, downY = 0;
 
-      for (let i = 0; i < ROWS * COLS; i++) {
-        const s = state[i];
+    function cancelPress() {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      press = null;
+      invalidate();
+    }
 
-        const cell = document.createElement('div');
-        cell.className = 'cell';
+    canvas.addEventListener('pointerdown', e => {
+      if (isAnimating || phase !== 'playing') return;
+      const i = cellAt(e);
+      if (i < 0) return;
+      longFired = false;
+      downX = e.clientX; downY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+      press = { i, start: performance.now() };
+      invalidate();
+      pressTimer = setTimeout(() => {
+        longFired = true;
+        const pi = press ? press.i : i;
+        cancelPress();
+        onLongPress(pi);
+      }, PRESS_MS);
+    });
 
-        // first-fill cascade: each tile drops in, staggered by row + column
-        if (intro) {
-          cell.classList.add('intro');
-          cell.style.animationDelay = (rowOf(i) * 0.03 + colOf(i) * 0.012) + 's';
-          cell.addEventListener('animationend', () => {
-            cell.classList.remove('intro');
-            cell.style.animationDelay = '';
-          }, { once: true });
-        }
-
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.style.background = visColor(s).hex;
-        card.style.clipPath   = s.shape;
-        if (s.flipped) card.classList.add('mirrored');
-
-        if (s.special && SPECIALS[s.special.type]) {
-          card.appendChild(SPECIALS[s.special.type].renderIcon());
-        }
-
-        cell.appendChild(card);
-
-        // drop animation (on the cell, so the card's flip transform is untouched)
-        if (dropInfo.has(i)) {
-          const fallen = dropInfo.get(i);
-          cell.style.setProperty('--drop-y', `${-fallen * getCellStride()}px`);
-          cell.classList.add('dropping');
-          cell.addEventListener('animationend', () => {
-            cell.classList.remove('dropping');
-            cell.style.removeProperty('--drop-y');
-          }, { once: true });
-        }
-
-        // ── input handling ───────────────────────────────────────────────
-        let pressTimer = null;
-        let longFired  = false;
-        let startX, startY;
-
-        cell.addEventListener('pointerdown', e => {
-          if (isAnimating || phase !== 'playing') return;
-          longFired = false;
-          startX    = e.clientX;
-          startY    = e.clientY;
-          cell.setPointerCapture(e.pointerId);
-          cell.classList.add('pressing');
-
-          pressTimer = setTimeout(() => {
-            longFired = true;
-            cell.classList.remove('pressing');
-            onLongPress(i, cell, card);
-          }, PRESS_MS);
-        });
-
-        const cancelPress = () => {
-          clearTimeout(pressTimer);
-          cell.classList.remove('pressing');
-        };
-
-        cell.addEventListener('pointermove', e => {
-          if (Math.abs(e.clientX - startX) > 8 || Math.abs(e.clientY - startY) > 8) cancelPress();
-        });
-
-        cell.addEventListener('pointerup',     cancelPress);
-        cell.addEventListener('pointercancel', cancelPress);
-
-        cell.addEventListener('click', () => {
-          if (longFired || isAnimating || phase !== 'playing') return;
-          state[i].flipped = !state[i].flipped;
-          animateFlip(card, i);
-          updateStatus();
-        });
-
-        gridEl.appendChild(cell);
+    canvas.addEventListener('pointermove', e => {
+      if (press && (Math.abs(e.clientX - downX) > 8 || Math.abs(e.clientY - downY) > 8)) {
+        cancelPress();
       }
+      if (e.pointerType === 'mouse' && !press) {
+        const i = (phase === 'playing' && !isAnimating) ? cellAt(e) : -1;
+        if (i !== hoverIdx) {
+          hoverIdx = i;
+          canvas.style.cursor = i >= 0 ? 'pointer' : '';
+          invalidate();
+        }
+      }
+    });
 
+    canvas.addEventListener('pointerup', e => {
+      const wasTap = press && !longFired
+        && Math.abs(e.clientX - downX) <= 8 && Math.abs(e.clientY - downY) <= 8;
+      const i = press ? press.i : -1;
+      cancelPress();
+      if (wasTap) onTap(i);
+    });
+
+    canvas.addEventListener('pointercancel', cancelPress);
+    canvas.addEventListener('pointerleave', () => {
+      if (hoverIdx !== -1) { hoverIdx = -1; canvas.style.cursor = ''; invalidate(); }
+    });
+
+    function onTap(i) {
+      if (i < 0 || isAnimating || phase !== 'playing') return;
+      const s = state[i];
+      if (s.special) return; // bombs are the same colour both sides — they don't flip
+      s.flipped = !s.flipped;
+      fx.flips.set(i, { start: performance.now() });
+      invalidate();
       updateStatus();
     }
 
-    function animateFlip(card, i) {
-      const toBack    = state[i].flipped; // state already toggled before this call
-      const addCls    = toBack ? 'flipping-to-back'  : 'flipping-to-front';
-      const removeCls = toBack ? 'flipping-to-front' : 'flipping-to-back';
-      card.classList.remove(addCls, removeCls);
-      void card.offsetWidth; // restart cleanly if already mid-flip
-      card.classList.add(addCls);
-      setTimeout(() => {
-        card.style.background = visColor(state[i]).hex;
-        card.classList.toggle('mirrored', toBack);
-      }, FLIP_MS / 2);
-      card.addEventListener('animationend', e => {
-        if (e.animationName === (toBack ? 'card-flip-to-back' : 'card-flip-to-front'))
-          card.classList.remove(addCls);
-      }, { once: true });
-    }
-
-    function onLongPress(i, cell, card) {
+    function onLongPress(i) {
       if (isAnimating || phase !== 'playing') return;
       const group = floodFill(i);
       if (group.length >= 4) {
         popAndDrop(group, i);
       } else {
-        card.classList.remove('no-match');
-        void card.offsetWidth;
-        card.classList.add('no-match');
-        card.addEventListener('animationend', () => card.classList.remove('no-match'), { once: true });
+        fx.noMatch.set(i, { start: performance.now() });
+        invalidate();
       }
     }
 
@@ -1261,21 +1306,6 @@
       legendEl.appendChild(item);
     });
 
-    // Wait for every in-flight grid animation/transition (pops, drops, flips)
-    // to finish. Excludes infinite animations (e.g. the title flicker) so it
-    // can never hang.
-    function waitForGridAnimations() {
-      const grid = document.getElementById('grid');
-      const anims = document.getAnimations().filter(a => {
-        const target = a.effect && a.effect.target;
-        if (!target || !grid.contains(target)) return false;
-        return a.effect.getComputedTiming().iterations !== Infinity;
-      });
-      return Promise.allSettled(anims.map(a => a.finished));
-    }
-
-    const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
-
     const btnFlipAll = document.getElementById('btn-flip-all');
 
     async function flipAll() {
@@ -1283,42 +1313,21 @@
       isAnimating = true;
       btnFlipAll.disabled = true;
 
-      await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 600))]);
+      // let in-flight tap flips finish (bounded so a hung tab can't block)
+      const w0 = Date.now();
+      while (fx.flips.size && Date.now() - w0 < 600) await sleep(50);
 
-      const cards = [...document.querySelectorAll('.card')];
-
-      // Commit state now so the per-row timeouts below read the final values
-      state.forEach(s => { s.flipped = !s.flipped; });
+      // every tile at once — on canvas this is just one paint per frame
+      const t = performance.now();
+      state.forEach((s, i) => {
+        if (s.special) return; // bombs don't flip
+        s.flipped = !s.flipped;
+        fx.flips.set(i, { start: t });
+      });
+      invalidate();
       updateStatus();
       isAnimating = false;
-
-      // Stagger columns left-to-right so the last column finishes at ~1 s
-      const colStagger = Math.round((1000 - FLIP_MS) / (COLS - 1));
-
-      for (let col = 0; col < COLS; col++) {
-        const t    = col * colStagger;
-        const rows = Array.from({ length: ROWS }, (_, r) => idx(r, col));
-
-        setTimeout(() => {
-          rows.forEach(i => cards[i].classList.add(
-            state[i].flipped ? 'flipping-to-back' : 'flipping-to-front'
-          ));
-        }, t);
-
-        setTimeout(() => {
-          rows.forEach(i => {
-            cards[i].style.background = visColor(state[i]).hex;
-            cards[i].classList.toggle('mirrored', state[i].flipped);
-          });
-        }, t + FLIP_MS / 2);
-
-        setTimeout(() => {
-          rows.forEach(i => cards[i].classList.remove('flipping-to-back', 'flipping-to-front'));
-        }, t + FLIP_MS);
-      }
-
-      const totalMs = (COLS - 1) * colStagger + FLIP_MS;
-      setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, totalMs + 50);
+      setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, FLIP_MS + 50);
     }
 
     btnFlipAll.addEventListener('click', flipAll);
@@ -1351,14 +1360,17 @@
 
     function goIdle() {
       initLayout();
+      sizeCanvas();
       stopClock();
+      clearFx();
       phase = 'idle';
+      state = [];
       document.body.classList.remove('playing');
       score = 0;
       document.getElementById('score-val').textContent = '0';
       document.getElementById('timer').classList.remove('warn', 'danger', 'over');
       renderTimer(TIME_MS);
-      buildEmptyGrid();
+      invalidate();
       startOverlay.classList.remove('hidden');
       gameoverOverlay.classList.add('hidden');
       btnFlipAll.disabled = true;   // nothing to flip yet
@@ -1368,6 +1380,8 @@
     async function startGame() {
       if (phase === 'playing') return;
       initLayout();
+      sizeCanvas();
+      clearFx();
       phase = 'playing';
       document.body.classList.add('playing');
       score = 0;
@@ -1378,19 +1392,19 @@
       gameoverOverlay.classList.add('hidden');
       // fill the board with the intro cascade
       state = Array.from({ length: ROWS * COLS }, newCell);
-      buildGrid(new Map(), true);
+      const t = performance.now();
+      for (let i = 0; i < state.length; i++) {
+        fx.intro.set(i, { start: t, delay: rowOf(i) * 30 + colOf(i) * 12 });
+      }
+      invalidate();
+      updateStatus();
 
-      // wait for the staggered intro drop to finish (time-based so it's immune
-      // to background-tab animation pausing that hangs WAAPI .finished promises)
-      const cascadeMs = (ROWS - 1) * 30 + (COLS - 1) * 12 + 420 + 150;
-      await new Promise(r => setTimeout(r, cascadeMs));
+      const cascadeMs = (ROWS - 1) * 30 + (COLS - 1) * 12 + INTRO_MS + 150;
+      await sleep(cascadeMs);
       if (phase !== 'playing') return; // reset during the cascade
-      // clean up any intro state that didn't self-remove (backgrounded tab)
-      document.querySelectorAll('.cell.intro').forEach(c => {
-        c.classList.remove('intro');
-        c.style.removeProperty('animation-delay');
-      });
-      btnFlipAll.disabled = false;     // enable only after cascade finishes
+      fx.intro.clear();               // backgrounded-tab safety
+      invalidate();
+      btnFlipAll.disabled = false;    // enable only after cascade finishes
       timerDeadline = Date.now() + TIME_MS;
       tickTimer();
       timerInterval = setInterval(tickTimer, 200);
@@ -1405,7 +1419,7 @@
       document.getElementById('timer').classList.add('over');
       btnFlipAll.disabled = true;     // lock board actions
       // let an in-flight pop/drop finish so the final score is settled
-      while (isAnimating) await new Promise(r => setTimeout(r, 50));
+      while (isAnimating) await sleep(50);
       // dim the board and show the final score
       document.getElementById('go-score').textContent = score.toLocaleString();
       gameoverOverlay.classList.remove('hidden');
@@ -1522,7 +1536,7 @@
           .sort(() => Math.random() - 0.5)
           .slice(0, 10);
         indices.forEach(i => { state[i] = newBombCell(pick(COLORS, null)); });
-        buildGrid();
+        invalidate();
       });
     }
     // ── END TEMPORARY DEBUG UI ────────────────────────────────────────────────
