@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v35</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v36</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -669,7 +669,7 @@
     const POP_MS     = 320;
     const DROP_MS    = 300;
     const INTRO_MS   = 420;
-    const BOMB_MS    = 450;       // bomb-pulse
+    const BOMB_MS    = 380;       // bomb-pulse
     const RING_MS    = 600;       // expanding blast ring
     const VICTIM_MS  = 320;
     const NOMATCH_MS = 380;
@@ -905,13 +905,13 @@
 
       const pulse = fx.bombPulse.get(i);
       if (pulse) {
-        const t = easeOutQuad(Math.min(1, (now - pulse.start) / BOMB_MS));
+        const t = Math.min(1, (now - pulse.start) / BOMB_MS);
         if (t >= 1) return false; // exploded, waiting for compact
         active = true;
-        sc    *= kf(t, [[0, 1], [0.15, 0.72], [0.45, 2.2], [0.75, 1.9], [1, 1.5]]);
-        alpha *= kf(t, [[0, 1], [0.45, 1], [0.75, 0.9], [1, 0]]);
-        white  = kf(t, [[0, 0], [0.15, 0.85], [0.45, 0.9], [0.75, 0.5], [1, 0.15]]);
-        glowColor = 'rgba(255,136,0,0.9)'; glowBlur = 32 * kf(t, [[0, 0], [0.45, 1], [1, 0.2]]);
+        sc    *= kf(t, [[0, 1], [0.06, 0.72], [0.32, 2.3], [0.65, 1.9], [1, 1.5]]);
+        alpha *= kf(t, [[0, 1], [0.32, 1], [0.65, 0.9], [1, 0]]);
+        white  = kf(t, [[0, 0.65], [0.06, 0.92], [0.32, 0.85], [0.65, 0.45], [1, 0]]);
+        glowColor = 'rgba(255,136,0,0.9)'; glowBlur = 32 * kf(t, [[0, 0.3], [0.32, 1], [1, 0.2]]);
       }
 
       const nm = fx.noMatch.get(i);
