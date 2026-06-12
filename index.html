@@ -708,7 +708,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v32</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v33</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -1280,41 +1280,45 @@
 
     async function flipAll() {
       if (isAnimating || phase !== 'playing') return;
-      isAnimating = true;          // blocks tile clicks/long-press and reset
-      btnFlipAll.disabled = true;  // grey out so it can't be interrupted
+      isAnimating = true;
+      btnFlipAll.disabled = true;
 
-      // 1. wait for any in-progress flip animations to finish first
       await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 600))]);
 
-      // 2. Pre-promote all cards to compositor layers so the animation runs
-      // on the GPU. Wait 2 frames for promotion to complete before starting.
       const cards = [...document.querySelectorAll('.card')];
-      cards.forEach(c => { c.style.willChange = 'transform'; });
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      // 3. Start directional flip animations on all cards simultaneously
+      // Commit state now so the per-row timeouts below read the final values
       state.forEach(s => { s.flipped = !s.flipped; });
-      cards.forEach((c, i) => {
-        c.classList.add(state[i].flipped ? 'flipping-to-back' : 'flipping-to-front');
-      });
-      setTimeout(() => {
-        cards.forEach((c, i) => {
-          c.style.background = visColor(state[i]).hex;
-          c.classList.toggle('mirrored', state[i].flipped);
-        });
-      }, FLIP_MS / 2);
-      setTimeout(() => {
-        cards.forEach(c => {
-          c.classList.remove('flipping-to-back', 'flipping-to-front');
-          c.style.willChange = '';
-        });
-      }, FLIP_MS);
-
-      // 3. release game lock immediately (state committed); keep button disabled
-      // for the visual transition without blocking on a hangable await
       updateStatus();
       isAnimating = false;
-      setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, 500);
+
+      // Stagger rows top-to-bottom so the last row finishes at ~2 s
+      const rowStagger = Math.round((2000 - FLIP_MS) / (ROWS - 1));
+
+      for (let row = 0; row < ROWS; row++) {
+        const t    = row * rowStagger;
+        const cols = Array.from({ length: COLS }, (_, c) => idx(row, c));
+
+        setTimeout(() => {
+          cols.forEach(i => cards[i].classList.add(
+            state[i].flipped ? 'flipping-to-back' : 'flipping-to-front'
+          ));
+        }, t);
+
+        setTimeout(() => {
+          cols.forEach(i => {
+            cards[i].style.background = visColor(state[i]).hex;
+            cards[i].classList.toggle('mirrored', state[i].flipped);
+          });
+        }, t + FLIP_MS / 2);
+
+        setTimeout(() => {
+          cols.forEach(i => cards[i].classList.remove('flipping-to-back', 'flipping-to-front'));
+        }, t + FLIP_MS);
+      }
+
+      const totalMs = (ROWS - 1) * rowStagger + FLIP_MS;
+      setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, totalMs + 50);
     }
 
     btnFlipAll.addEventListener('click', flipAll);
