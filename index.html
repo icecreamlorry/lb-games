@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v42</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v43</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -720,28 +720,66 @@
 
     // The bomb is its own canvas-drawn shape — a spiked mine with a reticle
     // core. Same colour on both faces, so it has no flip side.
-    function drawBomb(g, colorHex) {
+    function drawBomb(g, colorHex, type) {
       const R   = CELL * 0.30;
       const TIP = CELL * 0.47;
+      const w   = 0.22;
+      // spike angles per type
+      const spikeAngles = {
+        bomb:      [0,1,2,3,4,5,6,7].map(k => k * Math.PI / 4 + Math.PI / 8),
+        bombCross: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2],
+        bombX:     [1, 3, 5, 7].map(k => k * Math.PI / 4),
+        bombH:     [0, Math.PI],
+        bombV:     [Math.PI / 2, 3 * Math.PI / 2],
+      };
+      const angles = spikeAngles[type] || spikeAngles.bomb;
       g.fillStyle = colorHex;
       g.beginPath();
-      for (let k = 0; k < 8; k++) {
-        const a = k * Math.PI / 4 + Math.PI / 8;
-        const w = 0.22;
+      for (const a of angles) {
         g.moveTo(Math.cos(a - w) * R * 0.92, Math.sin(a - w) * R * 0.92);
         g.lineTo(Math.cos(a) * TIP,          Math.sin(a) * TIP);
         g.lineTo(Math.cos(a + w) * R * 0.92, Math.sin(a + w) * R * 0.92);
       }
       g.fill();
       g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
+      // white reticle ring (all types)
       g.strokeStyle = 'rgba(255,255,255,0.92)';
       g.lineWidth = Math.max(1.5, CELL * 0.045);
       g.beginPath(); g.arc(0, 0, R * 0.6, 0, 2 * Math.PI); g.stroke();
-      g.lineWidth = Math.max(1, CELL * 0.03);
-      g.beginPath();
-      g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
-      g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
-      g.stroke();
+      // type-specific inner symbol
+      g.lineWidth = Math.max(1.5, CELL * 0.055);
+      if (type === 'bomb') {
+        g.lineWidth = Math.max(1, CELL * 0.03);
+        g.beginPath();
+        g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
+        g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
+        g.stroke();
+      } else if (type === 'bombCross') {
+        g.beginPath();
+        g.moveTo(-R * 0.82, 0); g.lineTo(R * 0.82, 0);
+        g.moveTo(0, -R * 0.82); g.lineTo(0, R * 0.82);
+        g.stroke();
+      } else if (type === 'bombX') {
+        const d = R * 0.58;
+        g.beginPath();
+        g.moveTo(-d, -d); g.lineTo(d, d);
+        g.moveTo(d, -d);  g.lineTo(-d, d);
+        g.stroke();
+      } else if (type === 'bombH') {
+        const bx = R * 0.78, aw = R * 0.28, ah = R * 0.18;
+        g.beginPath();
+        g.moveTo(-bx, 0); g.lineTo(bx, 0);
+        g.moveTo(-bx + aw, -ah); g.lineTo(-bx, 0); g.lineTo(-bx + aw, ah);
+        g.moveTo(bx - aw, -ah);  g.lineTo(bx, 0);  g.lineTo(bx - aw, ah);
+        g.stroke();
+      } else if (type === 'bombV') {
+        const by = R * 0.78, aw = R * 0.18, ah = R * 0.28;
+        g.beginPath();
+        g.moveTo(0, -by); g.lineTo(0, by);
+        g.moveTo(-aw, -by + ah); g.lineTo(0, -by); g.lineTo(aw, -by + ah);
+        g.moveTo(-aw,  by - ah); g.lineTo(0,  by); g.lineTo(aw,  by - ah);
+        g.stroke();
+      }
     }
 
     // ── animation channels (tile index → {start, ...}, times from performance.now) ──
@@ -822,7 +860,8 @@
         const t = (now - ring.start) / RING_MS;
         if (t >= 1) { fx.rings.splice(k, 1); continue; }
         active = true;
-        const scale = 0.2 + 3.6 * easeOutCubic(t);
+        const maxSc = ring.maxScale || 3.8;
+        const scale = 0.15 + maxSc * easeOutCubic(t);
         const alpha = kf(t, [[0, 1], [0.4, 0.85], [1, 0]]);
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -954,7 +993,7 @@
       if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = glowBlur; }
 
       if (s.special) {
-        drawBomb(ctx, color);
+        drawBomb(ctx, color, s.special.type);
         if (white > 0) {
           ctx.shadowBlur = 0;
           ctx.fillStyle = `rgba(255,255,255,${white})`;
@@ -997,11 +1036,75 @@
           }
           return added;
         },
-      }
+      },
+      bombCross: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+            for (let d = 1; d <= 2; d++) {
+              const nr = r + dr*d, nc = c + dc*d;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
+            }
+          }
+          return added;
+        },
+      },
+      bombX: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+            for (let d = 1; d <= 2; d++) {
+              const nr = r + dr*d, nc = c + dc*d;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
+            }
+          }
+          return added;
+        },
+      },
+      bombH: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dc = -4; dc <= 4; dc++) {
+            if (dc === 0) continue;
+            const nc = c + dc;
+            if (nc >= 0 && nc < COLS) {
+              const ni = idx(r, nc);
+              if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+            }
+          }
+          return added;
+        },
+      },
+      bombV: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dr = -4; dr <= 4; dr++) {
+            if (dr === 0) continue;
+            const nr = r + dr;
+            if (nr >= 0 && nr < ROWS) {
+              const ni = idx(nr, c);
+              if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+            }
+          }
+          return added;
+        },
+      },
     };
 
+    const BOMB_TYPES = ['bomb', 'bombCross', 'bombX', 'bombH', 'bombV'];
+    let _bombTypeIdx = 0;
     function getSpawnType(groupSize) {
-      if (groupSize >= BOMB_SPAWN_THRESHOLD) return 'bomb';
+      if (groupSize >= BOMB_SPAWN_THRESHOLD) return BOMB_TYPES[_bombTypeIdx++ % BOMB_TYPES.length];
       return null;
     }
 
@@ -1030,9 +1133,9 @@
       return { frontColor, backColor, shape, flipped: false, special: null };
     }
 
-    function newBombCell(color) {
+    function newBombCell(color, type = 'bomb') {
       // bombs have one face: same colour both sides, custom drawn shape
-      return { frontColor: color, backColor: color, shape: 0, flipped: false, special: { type: 'bomb' } };
+      return { frontColor: color, backColor: color, shape: 0, flipped: false, special: { type } };
     }
 
     function idx(r, c)  { return r * COLS + c; }
@@ -1133,23 +1236,31 @@
         const fireWave = w => {
           const { bombs, victims } = waveData[w];
           const t = performance.now();
+          // compute max victim distance per bomb (drives ring scale + victim timing)
+          const bombMaxDist = new Map();
+          for (const bi of bombs) {
+            const [bx, by] = cellCenter(bi);
+            let maxD = CELL;
+            for (const vi of victims) { const [vx,vy]=cellCenter(vi); maxD=Math.max(maxD,Math.hypot(vx-bx,vy-by)); }
+            bombMaxDist.set(bi, maxD);
+          }
           for (const bombIdx of bombs) {
             fx.bombCharge.delete(bombIdx);
             fx.bombPulse.set(bombIdx, { start: t });
             const [cx, cy] = cellCenter(bombIdx);
-            fx.rings.push({ cx, cy, start: t });
+            const maxScale = (bombMaxDist.get(bombIdx) / (CELL / 2)) * 1.15;
+            fx.rings.push({ cx, cy, start: t, maxScale });
           }
           victims.forEach(vi => {
             fx.flips.delete(vi);
-            // schedule victim pop to coincide with the blast ring reaching that cell
             const [vx, vy] = cellCenter(vi);
             let minDelay = Infinity;
             for (const bi of bombs) {
               const [bx, by] = cellCenter(bi);
               const dist = Math.hypot(vx - bx, vy - by);
-              const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.2) / 3.6));
-              const waveT = 1 - Math.cbrt(1 - ratio);
-              minDelay = Math.min(minDelay, waveT * RING_MS);
+              const maxD = bombMaxDist.get(bi);
+              const ratio = dist / maxD;
+              minDelay = Math.min(minDelay, ratio * RING_MS);
             }
             setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
           });
@@ -1194,7 +1305,7 @@
         for (let k = 0; k < missing; k++) {
           let data;
           if (!bombPlaced && spawnType && c === originCol && k === 0) {
-            data = newBombCell(bombColor);
+            data = newBombCell(bombColor, spawnType);
             bombPlaced = true;
           } else {
             data = newCell();
