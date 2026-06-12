@@ -499,6 +499,55 @@
       color: #fff;
     }
 
+    /* ── colour-blind toggle ────────────────────────────────────────────── */
+    .cbm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .cbm-label {
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.75);
+      letter-spacing: 0.05em;
+    }
+    .cbm-toggle {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .cbm-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .cbm-slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(0,245,255,0.25);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .cbm-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      left: 2px;
+      top: 2px;
+      border-radius: 50%;
+      background: rgba(0,245,255,0.45);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .cbm-toggle input:checked + .cbm-slider {
+      background: rgba(0,245,255,0.15);
+      border-color: var(--cyan);
+    }
+    .cbm-toggle input:checked + .cbm-slider::before {
+      transform: translateX(18px);
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
       body  { padding: 6px 12px 8px; gap: 6px; }
@@ -530,7 +579,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v53</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v55</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -628,6 +677,17 @@
         </div>
       </div>
 
+      <div class="help-section">
+        <div class="help-label">ACCESSIBILITY</div>
+        <div class="cbm-row">
+          <span class="cbm-label">Colour-blind mode — shapes identify colours</span>
+          <label class="cbm-toggle">
+            <input type="checkbox" id="cbm-check">
+            <span class="cbm-slider"></span>
+          </label>
+        </div>
+      </div>
+
       <button id="help-got-it">GOT IT</button>
     </div>
   </div>
@@ -667,6 +727,14 @@
 
     // each color has its own shape — looked up by hex during rendering
     const colorShapeMap = new Map(COLORS.map(c => [c.hex, c.shape]));
+
+    // lightning bolt needs a wider bottom at small icon sizes; chevron optical centering
+    const BOMB_ICON_SHAPE_PTS = {
+      6: [[0.38,0],[1,0],[0.72,0.36],[1,0.36],[0.40,1],[0.22,1],[0.48,0.52],[0,0.52]],
+    };
+    const BOMB_ICON_X_SHIFTS = { 11: 0.12 };
+
+    let colourBlindMode = localStorage.getItem('chromagrid-cbm') === '1';
 
     let COLS = 12, ROWS = 10;
     let CELL = 52, GAP = 6;       // logical px, set by initLayout()
@@ -748,43 +816,60 @@
       }
       g.fill();
       g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
-      // white reticle ring (all types)
+
       g.strokeStyle = 'rgba(255,255,255,0.92)';
-      g.lineWidth = Math.max(1.5, CELL * 0.045);
-      g.beginPath(); g.arc(0, 0, R * 0.6, 0, 2 * Math.PI); g.stroke();
-      // type-specific inner symbol
-      g.lineWidth = Math.max(1.5, CELL * 0.055);
-      if (type === 'bomb') {
-        g.lineWidth = Math.max(1, CELL * 0.03);
+      if (colourBlindMode) {
+        // draw the colour's assigned shape as a white outline icon
+        const shapeIdx = colorShapeMap.get(colorHex) ?? 0;
+        const pts = BOMB_ICON_SHAPE_PTS[shapeIdx] || SHAPE_PTS[shapeIdx];
+        const iconHalf = R * 0.52;
+        const xShift = (BOMB_ICON_X_SHIFTS[shapeIdx] || 0) * iconHalf * 2;
+        g.lineWidth = Math.max(1, CELL * 0.032);
         g.beginPath();
-        g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
-        g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
+        for (let k = 0; k < pts.length; k++) {
+          const px = (pts[k][0] - 0.5) * iconHalf * 2 + xShift;
+          const py = (pts[k][1] - 0.5) * iconHalf * 2;
+          k === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+        }
+        g.closePath();
         g.stroke();
-      } else if (type === 'bombCross') {
-        g.beginPath();
-        g.moveTo(-R * 0.82, 0); g.lineTo(R * 0.82, 0);
-        g.moveTo(0, -R * 0.82); g.lineTo(0, R * 0.82);
-        g.stroke();
-      } else if (type === 'bombX') {
-        const d = R * 0.58;
-        g.beginPath();
-        g.moveTo(-d, -d); g.lineTo(d, d);
-        g.moveTo(d, -d);  g.lineTo(-d, d);
-        g.stroke();
-      } else if (type === 'bombH') {
-        const bx = R * 0.78, aw = R * 0.28, ah = R * 0.18;
-        g.beginPath();
-        g.moveTo(-bx, 0); g.lineTo(bx, 0);
-        g.moveTo(-bx + aw, -ah); g.lineTo(-bx, 0); g.lineTo(-bx + aw, ah);
-        g.moveTo(bx - aw, -ah);  g.lineTo(bx, 0);  g.lineTo(bx - aw, ah);
-        g.stroke();
-      } else if (type === 'bombV') {
-        const by = R * 0.78, aw = R * 0.18, ah = R * 0.28;
-        g.beginPath();
-        g.moveTo(0, -by); g.lineTo(0, by);
-        g.moveTo(-aw, -by + ah); g.lineTo(0, -by); g.lineTo(aw, -by + ah);
-        g.moveTo(-aw,  by - ah); g.lineTo(0,  by); g.lineTo(aw,  by - ah);
-        g.stroke();
+      } else {
+        // reticle ring + directional crosshair
+        g.lineWidth = Math.max(1.5, CELL * 0.045);
+        g.beginPath(); g.arc(0, 0, R * 0.6, 0, 2 * Math.PI); g.stroke();
+        g.lineWidth = Math.max(1.5, CELL * 0.055);
+        if (type === 'bomb') {
+          g.lineWidth = Math.max(1, CELL * 0.03);
+          g.beginPath();
+          g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
+          g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
+          g.stroke();
+        } else if (type === 'bombCross') {
+          g.beginPath();
+          g.moveTo(-R * 0.82, 0); g.lineTo(R * 0.82, 0);
+          g.moveTo(0, -R * 0.82); g.lineTo(0, R * 0.82);
+          g.stroke();
+        } else if (type === 'bombX') {
+          const d = R * 0.58;
+          g.beginPath();
+          g.moveTo(-d, -d); g.lineTo(d, d);
+          g.moveTo(d, -d);  g.lineTo(-d, d);
+          g.stroke();
+        } else if (type === 'bombH') {
+          const bx = R * 0.78, aw = R * 0.28, ah = R * 0.18;
+          g.beginPath();
+          g.moveTo(-bx, 0); g.lineTo(bx, 0);
+          g.moveTo(-bx + aw, -ah); g.lineTo(-bx, 0); g.lineTo(-bx + aw, ah);
+          g.moveTo(bx - aw, -ah);  g.lineTo(bx, 0);  g.lineTo(bx - aw, ah);
+          g.stroke();
+        } else if (type === 'bombV') {
+          const by = R * 0.78, aw = R * 0.18, ah = R * 0.28;
+          g.beginPath();
+          g.moveTo(0, -by); g.lineTo(0, by);
+          g.moveTo(-aw, -by + ah); g.lineTo(0, -by); g.lineTo(aw, -by + ah);
+          g.moveTo(-aw,  by - ah); g.lineTo(0,  by); g.lineTo(aw,  by - ah);
+          g.stroke();
+        }
       }
     }
 
@@ -931,7 +1016,7 @@
       let [cx, cy] = cellCenter(i);
       let alpha = 1, sc = 1, rot = 0, dy = 0;
       let white = 0, glowColor = null, glowBlur = 0;
-      let sx = 1;
+      let sx = (!colourBlindMode && s.flipped && !s.special) ? -1 : 1;
       let color = visColor(s).hex;
       let active = false;
 
@@ -961,7 +1046,7 @@
         else {
           active = true;
           const angle = flipAngle(t);
-          sx = Math.abs(Math.cos(angle));
+          sx = colourBlindMode ? Math.abs(Math.cos(angle)) : (s.flipped ? 1 : -1) * Math.cos(angle);
           color = (t < 0.5 ? (s.flipped ? s.frontColor : s.backColor) : visColor(s)).hex;
         }
       }
@@ -1044,7 +1129,7 @@
           ctx.beginPath(); ctx.arc(0, 0, CELL * 0.47, 0, 2 * Math.PI); ctx.fill();
         }
       } else {
-        const path = shapePaths[colorShapeMap.get(color) ?? 0];
+        const path = shapePaths[colourBlindMode ? (colorShapeMap.get(color) ?? 0) : (s.shape ?? 0)];
         ctx.fillStyle = color;
         ctx.fill(path);
         if (white > 0) {
@@ -1173,7 +1258,8 @@
     function newCell() {
       const frontColor = pick(COLORS, null);
       const backColor  = pick(COLORS, frontColor);
-      return { frontColor, backColor, flipped: false, special: null };
+      const shape = Math.floor(Math.random() * SHAPES.length);
+      return { frontColor, backColor, shape, flipped: false, special: null };
     }
 
     function newBombCell(color, type = 'bomb') {
@@ -1675,6 +1761,13 @@
     document.getElementById('help-close').addEventListener('click',  () => helpModal.classList.add('hidden'));
     document.getElementById('help-got-it').addEventListener('click', () => helpModal.classList.add('hidden'));
     helpModal.addEventListener('click', e => { if (e.target === helpModal) helpModal.classList.add('hidden'); });
+    const cbmCheck = document.getElementById('cbm-check');
+    cbmCheck.checked = colourBlindMode;
+    cbmCheck.addEventListener('change', () => {
+      colourBlindMode = cbmCheck.checked;
+      localStorage.setItem('chromagrid-cbm', colourBlindMode ? '1' : '0');
+      invalidate();
+    });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') helpModal.classList.add('hidden'); });
     document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
     document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
