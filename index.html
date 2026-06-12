@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v51</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v52</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -636,9 +636,9 @@
     const COLORS = [
       { name: 'PLASMA',  hex: '#DD6600', shape: 6 },  // burnt orange  — lightning bolt
       { name: 'HOLO',    hex: '#00AACC', shape: 1 },  // teal-cyan     — diamond
-      { name: 'SYNTH',   hex: '#CC0066', shape: 9 },  // raspberry     — 8-pointed star
-      { name: 'MATRIX',  hex: '#22CC55', shape: 4 },  // lime green    — hexagon
-      { name: 'VOID',    hex: '#662299', shape: 0 },  // dark purple   — octagon
+      { name: 'SYNTH',   hex: '#CC0066', shape: 10 }, // raspberry     — pennant
+      { name: 'MATRIX',  hex: '#22CC55', shape: 12 }, // lime green    — gem
+      { name: 'VOID',    hex: '#662299', shape: 11 }, // dark purple   — chevron
     ];
 
     const SHAPES = [
@@ -652,6 +652,9 @@
       'polygon(0% 0%, 62% 0%, 62% 19%, 100% 19%, 100% 100%, 38% 100%, 38% 81%, 0% 81%)',
       'polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%)',
       'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
+      'polygon(0% 0%, 100% 0%, 100% 65%, 50% 100%, 0% 65%)',
+      'polygon(0% 0%, 56% 0%, 100% 50%, 56% 100%, 0% 100%, 44% 50%)',
+      'polygon(50% 0%, 85% 20%, 100% 58%, 70% 100%, 30% 100%, 0% 58%, 15% 20%)',
     ];
 
     // parse 'polygon(x% y%, ...)' into [[x,y], ...] in 0..1 space
