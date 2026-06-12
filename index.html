@@ -581,7 +581,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v55</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v56</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -688,8 +688,9 @@
 
       <div class="help-section">
         <div class="help-label">ACCESSIBILITY</div>
+        <div class="help-note" style="margin-bottom:4px">Shapes are tied to colours. Takes effect from the next game.</div>
         <div class="cbm-row">
-          <span class="cbm-label">Colour-blind mode — shapes identify colours</span>
+          <span class="cbm-label">Colour-blind mode</span>
           <label class="cbm-toggle">
             <input type="checkbox" id="cbm-check">
             <span class="cbm-slider"></span>
@@ -743,7 +744,8 @@
     };
     const BOMB_ICON_X_SHIFTS = { 11: 0.12 };
 
-    let colourBlindMode = localStorage.getItem('chromagrid-cbm') === '1';
+    let colourBlindMode        = localStorage.getItem('chromagrid-cbm') === '1'; // active this game
+    let colourBlindModePending = colourBlindMode; // queued for next game
 
     let COLS = 12, ROWS = 10;
     let CELL = 52, GAP = 6;       // logical px, set by initLayout()
@@ -1658,6 +1660,7 @@
 
     async function startGame() {
       if (phase === 'playing') return;
+      colourBlindMode = colourBlindModePending;
       initLayout();
       sizeCanvas();
       clearFx();
@@ -1773,11 +1776,11 @@
     const cbmCheck = document.getElementById('cbm-check');
     const cbmStart = document.getElementById('cbm-start');
     function setCBM(val) {
-      colourBlindMode = val;
+      colourBlindModePending = val;
       cbmCheck.checked = val;
       cbmStart.checked = val;
       localStorage.setItem('chromagrid-cbm', val ? '1' : '0');
-      invalidate();
+      if (phase !== 'playing') { colourBlindMode = val; invalidate(); }
     }
     setCBM(colourBlindMode);
     cbmCheck.addEventListener('change', () => setCBM(cbmCheck.checked));
