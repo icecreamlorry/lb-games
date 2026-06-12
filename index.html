@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v49</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v50</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -634,11 +634,11 @@
 
   <script>
     const COLORS = [
-      { name: 'PLASMA',  hex: '#DD6600' },  // burnt orange      — L 0.320
-      { name: 'HOLO',    hex: '#00AACC' },  // dirty teal-cyan  — L 0.331
-      { name: 'SYNTH',   hex: '#CC0066' },  // muted raspberry  — L 0.138
-      { name: 'MATRIX',  hex: '#22CC55' },  // lime green        — L 0.397
-      { name: 'VOID',    hex: '#662299' },  // dark purple      — L 0.063
+      { name: 'PLASMA',  hex: '#DD6600', shape: 6 },  // burnt orange  — lightning bolt
+      { name: 'HOLO',    hex: '#00AACC', shape: 1 },  // teal-cyan     — diamond
+      { name: 'SYNTH',   hex: '#CC0066', shape: 9 },  // raspberry     — 8-pointed star
+      { name: 'MATRIX',  hex: '#22CC55', shape: 4 },  // lime green    — hexagon
+      { name: 'VOID',    hex: '#662299', shape: 0 },  // dark purple   — octagon
     ];
 
     const SHAPES = [
@@ -661,6 +661,9 @@
         return [x / 100, y / 100];
       })
     );
+
+    // each color has its own shape — looked up by hex during rendering
+    const colorShapeMap = new Map(COLORS.map(c => [c.hex, c.shape]));
 
     let COLS = 12, ROWS = 10;
     let CELL = 52, GAP = 6;       // logical px, set by initLayout()
@@ -1038,7 +1041,7 @@
           ctx.beginPath(); ctx.arc(0, 0, CELL * 0.47, 0, 2 * Math.PI); ctx.fill();
         }
       } else {
-        const path = shapePaths[s.shape];
+        const path = shapePaths[colorShapeMap.get(color) ?? 0];
         ctx.fillStyle = color;
         ctx.fill(path);
         if (white > 0) {
@@ -1167,8 +1170,7 @@
     function newCell() {
       const frontColor = pick(COLORS, null);
       const backColor  = pick(COLORS, frontColor);
-      const shape      = Math.floor(Math.random() * SHAPES.length);
-      return { frontColor, backColor, shape, flipped: false, special: null };
+      return { frontColor, backColor, flipped: false, special: null };
     }
 
     function newBombCell(color, type = 'bomb') {
