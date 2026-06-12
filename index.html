@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v38</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v39</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -671,7 +671,7 @@
     const INTRO_MS   = 420;
     const BOMB_MS    = 160;       // bomb-pulse
     const RING_MS    = 300;       // expanding blast ring
-    const VICTIM_MS  = 160;
+    const VICTIM_MS  = 150;
     const NOMATCH_MS = 380;
     const TIME_MS    = 120000;    // 2-minute run
     const DEBUG      = false;     // TEMPORARY — set false (or delete debug block below) to remove debug UI
@@ -897,10 +897,8 @@
         const t = (now - vic.start) / VICTIM_MS;
         if (t >= 1) return false; // obliterated, waiting for compact
         active = true;
-        sc    *= kf(t, [[0, 1], [0.25, 1.28], [0.65, 0.9], [1, 0]]);
-        alpha *= kf(t, [[0, 1], [0.25, 1], [0.65, 0.6], [1, 0]]);
-        white  = kf(t, [[0, 0], [0.25, 0.6], [0.65, 0.15], [1, 0]]);
-        glowColor = 'rgba(255,136,68,0.9)'; glowBlur = 14 * (1 - t);
+        sc    *= kf(t, [[0, 1], [0.35, 1.45], [1, 0]]);
+        alpha *= kf(t, [[0, 1], [0.35, 0.9], [1, 0]]);
       }
 
       const pulse = fx.bombPulse.get(i);
@@ -971,7 +969,7 @@
 
     const SPECIALS = {
       bomb: {
-        animDuration: RING_MS,
+        animDuration: RING_MS + VICTIM_MS,
 
         expandPop(bombIdx, poppedSet) {
           const added = [];
@@ -1127,7 +1125,20 @@
               const [cx, cy] = cellCenter(bombIdx);
               fx.rings.push({ cx, cy, start: t });
             }
-            victims.forEach(vi => { fx.victims.set(vi, { start: t }); fx.flips.delete(vi); });
+            victims.forEach(vi => {
+              fx.flips.delete(vi);
+              // schedule victim pop to coincide with the blast ring reaching that cell
+              const [vx, vy] = cellCenter(vi);
+              let minDelay = Infinity;
+              for (const bi of bombs) {
+                const [bx, by] = cellCenter(bi);
+                const dist = Math.hypot(vx - bx, vy - by);
+                const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.2) / 3.6));
+                const waveT = 1 - Math.cbrt(1 - ratio);
+                minDelay = Math.min(minDelay, waveT * RING_MS);
+              }
+              setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
+            });
             invalidate();
           };
           if (w === 0) fire();
