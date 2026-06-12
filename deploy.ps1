@@ -1,5 +1,6 @@
 param([string]$Message = "Update CHROMAGRID")
 
+git config core.hooksPath .githooks
 git add index.html deploy.ps1
 git commit -m "$Message
 

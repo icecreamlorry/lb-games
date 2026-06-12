@@ -1,0 +1,6 @@
+#!/bin/sh
+# Auto-update the build number in index.html before every commit.
+# Version = v{next_commit_count} where next = current HEAD count + 1.
+NEXT=$(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + 1 ))
+sed -i "s/v[0-9]\+\(<\/span>\)/v${NEXT}\1/" index.html
+git add index.html
