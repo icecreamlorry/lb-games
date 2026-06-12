@@ -234,24 +234,35 @@
        the tile is edge-on (front/back share shape + icon, so this is
        pixel-equivalent to a two-faced 3D flip). No preserve-3d, no
        backface-visibility, no per-cell 3D context — half the layers. */
+    /* --flip-x is set to -1 on flipped cards so the resting transform and
+       hover tilt always mirror asymmetric shapes correctly. */
     .card {
       width: 100%;
       height: 100%;
       position: relative;
-      transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s;
+      transform: perspective(500px) scaleX(var(--flip-x, 1));
+      transition: transform 0.15s ease, filter 0.2s;
     }
 
-    .card.flipping {
-      animation: card-flip 0.45s forwards;
-    }
+    .card.flipping-to-back  { animation: card-flip-to-back  0.45s forwards; }
+    .card.flipping-to-front { animation: card-flip-to-front 0.45s forwards; }
 
-    @keyframes card-flip {
-      0%    { transform: perspective(500px) rotateY(0deg);
+    @keyframes card-flip-to-back {
+      0%    { transform: perspective(500px) scaleX(1) rotateY(0deg);
               animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.6); }
-      49.9% { transform: perspective(500px) rotateY(90deg); }
-      50.1% { transform: perspective(500px) rotateY(-90deg);
+      49.9% { transform: perspective(500px) scaleX(1) rotateY(90deg); }
+      50.1% { transform: perspective(500px) scaleX(-1) rotateY(-90deg);
               animation-timing-function: cubic-bezier(0.2, 0.4, 0.2, 1); }
-      100%  { transform: perspective(500px) rotateY(0deg); }
+      100%  { transform: perspective(500px) scaleX(-1) rotateY(0deg); }
+    }
+
+    @keyframes card-flip-to-front {
+      0%    { transform: perspective(500px) scaleX(-1) rotateY(0deg);
+              animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.6); }
+      49.9% { transform: perspective(500px) scaleX(-1) rotateY(90deg); }
+      50.1% { transform: perspective(500px) scaleX(1) rotateY(-90deg);
+              animation-timing-function: cubic-bezier(0.2, 0.4, 0.2, 1); }
+      100%  { transform: perspective(500px) scaleX(1) rotateY(0deg); }
     }
 
     /* hover effects only on devices with a real pointer — on touch they
@@ -261,12 +272,12 @@
         filter:
           drop-shadow(0 0 3px rgba(0,245,255,0.9))
           drop-shadow(0 0 8px rgba(0,245,255,0.5));
-        transform: perspective(500px) rotateY(18deg) scale(1.1);
+        transform: perspective(500px) scaleX(var(--flip-x, 1)) rotateY(18deg) scale(1.1);
       }
 
       /* override hover tilt while charging for long press */
       .cell.pressing:hover .card {
-        transform: none;
+        transform: perspective(500px) scaleX(var(--flip-x, 1));
       }
     }
 
@@ -1122,6 +1133,7 @@
         card.className = 'card';
         card.style.background = visColor(s).hex;
         card.style.clipPath   = s.shape;
+        if (s.flipped) card.style.setProperty('--flip-x', '-1');
 
         if (s.special && SPECIALS[s.special.type]) {
           card.appendChild(SPECIALS[s.special.type].renderIcon());
@@ -1185,16 +1197,20 @@
       updateStatus();
     }
 
-    // Spin a card and swap its colour while it's edge-on. The colour is read
-    // at swap time (not scheduled up front) so rapid re-taps always settle
-    // on the live state.
     function animateFlip(card, i) {
-      card.classList.remove('flipping');
+      const toBack    = state[i].flipped; // state already toggled before this call
+      const addCls    = toBack ? 'flipping-to-back'  : 'flipping-to-front';
+      const removeCls = toBack ? 'flipping-to-front' : 'flipping-to-back';
+      card.classList.remove(addCls, removeCls);
       void card.offsetWidth; // restart cleanly if already mid-flip
-      card.classList.add('flipping');
-      setTimeout(() => { card.style.background = visColor(state[i]).hex; }, FLIP_MS / 2);
+      card.classList.add(addCls);
+      setTimeout(() => {
+        card.style.background = visColor(state[i]).hex;
+        card.style.setProperty('--flip-x', toBack ? '-1' : '1');
+      }, FLIP_MS / 2);
       card.addEventListener('animationend', e => {
-        if (e.animationName === 'card-flip') card.classList.remove('flipping');
+        if (e.animationName === (toBack ? 'card-flip-to-back' : 'card-flip-to-front'))
+          card.classList.remove(addCls);
       }, { once: true });
     }
 
@@ -1267,16 +1283,20 @@
       // 600 ms > 450 ms transition; guards against backgrounded-tab hangs
       await Promise.race([waitForGridAnimations(), new Promise(r => setTimeout(r, 600))]);
 
-      // 2. toggle every tile: one class-add starts all spins, one batched
-      // colour swap at the edge-on midpoint — two style recalcs total
+      // 2. toggle every tile — apply the directional animation per card so
+      // the mirror (--flip-x) is correct on both sides of the flip
       const cards = [...document.querySelectorAll('.card')];
       state.forEach(s => { s.flipped = !s.flipped; });
-      cards.forEach(c => c.classList.add('flipping'));
+      cards.forEach((c, i) => {
+        c.classList.add(state[i].flipped ? 'flipping-to-back' : 'flipping-to-front');
+      });
       setTimeout(() => {
-        cards.forEach((c, i) => { c.style.background = visColor(state[i]).hex; });
+        cards.forEach((c, i) => {
+          c.style.background = visColor(state[i]).hex;
+          c.style.setProperty('--flip-x', state[i].flipped ? '-1' : '1');
+        });
       }, FLIP_MS / 2);
-      // final keyframe equals the resting transform, so removal is invisible
-      setTimeout(() => cards.forEach(c => c.classList.remove('flipping')), FLIP_MS);
+      setTimeout(() => cards.forEach(c => c.classList.remove('flipping-to-back', 'flipping-to-front')), FLIP_MS);
 
       // 3. release game lock immediately (state committed); keep button disabled
       // for the visual transition without blocking on a hangable await
