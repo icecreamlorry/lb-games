@@ -530,7 +530,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v50</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v51</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -928,7 +928,7 @@
       let [cx, cy] = cellCenter(i);
       let alpha = 1, sc = 1, rot = 0, dy = 0;
       let white = 0, glowColor = null, glowBlur = 0;
-      let sx = (s.flipped && !s.special) ? -1 : 1;
+      let sx = 1;
       let color = visColor(s).hex;
       let active = false;
 
@@ -958,7 +958,7 @@
         else {
           active = true;
           const angle = flipAngle(t);
-          sx = (s.flipped ? 1 : -1) * Math.cos(angle);
+          sx = Math.abs(Math.cos(angle));
           color = (t < 0.5 ? (s.flipped ? s.frontColor : s.backColor) : visColor(s)).hex;
         }
       }
