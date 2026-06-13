@@ -51,12 +51,6 @@
       gap: 10px;
     }
 
-    #side-col {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 280px;
-    }
 
     body::after {
       content: '';
@@ -174,30 +168,6 @@
       transform: translateY(-6px);
     }
 
-    #legend {
-      display: flex;
-      gap: 10px 16px;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-      border: 1px solid rgba(0,245,255,0.15);
-      border-radius: 4px;
-      padding: 10px 14px;
-      background: rgba(0,245,255,0.03);
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
-      color: rgba(0,245,255,0.7);
-    }
-
-    .legend-swatch {
-      width: 16px;
-      height: 16px;
-    }
 
     #grid-wrap { position: relative; }
 
@@ -554,7 +524,6 @@
     @media (max-width: 760px) {
       body  { padding: 6px 12px 8px; gap: 6px; }
       #grid { padding: 3px; }
-      #side-col { display: none; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
       .subtitle { display: none; }
@@ -581,7 +550,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v59</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v60</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -639,9 +608,6 @@
       </div>
     </div>
 
-    <div id="side-col">
-      <div id="legend"></div>
-    </div>
   </div>
 
   <div id="help-modal">
@@ -1568,18 +1534,6 @@
         `SYS_ACTIVE > ${total} TILES > ${flipped} FLIPPED > ${total - flipped} FACE-UP`;
     }
 
-    // ── legend ──────────────────────────────────────────────────────────────
-    const legendEl = document.getElementById('legend');
-    COLORS.forEach(c => {
-      const item   = document.createElement('div');
-      item.className = 'legend-item';
-      const swatch = document.createElement('div');
-      swatch.className = 'legend-swatch';
-      swatch.style.cssText = `background:${c.hex};clip-path:${SHAPES[0]};filter:drop-shadow(0 0 4px ${c.hex});`;
-      item.appendChild(swatch);
-      item.appendChild(document.createTextNode(c.name));
-      legendEl.appendChild(item);
-    });
 
     const btnFlipAll = document.getElementById('btn-flip-all');
 
