@@ -7,7 +7,7 @@
 // under /lb-games/.
 
 import {
-  currentUser, onAuthChange, displayName,
+  currentSession, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut,
 } from './auth.js';
 import { configReady } from './supabase-config.js';
@@ -17,47 +17,6 @@ const $ = id => document.getElementById(id);
 
 let user = null;
 let authMode = 'signin';
-
-function injectHTML() {
-  const bar = $('lb-account');
-  if (bar) {
-    bar.innerHTML = `
-      <div id="lb-acct-guest" class="lb-acct-guest">
-        <input id="lb-name" class="field" type="text" maxlength="20"
-               placeholder="Your name" autocomplete="name">
-        <button id="lb-login" class="btn-primary">LOG IN / SIGN UP</button>
-      </div>
-      <div id="lb-acct-user" class="lb-acct-user hidden">
-        <span class="lb-acct-line">Signed in as <strong id="lb-acct-name"></strong></span>
-        <button id="lb-logout" class="link-btn">LOG OUT</button>
-      </div>
-      <p id="lb-acct-hint" class="lb-acct-hint">
-        Log in to play across devices, add friends and keep your scores — or just pick a guest name to get going.
-      </p>
-    `;
-  }
-  // Auth modal — same classes as the in-game modals (styled by shared.css).
-  document.body.insertAdjacentHTML('beforeend', `
-    <div id="auth-modal" class="modal hidden">
-      <div class="modal-panel">
-        <button id="auth-close" class="modal-close">✕</button>
-        <div id="auth-title" class="modal-title">LOG IN</div>
-        <p class="modal-intro">One account works across every LB Games title — no separate sign-up per game.</p>
-        <div class="auth-tabs">
-          <button id="auth-tab-signin" class="tab active">SIGN IN</button>
-          <button id="auth-tab-signup" class="tab">CREATE</button>
-        </div>
-        <input id="auth-name"     class="field hidden" type="text"     maxlength="20" placeholder="Display name" autocomplete="name">
-        <input id="auth-email"    class="field"        type="email"    placeholder="Email"    autocomplete="email">
-        <input id="auth-password" class="field"        type="password" placeholder="Password" autocomplete="current-password">
-        <button id="btn-auth-primary" class="btn-primary">SIGN IN</button>
-        <div class="auth-or">OR</div>
-        <button id="btn-auth-magic">EMAIL ME A SIGN-IN LINK</button>
-        <p id="auth-status" class="status-line"></p>
-      </div>
-    </div>
-  `);
-}
 
 function render() {
   const signedIn = !!user;
@@ -159,11 +118,13 @@ function wire() {
 }
 
 async function init() {
-  injectHTML();
+  // Markup is already in the page (no injection, so nothing pops in late).
   wire();
   render();
   if (!configReady()) return;
-  try { user = await currentUser(); } catch {}
+  // Read the cached session (local, no network round-trip) so a signed-in
+  // visitor's bar resolves immediately rather than flipping from guest.
+  try { user = (await currentSession())?.user ?? null; } catch {}
   render();
   onAuthChange(u => { user = u; render(); });
 }

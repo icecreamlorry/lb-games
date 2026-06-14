@@ -303,9 +303,13 @@ button:disabled:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   width: 100%;
   max-width: 440px;
+  /* Reserve the guest-state height so the signed-in state (shorter) doesn't
+     shift the page when it resolves. */
+  min-height: 84px;
 }
 .lb-acct-guest { display: flex; gap: 10px; width: 100%; }
 .lb-acct-guest .field { flex: 1; }
