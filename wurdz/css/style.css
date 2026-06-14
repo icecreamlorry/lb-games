@@ -393,6 +393,11 @@ input, textarea { user-select: text; }
   gap: 10px;
 }
 
+/* Size the Play button up-front to fit its widest label ("Play for 999") so
+   the score preview appearing on tile placement never resizes the button or
+   reflows the controls row. */
+#btn-play { min-width: 132px; }
+
 .exchange-bar {
   display: flex;
   align-items: center;
