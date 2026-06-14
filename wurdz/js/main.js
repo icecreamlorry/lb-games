@@ -5,7 +5,7 @@ import {
 } from './engine.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
-  RoomConnection, triggerPush,
+  RoomConnection, triggerPush, seatName, userSeat,
 } from './net.js';
 import {
   currentUser, onAuthChange, displayName,
@@ -282,9 +282,9 @@ async function renderLobby() {
 }
 
 async function summarizeRoom(room) {
-  const myIndex = room.host_user_id === app.userId ? 0 : 1;
-  const oppIndex = 1 - myIndex;
-  const oppName = (oppIndex === 0 ? room.host_name : room.guest_name) || null;
+  const myIndex = userSeat(room, app.userId);
+  const oppIndex = myIndex === 0 ? 1 : 0;
+  const oppName = seatName(room, oppIndex);
   let state = null;
   try {
     state = replayMoves(room.seed, await fetchMoves(room.code));
@@ -298,11 +298,12 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
 
   // A challenge addressed to me that I haven't accepted yet.
   const challengedMe = room.invited_user_id === app.userId
-    && !room.guest_user_id && room.host_user_id !== app.userId;
+    && room.player_count < room.max_players
+    && userSeat(room, app.userId) === -1;
 
   let status, mine = false, label;
   if (challengedMe) {
-    label = `${room.host_name} challenged you`;
+    label = `${seatName(room, 0)} challenged you`;
     status = 'Tap to accept';
     mine = true;
   } else if (!oppName) {
@@ -801,7 +802,7 @@ $('room-code-chip').addEventListener('click', async () => {
 
 // Resign: forfeit the game (opponent wins) and clear it from your own list.
 $('btn-resign').addEventListener('click', async () => {
-  if (!app.state || app.state.gameOver || !app.room?.guest_name) return;
+  if (!app.state || app.state.gameOver || (app.room?.player_count ?? 0) < 2) return;
   const ok = await confirmDialog({
     title: 'Resign this game?',
     message: "You'll forfeit — your opponent wins and the game is removed from your "
@@ -872,7 +873,7 @@ async function handlePresence(present) {
   renderOppPanel();
   // The guest joining updates the rooms row; if we're on the websocket we
   // won't see that via polling, so refresh when their presence appears.
-  if (app.oppOnline && !app.room?.guest_name) {
+  if (app.oppOnline && !seatName(app.room, 1 - app.playerIndex)) {
     try {
       app.room = await fetchRoom(app.code);
       renderAll();
@@ -881,9 +882,9 @@ async function handlePresence(present) {
 }
 
 function handleRoomUpdate(room) {
-  const hadGuest = !!app.room?.guest_name;
+  const hadSecondPlayer = (app.room?.player_count ?? 0) >= 2;
   app.room = room;
-  if (!hadGuest && room.guest_name) renderAll();
+  if (!hadSecondPlayer && room.player_count >= 2) renderAll();
   else renderOverlays();
 }
 
@@ -918,7 +919,7 @@ function announceLastMove() {
 
 function playerName(idx) {
   if (!app.room) return '?';
-  return idx === 0 ? app.room.host_name : (app.room.guest_name || 'Opponent');
+  return seatName(app.room, idx) ?? 'Opponent';
 }
 
 function myRack() {
@@ -1392,7 +1393,7 @@ function renderRack() {
 
 function renderOppPanel() {
   const oppIdx = 1 - app.playerIndex;
-  const hasOpp = oppIdx === 0 || !!app.room?.guest_name;
+  const hasOpp = !!seatName(app.room, oppIdx);
   $('opp-name').textContent = hasOpp ? playerName(oppIdx) : 'Waiting for opponent…';
   $('opp-score').textContent = app.state.scores[oppIdx];
   $('opp-tiles').textContent = app.state.started ? `${app.state.racks[oppIdx].length} tiles` : '';
@@ -1444,7 +1445,7 @@ function renderControls() {
   $('btn-exchange-go').disabled = !app.exchangeSel.size;
 
   // Resign is offered once there's an opponent and the game isn't already over.
-  $('btn-resign').classList.toggle('hidden', !(app.room?.guest_name && !app.state.gameOver));
+  $('btn-resign').classList.toggle('hidden', !((app.room?.player_count ?? 0) >= 2 && !app.state.gameOver));
 }
 
 function renderOverlays() {
@@ -1465,12 +1466,12 @@ function renderOverlays() {
   }
 
   startOv.classList.remove('hidden');
-  const haveGuest = !!app.room?.guest_name;
+  const haveGuest = !!seatName(app.room, 1);
   $('start-share').classList.toggle('hidden', haveGuest);
   $('start-code').textContent = app.code;
   if (haveGuest) {
     $('start-title').textContent = 'Both players are here!';
-    $('start-versus').textContent = `${app.room.host_name} vs ${app.room.guest_name}`;
+    $('start-versus').textContent = `${seatName(app.room, 0)} vs ${seatName(app.room, 1)}`;
     $('btn-start').classList.toggle('hidden', app.playerIndex !== 0);
     $('start-waiting').classList.toggle('hidden', app.playerIndex === 0);
   } else {

@@ -1,11 +1,11 @@
--- Wurdz database schema
+-- LB Games shared database schema
 -- Run this in the Supabase SQL editor (or via the Supabase MCP server).
 --
--- This schema is deliberately game-independent. Several small two-player,
--- turn-based games can share ONE Supabase project: accounts (Supabase Auth)
--- are project-wide, and these tables carry a `game` slug so each game only
--- sees its own rooms. To add another game, point it at the same project and
--- set its GAME_SLUG in js/config.js — no new SQL required.
+-- This schema is deliberately game-independent. Multiple games share ONE
+-- Supabase project: accounts (Supabase Auth) are project-wide, and these
+-- tables carry a `game` slug so each game only sees its own rooms. To add
+-- another game, point it at the same project and set its GAME_SLUG in
+-- js/config.js — no new SQL required.
 --
 -- Every statement is written to be safe to re-run, so this doubles as the
 -- migration for an existing database.
@@ -142,3 +142,67 @@ grant insert, update, delete on table push_subscriptions to anon, authenticated;
 -- raw SQL aren't always granted to it automatically — so grant explicitly.
 grant select on table rooms to service_role;
 grant select, delete on table push_subscriptions to service_role;
+
+-- ---- N-player rooms (shared rooms layer) --------------------------------
+--
+-- Replaces the flat host_name/guest_name/host_user_id/guest_user_id columns
+-- with a players JSONB array: [{seat, name, userId}, ...].
+-- The old flat columns are kept nullable for backward compatibility with any
+-- existing data but are no longer written by the application.
+
+-- host_name was NOT NULL in the original schema; new inserts omit it.
+alter table rooms alter column host_name drop not null;
+
+-- players JSONB: ordered array of seated players, one entry per seat.
+alter table rooms add column if not exists players jsonb not null default '[]';
+
+-- max_players: how many seats the game requires before it can start.
+alter table rooms add column if not exists max_players int not null default 2;
+
+-- player_count mirrors jsonb_array_length(players). Used as an optimistic
+-- lock in joinRoom so two simultaneous joins never land on the same seat.
+alter table rooms add column if not exists player_count int not null default 1;
+
+-- Back-fill existing 2-player rooms from the old flat columns.
+update rooms
+set players = jsonb_build_array(
+  jsonb_build_object('seat', 0, 'name', host_name, 'userId', host_user_id)
+)
+where players = '[]'::jsonb
+  and host_name is not null;
+
+update rooms
+set players    = players || jsonb_build_array(
+                   jsonb_build_object('seat', 1, 'name', guest_name, 'userId', guest_user_id)
+                 ),
+    player_count = 2
+where guest_name is not null
+  and jsonb_array_length(players) = 1;
+
+-- Sync player_count for any rows that diverged (e.g. repeated migrations).
+update rooms
+set player_count = jsonb_array_length(players)
+where player_count != jsonb_array_length(players);
+
+-- Fast containment search: "all rooms where this user has a seat".
+create index if not exists rooms_players_gin on rooms using gin (players);
+
+-- Fast index for the new invited-user lookup alongside the GIN search.
+create index if not exists rooms_invited_user_idx on rooms (game, invited_user_id);
+
+-- RPC used by fetchMyRooms: returns all rooms a signed-in player appears in
+-- (either as a seated player or as the pending invite recipient).
+drop function if exists my_rooms(uuid, text);
+create function my_rooms(p_user_id uuid, p_game text)
+returns setof rooms
+language sql stable security definer as $$
+  select * from rooms
+  where game = p_game
+    and (
+      players @> jsonb_build_array(jsonb_build_object('userId', p_user_id))
+      or invited_user_id = p_user_id
+    )
+  order by last_move_at desc;
+$$;
+
+grant execute on function my_rooms(uuid, text) to anon, authenticated;
