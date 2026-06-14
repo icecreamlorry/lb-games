@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CHROMAGRID // SYS</title>
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <style>
+    body {
+      background-color: var(--dark);
+      background-image:
+        linear-gradient(rgba(0,245,255,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.035) 1px, transparent 1px);
+      background-size: 44px 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 16px 16px;
+      min-height: 100vh;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--cyan);
+      gap: 12px;
+      overscroll-behavior: none;
+    }
+
+    body.playing { touch-action: none; }
+
+    #stage {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    #board-col {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.15) 3px,
+        rgba(0,0,0,0.15) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;
+      color: var(--cyan);
+      text-shadow:
+        0 0 6px var(--cyan),
+        0 0 20px var(--cyan),
+        0 0 50px rgba(0,245,255,0.4);
+      animation: flicker 8s infinite;
+    }
+
+    @keyframes flicker {
+      0%, 95%, 97%, 100% { opacity: 1; }
+      96%                 { opacity: 0.7; }
+    }
+
+    .subtitle {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: var(--magenta);
+      text-shadow: 0 0 8px var(--magenta);
+      text-transform: uppercase;
+    }
+
+    #score-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: rgba(0,245,255,0.6);
+    }
+
+    #timer-label { margin-left: auto; }
+
+    #timer {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      min-width: 80px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #timer.warn {
+      color: var(--yellow);
+      text-shadow: 0 0 12px var(--yellow);
+    }
+
+    #timer.danger {
+      color: #ff4040;
+      text-shadow: 0 0 14px #ff4040;
+      animation: timer-pulse 1s steps(2, start) infinite;
+    }
+
+    #timer.over {
+      color: var(--magenta);
+      text-shadow: 0 0 14px var(--magenta);
+    }
+
+    @keyframes timer-pulse {
+      0%   { opacity: 1;    }
+      100% { opacity: 0.35; }
+    }
+
+    #score-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      transition: color 0.15s;
+      min-width: 170px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #score-delta {
+      font-size: 0.85rem;
+      color: var(--yellow);
+      text-shadow: 0 0 8px var(--yellow);
+      opacity: 0;
+      transform: translateY(0px);
+      transition: opacity 0.4s, transform 0.4s;
+      min-width: 70px;
+    }
+
+    #score-delta.show {
+      opacity: 1;
+      transform: translateY(-6px);
+    }
+
+    #grid-wrap { position: relative; }
+
+    #grid {
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.18);
+      border-radius: 4px;
+      box-shadow:
+        0 0 30px rgba(0,245,255,0.07),
+        inset 0 0 60px rgba(0,0,0,0.5);
+      line-height: 0;
+    }
+
+    #grid-canvas {
+      display: block;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .status-bar {
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: rgba(0,245,255,0.3);
+    }
+
+    /* ── best score bar ──────────────────────────────────────────────────── */
+    #best-score-bar {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: rgba(0,245,255,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    #best-val {
+      color: rgba(0,245,255,0.65);
+      transition: color 0.3s;
+    }
+    .score-action-btn {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-color: rgba(0,245,255,0.22);
+      color: rgba(0,245,255,0.4);
+      text-shadow: none;
+      box-shadow: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+    .score-action-btn:hover {
+      background: rgba(0,245,255,0.07);
+      border-color: rgba(0,245,255,0.55);
+      color: var(--cyan);
+      box-shadow: 0 0 8px rgba(0,245,255,0.25);
+    }
+    .score-action-btn.copied {
+      color: var(--yellow);
+      border-color: rgba(255,230,0,0.5);
+      box-shadow: 0 0 8px rgba(255,230,0,0.3);
+    }
+    .score-action-btn.trophy svg { width: 12px; height: 12px; }
+
+    /* ── overlays (start screen + game over) ──────────────────────────── */
+    #start-overlay,
+    #gameover-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: 4px;
+    }
+
+    #start-overlay { background: rgba(4,4,15,0.55); }
+
+    #gameover-overlay {
+      background: rgba(4,4,15,0.82);
+      -webkit-backdrop-filter: blur(2px) grayscale(0.5);
+      backdrop-filter: blur(2px) grayscale(0.5);
+      animation: ov-fade 0.4s ease;
+    }
+
+    .ov-tag {
+      font-size: 0.68rem;
+      letter-spacing: 0.3em;
+      color: var(--magenta);
+      text-shadow: 0 0 8px var(--magenta);
+    }
+
+    #btn-start,
+    #btn-play-again {
+      font-size: 1rem;
+      padding: 14px 42px;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 16px rgba(0,245,255,0.3), inset 0 0 14px rgba(0,245,255,0.06);
+    }
+    #btn-start:hover,
+    #btn-play-again:hover {
+      background: rgba(0,245,255,0.12);
+      box-shadow: 0 0 24px rgba(0,245,255,0.6), inset 0 0 18px rgba(0,245,255,0.1);
+      color: #fff;
+    }
+
+    .go-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 2.1rem;
+      letter-spacing: 0.16em;
+      color: var(--magenta);
+      text-shadow: 0 0 12px var(--magenta), 0 0 34px rgba(255,0,200,0.5);
+    }
+    .go-score-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: rgba(0,245,255,0.6);
+      margin-top: 4px;
+    }
+    #go-score {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 2.3rem;
+      color: var(--cyan);
+      text-shadow: 0 0 14px var(--cyan);
+      margin-bottom: 6px;
+    }
+
+    /* ── in-game leaderboard panel (inside gameover overlay) ─────────── */
+    #lb-panel {
+      width: 100%;
+      max-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #lb-status { min-height: 1em; }
+    #lb-status strong { color: var(--cyan); font-weight: 600; }
+
+    /* ── help modal ─────────────────────────────────────────────────────── */
+    #help-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4,4,15,0.88);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      padding: 20px;
+      overflow-y: auto;
+      animation: ov-fade 0.3s ease;
+    }
+    #help-panel {
+      position: relative;
+      max-width: 480px;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 4px;
+      padding: 28px 28px 24px;
+      box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #help-close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 26px; height: 26px;
+      padding: 0;
+      border-radius: 2px;
+      font-size: 0.7rem;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    .help-heading {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.25em;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(0,245,255,0.15);
+    }
+    .help-section { display: flex; flex-direction: column; gap: 6px; }
+    .help-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      color: var(--magenta);
+      text-shadow: 0 0 6px var(--magenta);
+    }
+    .help-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .help-key {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.58rem;
+      color: var(--yellow);
+      text-shadow: 0 0 5px var(--yellow);
+    }
+    .help-val {
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.75);
+      letter-spacing: 0.05em;
+      line-height: 1.5;
+    }
+    .help-note {
+      font-size: 0.7rem;
+      color: rgba(0,245,255,0.5);
+      letter-spacing: 0.05em;
+      line-height: 1.6;
+    }
+    #help-got-it {
+      font-size: 0.82rem;
+      padding: 11px 30px;
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+      align-self: center;
+    }
+    #help-got-it:hover {
+      background: rgba(0,245,255,0.12);
+      box-shadow: 0 0 22px rgba(0,245,255,0.5), inset 0 0 16px rgba(0,245,255,0.1);
+      color: #fff;
+    }
+
+    #start-cbm-row { width: 200px; }
+
+    /* ── colour-blind toggle ────────────────────────────────────────────── */
+    .cbm-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .cbm-label {
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.75);
+      letter-spacing: 0.05em;
+    }
+    .cbm-toggle {
+      position: relative;
+      width: 38px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .cbm-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .cbm-slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(0,245,255,0.25);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .cbm-slider::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 2px; top: 2px;
+      border-radius: 50%;
+      background: rgba(0,245,255,0.45);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .cbm-toggle input:checked + .cbm-slider {
+      background: rgba(0,245,255,0.15);
+      border-color: var(--cyan);
+    }
+    .cbm-toggle input:checked + .cbm-slider::before {
+      transform: translateX(18px);
+      background: var(--cyan);
+      box-shadow: 0 0 6px var(--cyan);
+    }
+
+    /* ── account bar (start overlay) ────────────────────────────────────── */
+    #account-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      margin-top: 4px;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+    }
+    #account-line { color: rgba(0,245,255,0.6); }
+    #account-line strong { color: var(--cyan); font-weight: 600; }
+
+    /* ── mobile layout ──────────────────────────────────────────────────── */
+    @media (max-width: 760px) {
+      body  { padding: 6px 12px 8px; gap: 6px; }
+      #grid { padding: 3px; }
+      #board-col { gap: 6px; }
+      h1 { font-size: 1.1rem; }
+      .subtitle { display: none; }
+      #help-modal { padding: 10px; }
+      #help-panel {
+        padding: 14px 14px 12px;
+        gap: 10px;
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+        overflow-y: auto;
+      }
+      .help-heading { padding-bottom: 4px; }
+      #help-got-it { padding: 8px 24px; font-size: 0.75rem; }
+      .help-row { grid-template-columns: 70px 1fr; }
+      #score-bar { overflow: hidden; }
+      #score-val { font-size: 1.2rem; min-width: 115px; }
+      #timer { font-size: 1.2rem; min-width: 62px; }
+      #score-delta { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="stage">
+    <div id="board-col">
+      <header>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v63</span></h1>
+        <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
+      </header>
+      <div id="score-bar">
+        SCORE &nbsp;<span id="score-val">0</span>
+        <span id="score-delta"></span>
+        <span id="timer-label">TIME</span>
+        <span id="timer">2:00</span>
+      </div>
+
+      <div id="grid-wrap">
+        <div id="grid"><canvas id="grid-canvas"></canvas></div>
+
+        <div id="start-overlay">
+          <div class="ov-tag">// SYSTEM READY //</div>
+          <button id="btn-start">START</button>
+          <div class="cbm-row" id="start-cbm-row">
+            <span class="cbm-label">Colour-blind mode</span>
+            <label class="cbm-toggle">
+              <input type="checkbox" id="cbm-start">
+              <span class="cbm-slider"></span>
+            </label>
+          </div>
+          <div id="account-bar">
+            <div id="account-line">Playing as a guest</div>
+            <div class="account-actions">
+              <button id="btn-set-name" class="link-btn">SET NAME</button>
+              <button id="btn-login" class="link-btn">LOG IN</button>
+              <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="gameover-overlay" class="hidden">
+          <div class="go-title">GAME OVER</div>
+          <div class="go-score-label">SCORE</div>
+          <div id="go-score">0</div>
+          <div id="lb-panel" class="hidden">
+            <div id="lb-status" class="status-line"></div>
+            <ul id="lb-list" class="lb-list"></ul>
+            <div id="lb-actions" class="hidden">
+              <button id="lb-set-name" class="link-btn">SET NAME</button>
+              <button id="lb-login" class="link-btn">LOG IN</button>
+            </div>
+          </div>
+          <button id="btn-play-again">PLAY AGAIN</button>
+        </div>
+      </div>
+
+      <div id="controls">
+        <button id="btn-flip-all">[ FLIP ALL ]</button>
+        <button id="btn-reset">[ RESET ]</button>
+      </div>
+
+      <div class="status-bar" id="status"></div>
+      <div id="best-score-bar">
+        <span>HIGH SCORE &nbsp;<span id="best-val">—</span></span>
+        <button class="score-action-btn trophy" id="btn-leaderboard" title="Leaderboard">
+          <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 1.5h8v3a4 4 0 0 1-8 0v-3Z"/>
+            <path d="M3 2.5H1.5v1A2 2 0 0 0 3 5.4M11 2.5h1.5v1A2 2 0 0 1 11 5.4"/>
+            <line x1="7" y1="8.5" x2="7" y2="10.5"/>
+            <path d="M4.5 12.5h5l-.5-2h-4l-.5 2Z"/>
+          </svg>
+        </button>
+        <button class="score-action-btn" id="btn-copy" title="Copy link">
+          <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="3" width="8" height="10" rx="1"/>
+            <rect x="5" y="1" width="8" height="10" rx="1"/>
+          </svg>
+        </button>
+        <button class="score-action-btn" id="btn-share" title="Share game">
+          <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="7" y1="9" x2="7" y2="2"/>
+            <polyline points="4,5 7,2 10,5"/>
+            <path d="M2 11v2h10v-2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="help-modal" class="hidden">
+    <div id="help-panel">
+      <button id="help-close">✕</button>
+      <div class="help-heading">// CHROMAGRID //</div>
+
+      <div class="help-section">
+        <div class="help-note">2 minutes. Flip tiles, match colours, pop groups. Score exponentially more for bigger combos.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">CONTROLS</div>
+        <div class="help-row">
+          <span class="help-key">TAP</span>
+          <span class="help-val">Flip a tile</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">HOLD 0.5s</span>
+          <span class="help-val">Pop a connected group of 4+ same-colour tiles</span>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">BOMB ⊕</div>
+        <div class="help-note">Pop 6+ tiles to spawn a bomb — the spiked one. It's the same colour on both sides, so it never flips. Pop it as part of any group to obliterate all 8 surrounding tiles — and chain-detonate any bombs caught in the blast.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">BUTTONS</div>
+        <div class="help-row">
+          <span class="help-key">FLIP ALL</span>
+          <span class="help-val">Flip every tile at once</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">RESET</span>
+          <span class="help-val">Abandon the run</span>
+        </div>
+        <div class="help-row">
+          <span class="help-key">⧉ / ↑</span>
+          <span class="help-val">Copy or share the game link</span>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-label">ACCESSIBILITY</div>
+        <div class="help-note" style="margin-bottom:4px">Shapes are tied to colours. Takes effect from the next game.</div>
+        <div class="cbm-row">
+          <span class="cbm-label">Colour-blind mode</span>
+          <label class="cbm-toggle">
+            <input type="checkbox" id="cbm-check">
+            <span class="cbm-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button id="help-got-it">GOT IT</button>
+    </div>
+  </div>
+
+  <script>
+    window.LB_CONFIG = {
+      gameSlug:      'chromagrid',
+      gameName:      'Chromagrid',
+      gameoverEvent: 'chromagrid:gameover',
+      nameKey:       'chromagrid.name',
+      guestIdKey:    'chromagrid.guestId',
+    };
+  </script>
+  <script type="module" src="../shared/account-ui.js"></script>
+
+  <script>
+    const COLORS = [
+      { name: 'PLASMA',  hex: '#DD6600', shape: 6 },  // burnt orange  — lightning bolt
+      { name: 'HOLO',    hex: '#00AACC', shape: 1 },  // teal-cyan     — diamond
+      { name: 'SYNTH',   hex: '#CC0066', shape: 10 }, // raspberry     — pennant
+      { name: 'MATRIX',  hex: '#22CC55', shape: 12 }, // lime green    — gem
+      { name: 'VOID',    hex: '#662299', shape: 11 }, // dark purple   — chevron
+    ];
+
+    const SHAPES = [
+      'polygon(29% 0%, 71% 0%, 100% 29%, 100% 71%, 71% 100%, 29% 100%, 0% 71%, 0% 29%)',
+      'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+      'polygon(33% 0%, 67% 0%, 67% 33%, 100% 33%, 100% 67%, 67% 67%, 67% 100%, 33% 100%, 33% 67%, 0% 67%, 0% 33%, 33% 33%)',
+      'polygon(0% 0%, 68% 0%, 100% 50%, 68% 100%, 0% 100%, 32% 50%)',
+      'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+      'polygon(50% 0%, 100% 22%, 82% 100%, 18% 100%, 0% 22%)',
+      'polygon(38% 0%, 100% 0%, 72% 36%, 100% 36%, 30% 100%, 48% 52%, 0% 52%)',
+      'polygon(0% 0%, 62% 0%, 62% 19%, 100% 19%, 100% 100%, 38% 100%, 38% 81%, 0% 81%)',
+      'polygon(18% 0%, 100% 0%, 82% 100%, 0% 100%)',
+      'polygon(50% 0%, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0% 50%, 37% 37%)',
+      'polygon(12% 0%, 88% 0%, 100% 12%, 100% 65%, 50% 100%, 0% 65%, 0% 12%)',
+      'polygon(0% 0%, 56% 0%, 100% 50%, 56% 100%, 0% 100%, 44% 50%)',
+      'polygon(50% 0%, 85% 20%, 100% 58%, 70% 100%, 30% 100%, 0% 58%, 15% 20%)',
+    ];
+
+    // parse 'polygon(x% y%, ...)' into [[x,y], ...] in 0..1 space
+    const SHAPE_PTS = SHAPES.map(str =>
+      str.match(/[\d.]+%\s+[\d.]+%/g).map(pair => {
+        const [x, y] = pair.match(/[\d.]+/g).map(Number);
+        return [x / 100, y / 100];
+      })
+    );
+
+    // each color has its own shape — looked up by hex during rendering
+    const colorShapeMap = new Map(COLORS.map(c => [c.hex, c.shape]));
+
+    // lightning bolt needs a wider bottom at small icon sizes; chevron optical centering
+    const BOMB_ICON_SHAPE_PTS = {
+      6: [[0.38,0],[1,0],[0.72,0.36],[1,0.36],[0.40,1],[0.22,1],[0.48,0.52],[0,0.52]],
+    };
+    const BOMB_ICON_X_SHIFTS = { 11: 0.12 };
+
+    let colourBlindMode        = localStorage.getItem('chromagrid-cbm') === '1';
+    let colourBlindModePending = colourBlindMode;
+
+    let COLS = 12, ROWS = 10;
+    let CELL = 52, GAP = 6;
+    const PRESS_MS   = 500;
+    const FLIP_MS    = 450;
+    const POP_MS     = 320;
+    const DROP_MS    = 300;
+    const INTRO_MS   = 420;
+    const BOMB_MS    = 160;
+    const RING_MS    = 300;
+    const VICTIM_MS  = 150;
+    const NOMATCH_MS = 380;
+    const TIME_MS    = 120000;
+    const DEBUG      = false;
+
+    function initLayout() {
+      COLS = 8; ROWS = 12;
+      if (window.innerWidth <= 760) {
+        GAP = 4;
+        const bodyPadX = 12;
+        const gridPadX = 3;
+        const cellByW = Math.floor(
+          (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * GAP) / COLS
+        );
+        const cellByH = Math.floor((window.innerHeight - 225) / ROWS);
+        CELL = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
+      } else {
+        GAP = 6;
+        const cellByH = Math.floor((window.innerHeight - 270) / ROWS);
+        CELL = Math.min(52, Math.max(34, cellByH));
+      }
+    }
+
+    // ── canvas renderer ────────────────────────────────────────────────────
+    const canvas = document.getElementById('grid-canvas');
+    const ctx    = canvas.getContext('2d');
+    let boardW = 0, boardH = 0;
+    let shapePaths = [];
+
+    function sizeCanvas() {
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      boardW = COLS * CELL + (COLS - 1) * GAP;
+      boardH = ROWS * CELL + (ROWS - 1) * GAP;
+      canvas.width  = Math.round(boardW * dpr);
+      canvas.height = Math.round(boardH * dpr);
+      canvas.style.width  = boardW + 'px';
+      canvas.style.height = boardH + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      shapePaths = SHAPE_PTS.map(pts => {
+        const p = new Path2D();
+        pts.forEach(([x, y], k) => {
+          const px = (x - 0.5) * CELL, py = (y - 0.5) * CELL;
+          k === 0 ? p.moveTo(px, py) : p.lineTo(px, py);
+        });
+        p.closePath();
+        return p;
+      });
+    }
+
+    function drawBomb(g, colorHex, type) {
+      const R   = CELL * 0.30;
+      const TIP = CELL * 0.47;
+      const w   = 0.22;
+      const spikeAngles = {
+        bomb:      [0,1,2,3,4,5,6,7].map(k => k * Math.PI / 4 + Math.PI / 8),
+        bombCross: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2],
+        bombX:     [1, 3, 5, 7].map(k => k * Math.PI / 4),
+        bombH:     [0, Math.PI],
+        bombV:     [Math.PI / 2, 3 * Math.PI / 2],
+      };
+      const angles = spikeAngles[type] || spikeAngles.bomb;
+      g.fillStyle = colorHex;
+      g.beginPath();
+      for (const a of angles) {
+        g.moveTo(Math.cos(a - w) * R * 0.92, Math.sin(a - w) * R * 0.92);
+        g.lineTo(Math.cos(a) * TIP,          Math.sin(a) * TIP);
+        g.lineTo(Math.cos(a + w) * R * 0.92, Math.sin(a + w) * R * 0.92);
+      }
+      g.fill();
+      g.beginPath(); g.arc(0, 0, R, 0, 2 * Math.PI); g.fill();
+
+      g.strokeStyle = 'rgba(255,255,255,0.92)';
+      if (colourBlindMode) {
+        const shapeIdx = colorShapeMap.get(colorHex) ?? 0;
+        const pts = BOMB_ICON_SHAPE_PTS[shapeIdx] || SHAPE_PTS[shapeIdx];
+        const iconHalf = R * 0.52;
+        const xShift = (BOMB_ICON_X_SHIFTS[shapeIdx] || 0) * iconHalf * 2;
+        g.lineWidth = Math.max(1, CELL * 0.032);
+        g.beginPath();
+        for (let k = 0; k < pts.length; k++) {
+          const px = (pts[k][0] - 0.5) * iconHalf * 2 + xShift;
+          const py = (pts[k][1] - 0.5) * iconHalf * 2;
+          k === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+        }
+        g.closePath();
+        g.stroke();
+      } else {
+        g.strokeStyle = lightenHex(colorHex, 0.65);
+        g.lineWidth = Math.max(1.5, CELL * 0.045);
+        g.beginPath(); g.arc(0, 0, R * 0.6, 0, 2 * Math.PI); g.stroke();
+        g.lineWidth = Math.max(1.5, CELL * 0.055);
+        if (type === 'bomb') {
+          g.lineWidth = Math.max(1, CELL * 0.03);
+          g.beginPath();
+          g.moveTo(-R * 0.92, 0); g.lineTo(R * 0.92, 0);
+          g.moveTo(0, -R * 0.92); g.lineTo(0, R * 0.92);
+          g.stroke();
+        } else if (type === 'bombCross') {
+          g.beginPath();
+          g.moveTo(-R * 0.82, 0); g.lineTo(R * 0.82, 0);
+          g.moveTo(0, -R * 0.82); g.lineTo(0, R * 0.82);
+          g.stroke();
+        } else if (type === 'bombX') {
+          const d = R * 0.58;
+          g.beginPath();
+          g.moveTo(-d, -d); g.lineTo(d, d);
+          g.moveTo(d, -d);  g.lineTo(-d, d);
+          g.stroke();
+        } else if (type === 'bombH') {
+          const bx = R * 0.78, aw = R * 0.28, ah = R * 0.18;
+          g.beginPath();
+          g.moveTo(-bx, 0); g.lineTo(bx, 0);
+          g.moveTo(-bx + aw, -ah); g.lineTo(-bx, 0); g.lineTo(-bx + aw, ah);
+          g.moveTo(bx - aw, -ah);  g.lineTo(bx, 0);  g.lineTo(bx - aw, ah);
+          g.stroke();
+        } else if (type === 'bombV') {
+          const by = R * 0.78, aw = R * 0.18, ah = R * 0.28;
+          g.beginPath();
+          g.moveTo(0, -by); g.lineTo(0, by);
+          g.moveTo(-aw, -by + ah); g.lineTo(0, -by); g.lineTo(aw, -by + ah);
+          g.moveTo(-aw,  by - ah); g.lineTo(0,  by); g.lineTo(aw,  by - ah);
+          g.stroke();
+        }
+      }
+    }
+
+    // ── animation channels ─────────────────────────────────────────────────
+    const fx = {
+      flips:      new Map(),
+      pops:       new Map(),
+      drops:      new Map(),
+      intro:      new Map(),
+      bombPulse:  new Map(),
+      bombCharge: new Map(),
+      victims:    new Map(),
+      noMatch:    new Map(),
+      rings:      [],
+    };
+    let press    = null;
+    let hoverIdx = -1;
+
+    function clearFx() {
+      Object.values(fx).forEach(ch => ch.clear ? ch.clear() : (fx.rings.length = 0));
+      press = null;
+    }
+
+    let rafId = 0;
+    function invalidate() { if (!rafId) rafId = requestAnimationFrame(frame); }
+    function frame(now) { rafId = 0; if (render(now)) invalidate(); }
+
+    // ── easing / keyframe helpers ──────────────────────────────────────────
+    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+    function lightenHex(hex, t) {
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return `rgb(${Math.round(r+(255-r)*t)},${Math.round(g+(255-g)*t)},${Math.round(b+(255-b)*t)})`;
+    }
+    const easeOutQuad = t => 1 - (1 - t) * (1 - t);
+    const smoothstep  = t => t * t * (3 - 2 * t);
+
+    function kf(t, stops) {
+      if (t <= stops[0][0]) return stops[0][1];
+      for (let k = 1; k < stops.length; k++) {
+        if (t <= stops[k][0]) {
+          const [t0, v0] = stops[k - 1], [t1, v1] = stops[k];
+          return v0 + (v1 - v0) * ((t - t0) / (t1 - t0));
+        }
+      }
+      return stops[stops.length - 1][1];
+    }
+
+    function flipAngle(t) {
+      if (t < 0.5) { const u = t / 0.5; return (u * u) * Math.PI / 2; }
+      const u = (t - 0.5) / 0.5;
+      return Math.PI / 2 + easeOutCubic(u) * Math.PI / 2;
+    }
+
+    function cellCenter(i) {
+      return [
+        colOf(i) * (CELL + GAP) + CELL / 2,
+        rowOf(i) * (CELL + GAP) + CELL / 2,
+      ];
+    }
+
+    function render(now) {
+      ctx.clearRect(0, 0, boardW, boardH);
+      if (phase === 'idle' || !state.length) return false;
+
+      let active = false;
+      const bombsOnTop = [];
+
+      for (let i = 0; i < state.length; i++) {
+        const isExploding = fx.bombPulse.has(i);
+        if (isExploding) { bombsOnTop.push(i); continue; }
+        if (drawTile(now, i)) active = true;
+      }
+      for (const i of bombsOnTop) if (drawTile(now, i)) active = true;
+
+      for (let k = fx.rings.length - 1; k >= 0; k--) {
+        const ring = fx.rings[k];
+        const t = (now - ring.start) / RING_MS;
+        if (t >= 1) { fx.rings.splice(k, 1); continue; }
+        active = true;
+        const maxSc = ring.maxScale || 3.8;
+        const scale = 0.15 + maxSc * easeOutCubic(t);
+        const alpha = kf(t, [[0, 1], [0.4, 0.85], [1, 0]]);
+        const radius = (CELL / 2) * scale;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = 'rgba(255,136,50,0.95)';
+        ctx.lineWidth = 3;
+
+        if (!ring.type || ring.type === 'bomb') {
+          ctx.beginPath();
+          ctx.arc(ring.cx, ring.cy, radius, 0, 2 * Math.PI);
+          ctx.stroke();
+        } else {
+          const dirAngles = {
+            bombCross: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2],
+            bombX:     [1, 3, 5, 7].map(k => k * Math.PI / 4),
+            bombH:     [0, Math.PI],
+            bombV:     [Math.PI / 2, 3 * Math.PI / 2],
+          };
+          const angles = dirAngles[ring.type] || [];
+          const isLong = ring.type === 'bombH' || ring.type === 'bombV';
+          const arcW = isLong ? Math.PI / 4 : Math.PI / 5;
+
+          if (isLong) {
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.28;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (const a of angles) {
+              ctx.moveTo(ring.cx, ring.cy);
+              ctx.lineTo(ring.cx + Math.cos(a) * radius, ring.cy + Math.sin(a) * radius);
+            }
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.lineWidth = isLong ? 4 : 3;
+          for (const a of angles) {
+            ctx.beginPath();
+            ctx.arc(ring.cx, ring.cy, radius, a - arcW / 2, a + arcW / 2);
+            ctx.stroke();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      if (press) active = true;
+      return active;
+    }
+
+    function drawTile(now, i) {
+      const s = state[i];
+      if (!s) return false;
+
+      let [cx, cy] = cellCenter(i);
+      let alpha = 1, sc = 1, rot = 0, dy = 0;
+      let white = 0, glowColor = null, glowBlur = 0;
+      let sx = (!colourBlindMode && s.flipped && !s.special) ? -1 : 1;
+      let color = visColor(s).hex;
+      let active = false;
+
+      const intro = fx.intro.get(i);
+      if (intro) {
+        const t = (now - intro.start - intro.delay) / INTRO_MS;
+        if (t >= 1) fx.intro.delete(i);
+        else {
+          active = true;
+          if (t < 0) return true;
+          dy    = -60 * (1 - easeOutCubic(t));
+          alpha = Math.min(1, t / 0.6);
+        }
+      }
+
+      const drop = fx.drops.get(i);
+      if (drop) {
+        const t = (now - drop.start) / DROP_MS;
+        if (t >= 1) fx.drops.delete(i);
+        else { active = true; dy = -drop.fromPx * (1 - smoothstep(t)); }
+      }
+
+      const flip = fx.flips.get(i);
+      if (flip) {
+        const t = (now - flip.start) / FLIP_MS;
+        if (t >= 1) fx.flips.delete(i);
+        else {
+          active = true;
+          const angle = flipAngle(t);
+          sx = colourBlindMode ? Math.abs(Math.cos(angle)) : (s.flipped ? 1 : -1) * Math.cos(angle);
+          color = (t < 0.5 ? (s.flipped ? s.frontColor : s.backColor) : visColor(s)).hex;
+        }
+      }
+
+      const pop = fx.pops.get(i);
+      if (pop) {
+        const t = (now - pop.start) / POP_MS;
+        if (t >= 1) return false;
+        active = true;
+        sc   *= kf(t, [[0, 1], [0.35, 1.28], [1, 0]]);
+        rot   = kf(t, [[0, 0], [0.35, 4], [1, -8]]) * Math.PI / 180;
+        alpha *= kf(t, [[0, 1], [0.35, 1], [1, 0]]);
+      }
+
+      const vic = fx.victims.get(i);
+      if (vic) {
+        const t = (now - vic.start) / VICTIM_MS;
+        if (t >= 1) return false;
+        active = true;
+        sc    *= kf(t, [[0, 1], [0.35, 1.45], [1, 0]]);
+        alpha *= kf(t, [[0, 1], [0.35, 0.9], [1, 0]]);
+      }
+
+      const charge = fx.bombCharge.get(i);
+      if (charge) {
+        const t = Math.min(1, (now - charge.start) / POP_MS);
+        active = true;
+        sc *= 1 + Math.sin(t * Math.PI * 3) * 0.12 * easeOutCubic(t);
+        if (t > 0.8) white = easeOutCubic((t - 0.8) / 0.2) * 0.75;
+      }
+
+      const pulse = fx.bombPulse.get(i);
+      if (pulse) {
+        const t = Math.min(1, (now - pulse.start) / BOMB_MS);
+        if (t >= 1) return false;
+        active = true;
+        sc    *= kf(t, [[0, 1], [0.28, 2.3], [0.62, 1.9], [1, 1.5]]);
+        alpha *= kf(t, [[0, 1], [0.28, 1], [0.62, 0.9], [1, 0]]);
+        white  = kf(t, [[0, 0.9], [0.28, 0.85], [0.62, 0.45], [1, 0]]);
+      }
+
+      const nm = fx.noMatch.get(i);
+      if (nm) {
+        const t = (now - nm.start) / NOMATCH_MS;
+        if (t >= 1) fx.noMatch.delete(i);
+        else {
+          active = true;
+          const k2 = kf(t, [[0, 0], [0.4, 1], [1, 0]]);
+          glowColor = 'rgba(255,64,64,0.9)'; glowBlur = 8 * k2;
+          white = 0.25 * k2;
+        }
+      }
+
+      if (press && press.i === i) {
+        const t = Math.min(1, (now - press.start) / PRESS_MS);
+        glowColor = 'rgba(0,245,255,0.9)'; glowBlur = 2 + 18 * t;
+        white = Math.max(white, 0.22 * t);
+      } else if (hoverIdx === i && !press && phase === 'playing' && !isAnimating) {
+        sc *= 1.1; sx *= 0.95;
+        glowColor = 'rgba(0,245,255,0.7)'; glowBlur = 8;
+      }
+
+      if (alpha <= 0 || sc <= 0) return active;
+
+      ctx.save();
+      ctx.translate(cx, cy + dy);
+      if (rot) ctx.rotate(rot);
+      ctx.scale(sc * sx, sc);
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      if (glowColor) { ctx.shadowColor = glowColor; ctx.shadowBlur = glowBlur; }
+
+      if (s.special) {
+        drawBomb(ctx, color, s.special.type);
+        if (white > 0) {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(255,255,255,${white})`;
+          ctx.beginPath(); ctx.arc(0, 0, CELL * 0.47, 0, 2 * Math.PI); ctx.fill();
+        }
+      } else {
+        const path = shapePaths[colourBlindMode ? (colorShapeMap.get(color) ?? 0) : (s.shape ?? 0)];
+        ctx.fillStyle = color;
+        ctx.fill(path);
+        if (white > 0) {
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `rgba(255,255,255,${white})`;
+          ctx.fill(path);
+        }
+      }
+      ctx.restore();
+      return active;
+    }
+
+    // ── special items registry ─────────────────────────────────────────────
+    const BOMB_SPAWN_THRESHOLD = 6;
+    const CHAIN_STAGGER_MS     = 90;
+
+    const SPECIALS = {
+      bomb: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [];
+          const r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
+            }
+          }
+          return added;
+        },
+      },
+      bombCross: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+            for (let d = 1; d <= 2; d++) {
+              const nr = r + dr*d, nc = c + dc*d;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
+            }
+          }
+          return added;
+        },
+      },
+      bombX: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
+            for (let d = 1; d <= 2; d++) {
+              const nr = r + dr*d, nc = c + dc*d;
+              if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+                const ni = idx(nr, nc);
+                if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+              }
+            }
+          }
+          return added;
+        },
+      },
+      bombH: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dc = -4; dc <= 4; dc++) {
+            if (dc === 0) continue;
+            const nc = c + dc;
+            if (nc >= 0 && nc < COLS) {
+              const ni = idx(r, nc);
+              if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+            }
+          }
+          return added;
+        },
+      },
+      bombV: {
+        animDuration: RING_MS + VICTIM_MS,
+        expandPop(bombIdx, poppedSet) {
+          const added = [], r = rowOf(bombIdx), c = colOf(bombIdx);
+          for (let dr = -4; dr <= 4; dr++) {
+            if (dr === 0) continue;
+            const nr = r + dr;
+            if (nr >= 0 && nr < ROWS) {
+              const ni = idx(nr, c);
+              if (!poppedSet.has(ni)) { poppedSet.add(ni); added.push(ni); }
+            }
+          }
+          return added;
+        },
+      },
+    };
+
+    const BOMB_TYPES = ['bomb', 'bombCross', 'bombX', 'bombH', 'bombV'];
+    let _bombTypeIdx = 0;
+    function getSpawnType(groupSize) {
+      if (groupSize >= BOMB_SPAWN_THRESHOLD) return BOMB_TYPES[_bombTypeIdx++ % BOMB_TYPES.length];
+      return null;
+    }
+
+    // ── state ──────────────────────────────────────────────────────────────
+    let state       = [];
+    let score       = 0;
+    let isAnimating = false;
+    let phase         = 'idle';
+    let timerDeadline = 0;
+    let timerInterval = null;
+
+    function pick(arr, exclude) {
+      let v;
+      do { v = arr[Math.floor(Math.random() * arr.length)]; }
+      while (v === exclude);
+      return v;
+    }
+
+    function newCell() {
+      const frontColor = pick(COLORS, null);
+      const backColor  = pick(COLORS, frontColor);
+      const shape = Math.floor(Math.random() * SHAPES.length);
+      return { frontColor, backColor, shape, flipped: false, special: null };
+    }
+
+    function newBombCell(color, type = 'bomb') {
+      return { frontColor: color, backColor: color, shape: 0, flipped: false, special: { type } };
+    }
+
+    function idx(r, c)  { return r * COLS + c; }
+    function rowOf(i)   { return Math.floor(i / COLS); }
+    function colOf(i)   { return i % COLS; }
+    function visColor(s){ return s.flipped ? s.backColor : s.frontColor; }
+
+    // ── flood fill ─────────────────────────────────────────────────────────
+    function floodFill(startIdx) {
+      const target  = visColor(state[startIdx]);
+      const visited = new Set([startIdx]);
+      const queue   = [startIdx];
+      while (queue.length) {
+        const cur = queue.shift();
+        const r = rowOf(cur), c = colOf(cur);
+        for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+          const ni = idx(nr, nc);
+          if (!visited.has(ni) && visColor(state[ni]) === target) {
+            visited.add(ni);
+            queue.push(ni);
+          }
+        }
+      }
+      return [...visited];
+    }
+
+    function calcScore(n) { return Math.round(n * n * 6.25); }
+
+    let deltaClearTimer = null;
+    function showDelta(text) {
+      const el = document.getElementById('score-delta');
+      el.textContent = text;
+      el.classList.remove('show');
+      void el.offsetWidth;
+      el.classList.add('show');
+      clearTimeout(deltaClearTimer);
+      deltaClearTimer = setTimeout(() => el.classList.remove('show'), 1100);
+    }
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // ── pop & drop ─────────────────────────────────────────────────────────
+    async function popAndDrop(indices, originIdx) {
+      if (isAnimating) return;
+      isAnimating = true;
+
+      const poppedSet  = new Set(indices);
+      const firedBombs = new Set();
+      const waveData   = [];
+
+      {
+        const wave0 = indices.filter(i => state[i].special && SPECIALS[state[i].special.type]);
+        if (wave0.length > 0) {
+          wave0.forEach(i => firedBombs.add(i));
+          waveData.push({ bombs: wave0, victims: [] });
+
+          let wi = 0;
+          while (wi < waveData.length) {
+            const nextBombs = [];
+            for (const bombIdx of waveData[wi].bombs) {
+              const newCells = SPECIALS[state[bombIdx].special.type].expandPop(bombIdx, poppedSet);
+              for (const ni of newCells) {
+                const niSpec = state[ni].special;
+                if (niSpec && SPECIALS[niSpec.type] && !firedBombs.has(ni)) {
+                  firedBombs.add(ni);
+                  nextBombs.push(ni);
+                } else {
+                  waveData[wi].victims.push(ni);
+                }
+              }
+            }
+            if (nextBombs.length > 0) waveData.push({ bombs: nextBombs, victims: [] });
+            wi++;
+          }
+        }
+      }
+
+      const t0 = performance.now();
+      indices.forEach(i => {
+        if (!firedBombs.has(i)) { fx.pops.set(i, { start: t0 }); fx.flips.delete(i); }
+      });
+      invalidate();
+
+      if (waveData.length > 0) {
+        waveData[0].bombs.forEach(b => { fx.bombCharge.set(b, { start: t0 }); fx.flips.delete(b); });
+        invalidate();
+
+        const fireWave = w => {
+          const { bombs, victims } = waveData[w];
+          const t = performance.now();
+          const bombMaxDist = new Map();
+          for (const bi of bombs) {
+            const [bx, by] = cellCenter(bi);
+            let maxD = CELL;
+            for (const vi of victims) { const [vx,vy]=cellCenter(vi); maxD=Math.max(maxD,Math.hypot(vx-bx,vy-by)); }
+            bombMaxDist.set(bi, maxD);
+          }
+          for (const bombIdx of bombs) {
+            fx.bombCharge.delete(bombIdx);
+            fx.bombPulse.set(bombIdx, { start: t });
+            const [cx, cy] = cellCenter(bombIdx);
+            const maxScale = (bombMaxDist.get(bombIdx) / (CELL / 2)) * 1.15;
+            fx.rings.push({ cx, cy, start: t, maxScale, type: state[bombIdx].special.type });
+          }
+          victims.forEach(vi => {
+            fx.flips.delete(vi);
+            const [vx, vy] = cellCenter(vi);
+            let minDelay = Infinity;
+            for (const bi of bombs) {
+              const [bx, by] = cellCenter(bi);
+              const dist = Math.hypot(vx - bx, vy - by);
+              const maxD = bombMaxDist.get(bi);
+              const maxSc = (maxD / (CELL / 2)) * 1.15;
+              const ratio = Math.max(0, Math.min(1, (dist / (CELL / 2) - 0.15) / maxSc));
+              const waveT = 1 - Math.cbrt(1 - ratio);
+              minDelay = Math.min(minDelay, waveT * RING_MS);
+            }
+            setTimeout(() => { fx.victims.set(vi, { start: performance.now() }); invalidate(); }, minDelay);
+          });
+          invalidate();
+        };
+
+        setTimeout(() => {
+          fireWave(0);
+          for (let w = 1; w < waveData.length; w++) setTimeout(() => fireWave(w), w * CHAIN_STAGGER_MS);
+        }, POP_MS);
+
+        const totalDelay = POP_MS + (waveData.length - 1) * CHAIN_STAGGER_MS + RING_MS + VICTIM_MS;
+        await sleep(totalDelay);
+      } else {
+        await sleep(340);
+      }
+
+      const pts = calcScore(poppedSet.size);
+      score += pts;
+      document.getElementById('score-val').textContent = score;
+      showDelta(`+${pts}`);
+
+      const spawnType = getSpawnType(indices.length);
+      const bombColor = spawnType ? visColor(state[originIdx]) : null;
+      const originCol = colOf(originIdx);
+
+      const dropInfo = new Map();
+
+      for (let c = 0; c < COLS; c++) {
+        const survivors = [];
+        for (let r = 0; r < ROWS; r++) {
+          if (!poppedSet.has(idx(r, c))) survivors.push({ origRow: r, data: state[idx(r, c)] });
+        }
+        const missing = ROWS - survivors.length;
+        let bombPlaced = false;
+        for (let k = 0; k < missing; k++) {
+          let data;
+          if (!bombPlaced && spawnType && c === originCol && k === 0) {
+            data = newBombCell(bombColor, spawnType);
+            bombPlaced = true;
+          } else {
+            data = newCell();
+          }
+          survivors.unshift({ origRow: -(missing - k), data });
+        }
+        for (let r = 0; r < ROWS; r++) {
+          const { origRow, data } = survivors[r];
+          const ni     = idx(r, c);
+          const fallen = r - origRow;
+          state[ni] = data;
+          if (fallen !== 0) dropInfo.set(ni, fallen);
+        }
+      }
+
+      fx.pops.clear(); fx.victims.clear(); fx.bombPulse.clear(); fx.bombCharge.clear(); fx.flips.clear();
+      const t1 = performance.now();
+      dropInfo.forEach((fallen, ni) => fx.drops.set(ni, { start: t1, fromPx: fallen * (CELL + GAP) }));
+      invalidate();
+      updateStatus();
+      isAnimating = false;
+    }
+
+    // ── input ──────────────────────────────────────────────────────────────
+    function cellAt(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      const stride = CELL + GAP;
+      const c = Math.floor(x / stride), r = Math.floor(y / stride);
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return -1;
+      return idx(r, c);
+    }
+
+    let pressTimer = null, longFired = false, downX = 0, downY = 0;
+
+    function cancelPress() {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      press = null;
+      invalidate();
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      if (isAnimating || phase !== 'playing') return;
+      const i = cellAt(e);
+      if (i < 0) return;
+      longFired = false;
+      downX = e.clientX; downY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+      press = { i, start: performance.now() };
+      invalidate();
+      pressTimer = setTimeout(() => {
+        longFired = true;
+        const pi = press ? press.i : i;
+        cancelPress();
+        onLongPress(pi);
+      }, PRESS_MS);
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (press && (Math.abs(e.clientX - downX) > 8 || Math.abs(e.clientY - downY) > 8)) {
+        cancelPress();
+      }
+      if (e.pointerType === 'mouse' && !press) {
+        const i = (phase === 'playing' && !isAnimating) ? cellAt(e) : -1;
+        if (i !== hoverIdx) {
+          hoverIdx = i;
+          canvas.style.cursor = i >= 0 ? 'pointer' : '';
+          invalidate();
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', e => {
+      const wasTap = press && !longFired
+        && Math.abs(e.clientX - downX) <= 8 && Math.abs(e.clientY - downY) <= 8;
+      const i = press ? press.i : -1;
+      cancelPress();
+      if (wasTap) onTap(i);
+    });
+
+    canvas.addEventListener('pointercancel', cancelPress);
+    canvas.addEventListener('pointerleave', () => {
+      if (hoverIdx !== -1) { hoverIdx = -1; canvas.style.cursor = ''; invalidate(); }
+    });
+
+    function onTap(i) {
+      if (i < 0 || isAnimating || phase !== 'playing') return;
+      const s = state[i];
+      if (s.special) return;
+      s.flipped = !s.flipped;
+      fx.flips.set(i, { start: performance.now() });
+      invalidate();
+      updateStatus();
+    }
+
+    function onLongPress(i) {
+      if (isAnimating || phase !== 'playing') return;
+      const group = floodFill(i);
+      if (group.length >= 4) {
+        popAndDrop(group, i);
+      } else {
+        fx.noMatch.set(i, { start: performance.now() });
+        invalidate();
+      }
+    }
+
+    // ── status bar ──────────────────────────────────────────────────────────
+    function updateStatus() {
+      const el = document.getElementById('status');
+      if (phase === 'idle') {
+        el.textContent = 'SYS_STANDBY > AWAITING INITIALIZATION';
+        return;
+      }
+      if (phase === 'over') {
+        el.textContent = `SYS_HALT > TIME EXPIRED > FINAL SCORE ${score.toLocaleString()}`;
+        return;
+      }
+      const total   = ROWS * COLS;
+      const flipped = state.filter(s => s.flipped).length;
+      el.textContent =
+        `SYS_ACTIVE > ${total} TILES > ${flipped} FLIPPED > ${total - flipped} FACE-UP`;
+    }
+
+    const btnFlipAll = document.getElementById('btn-flip-all');
+
+    async function flipAll() {
+      if (isAnimating || phase !== 'playing') return;
+      isAnimating = true;
+      btnFlipAll.disabled = true;
+
+      const w0 = Date.now();
+      while (fx.flips.size && Date.now() - w0 < 600) await sleep(50);
+
+      const t = performance.now();
+      state.forEach((s, i) => {
+        if (s.special) return;
+        s.flipped = !s.flipped;
+        fx.flips.set(i, { start: t });
+      });
+      invalidate();
+      updateStatus();
+      isAnimating = false;
+      setTimeout(() => { if (phase === 'playing') btnFlipAll.disabled = false; }, FLIP_MS + 50);
+    }
+
+    btnFlipAll.addEventListener('click', flipAll);
+
+    // ── countdown timer ───────────────────────────────────────────────────
+    function renderTimer(ms) {
+      const total = Math.ceil(ms / 1000);
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      const el = document.getElementById('timer');
+      el.textContent = `${m}:${String(s).padStart(2, '0')}`;
+      el.classList.toggle('warn',   total <= 30 && total > 10);
+      el.classList.toggle('danger', total <= 10 && phase === 'playing');
+    }
+
+    function tickTimer() {
+      const remaining = Math.max(0, timerDeadline - Date.now());
+      renderTimer(remaining);
+      if (remaining <= 0) endGame();
+    }
+
+    function stopClock() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    // ── game flow ─────────────────────────────────────────────────────────
+    const startOverlay    = document.getElementById('start-overlay');
+    const gameoverOverlay = document.getElementById('gameover-overlay');
+
+    function goIdle() {
+      initLayout();
+      sizeCanvas();
+      stopClock();
+      clearFx();
+      phase = 'idle';
+      state = [];
+      document.body.classList.remove('playing');
+      score = 0;
+      document.getElementById('score-val').textContent = '0';
+      document.getElementById('timer').classList.remove('warn', 'danger', 'over');
+      renderTimer(TIME_MS);
+      invalidate();
+      startOverlay.classList.remove('hidden');
+      gameoverOverlay.classList.add('hidden');
+      btnFlipAll.disabled = true;
+      updateStatus();
+    }
+
+    async function startGame() {
+      if (phase === 'playing') return;
+      colourBlindMode = colourBlindModePending;
+      initLayout();
+      sizeCanvas();
+      clearFx();
+      phase = 'playing';
+      document.body.classList.add('playing');
+      score = 0;
+      document.getElementById('score-val').textContent = '0';
+      document.getElementById('timer').classList.remove('warn', 'danger', 'over');
+      renderTimer(TIME_MS);
+      startOverlay.classList.add('hidden');
+      gameoverOverlay.classList.add('hidden');
+      state = Array.from({ length: ROWS * COLS }, newCell);
+      const t = performance.now();
+      for (let i = 0; i < state.length; i++) {
+        fx.intro.set(i, { start: t, delay: rowOf(i) * 30 + colOf(i) * 12 });
+      }
+      invalidate();
+      updateStatus();
+
+      const cascadeMs = (ROWS - 1) * 30 + (COLS - 1) * 12 + INTRO_MS + 150;
+      await sleep(cascadeMs);
+      if (phase !== 'playing') return;
+      fx.intro.clear();
+      invalidate();
+      btnFlipAll.disabled = false;
+      timerDeadline = Date.now() + TIME_MS;
+      tickTimer();
+      timerInterval = setInterval(tickTimer, 200);
+    }
+
+    async function endGame() {
+      if (phase !== 'playing') return;
+      phase = 'over';
+      document.body.classList.remove('playing');
+      stopClock();
+      renderTimer(0);
+      document.getElementById('timer').classList.add('over');
+      btnFlipAll.disabled = true;
+      while (isAnimating) await sleep(50);
+      document.getElementById('go-score').textContent = score.toLocaleString();
+      gameoverOverlay.classList.remove('hidden');
+      updateStatus();
+      if (isHighScore(score)) autoSaveScore(score);
+      window.dispatchEvent(new CustomEvent('chromagrid:gameover', { detail: { score } }));
+    }
+
+    // ── local high scores ─────────────────────────────────────────────────
+    const HS_KEY = 'chromagrid.highscores';
+    const HS_MAX = 1;
+    let highScores = [];
+
+    function loadHighScores() {
+      try {
+        const arr = JSON.parse(localStorage.getItem(HS_KEY) || '[]');
+        return Array.isArray(arr)
+          ? arr.filter(e => e && typeof e.score === 'number').slice(0, HS_MAX)
+          : [];
+      } catch { return []; }
+    }
+
+    function saveHighScores() {
+      try { localStorage.setItem(HS_KEY, JSON.stringify(highScores)); } catch {}
+    }
+
+    function renderBestScore(flash) {
+      const el = document.getElementById('best-val');
+      if (!el) return;
+      if (!highScores.length) { el.textContent = '—'; return; }
+      el.textContent = highScores[0].score.toLocaleString();
+      if (flash) {
+        el.style.color = 'var(--yellow)';
+        setTimeout(() => { el.style.color = ''; }, 1200);
+      }
+    }
+
+    function isHighScore(s) {
+      if (s <= 0) return false;
+      if (highScores.length < HS_MAX) return true;
+      return s > highScores[highScores.length - 1].score;
+    }
+
+    function autoSaveScore(s) {
+      const ts = Date.now();
+      highScores.push({ score: s, ts });
+      highScores.sort((a, b) => b.score - a.score);
+      highScores = highScores.slice(0, HS_MAX);
+      saveHighScores();
+      renderBestScore(true);
+    }
+
+    highScores = loadHighScores();
+    renderBestScore();
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (isAnimating) return;
+      if (phase === 'playing' && isHighScore(score)) autoSaveScore(score);
+      goIdle();
+    });
+
+    document.getElementById('btn-start').addEventListener('click', startGame);
+    document.getElementById('btn-play-again').addEventListener('click', startGame);
+
+    const cbmCheck = document.getElementById('cbm-check');
+    const cbmStart = document.getElementById('cbm-start');
+    function setCBM(val) {
+      colourBlindModePending = val;
+      cbmCheck.checked = val;
+      cbmStart.checked = val;
+      localStorage.setItem('chromagrid-cbm', val ? '1' : '0');
+      if (phase !== 'playing') { colourBlindMode = val; invalidate(); }
+    }
+    setCBM(colourBlindMode);
+    cbmCheck.addEventListener('change', () => setCBM(cbmCheck.checked));
+    cbmStart.addEventListener('change', () => setCBM(cbmStart.checked));
+    document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
+    document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+
+    const SITE_URL = 'https://icecreamlorry.github.io/lb-games/chromagrid/';
+
+    document.getElementById('btn-copy').addEventListener('click', async () => {
+      const best = highScores.length ? highScores[0].score : null;
+      const text = best
+        ? `I scored ${best.toLocaleString()} on CHROMAGRID — can you beat it?\n${SITE_URL}`
+        : `playing CHROMAGRID — 2 minutes, beat your high score.\n${SITE_URL}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById('btn-copy');
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      } catch {}
+    });
+
+    document.getElementById('btn-share').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-share');
+      try {
+        const best = highScores.length ? highScores[0].score : null;
+        const shareText = best
+          ? `I scored ${best.toLocaleString()} on CHROMAGRID — can you beat it?`
+          : 'CHROMAGRID — 2 minutes, beat your high score.';
+        if (navigator.share) {
+          await navigator.share({ title: 'CHROMAGRID', text: shareText, url: SITE_URL });
+        } else {
+          await navigator.clipboard.writeText(shareText + '\n' + SITE_URL);
+          btn.classList.add('copied');
+          setTimeout(() => btn.classList.remove('copied'), 1500);
+        }
+      } catch {}
+    });
+
+    if (DEBUG) {
+      const debugBtn = document.createElement('button');
+      debugBtn.textContent = 'DEBUG: ADD BOMBS';
+      debugBtn.style.cssText = [
+        'position:fixed', 'bottom:12px', 'right:12px', 'z-index:999',
+        'font-size:0.65rem', 'padding:5px 10px', 'opacity:0.75',
+        'border-color:#ff4400', 'color:#ff4400',
+      ].join(';');
+      document.body.appendChild(debugBtn);
+      debugBtn.addEventListener('click', () => {
+        if (phase !== 'playing' || isAnimating) return;
+        const indices = [...Array(state.length).keys()]
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 10);
+        indices.forEach(i => { state[i] = newBombCell(pick(COLORS, null)); });
+        invalidate();
+      });
+    }
+
+    goIdle();
+  </script>
+</body>
+</html>

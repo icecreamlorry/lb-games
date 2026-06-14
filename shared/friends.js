@@ -1,12 +1,11 @@
-// Friends: a thin, game-independent wrapper over the project-wide social
-// graph (see supabase/friends.sql). Like auth.js it knows nothing about any
-// particular game — copy it as-is into other projects on the same Supabase
-// project and the friends/profile layer works unchanged.
+// Friends: game-independent wrapper over the project-wide social graph.
 //
-// A signed-in player has a profile row carrying a unique, shareable friend
-// code. Adding a friend by code sends a request; the other player accepts it
-// from their profile panel. Everything goes through SECURITY DEFINER RPCs so
-// the underlying tables stay locked down.
+// A signed-in player has a profile row with a unique shareable friend code.
+// Adding a friend by code sends a request; the other player accepts from
+// their profile panel. Everything goes through SECURITY DEFINER RPCs so the
+// underlying tables stay locked down.
+//
+// Copy this file as-is into any LB Games title on the same Supabase project.
 
 import { supabase } from './supabaseClient.js';
 
@@ -62,8 +61,7 @@ export async function removeFriend(friendId) {
   if (error) throw error;
 }
 
-// Friendly one-liner for an addFriendByCode result.
-export function addFriendMessage(result, codeOwnerName) {
+export function addFriendMessage(result) {
   switch (result) {
     case 'requested':         return 'Friend request sent.';
     case 'accepted':          return 'You are now friends!';
