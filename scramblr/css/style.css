@@ -1,0 +1,179 @@
+/* Scramblr — LB Games neon theme. Reuses shared.css for :root vars, buttons,
+   .field, .modal*, .link-btn, .status-line, .friend-list, .menu-item, .hidden. */
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background-color: var(--dark);
+  background-image:
+    linear-gradient(rgba(0,245,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.035) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+.muted { color: rgba(0,245,255,0.5); }
+.grow  { flex: 1; }
+.hidden { display: none !important; }
+
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+
+/* ---- Cards (landing / lobby) ---- */
+.card {
+  width: min(420px, 94vw);
+  background: var(--panel);
+  border: 1px solid rgba(0,245,255,0.22);
+  border-radius: 4px;
+  padding: 26px 24px 22px;
+  box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+  display: flex; flex-direction: column; gap: 14px;
+  text-align: center;
+}
+.card.wide { width: min(520px, 94vw); }
+.logo {
+  font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.18em;
+  font-size: 2.2rem; margin: 0; color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan), 0 0 26px rgba(0,245,255,0.5);
+}
+.logo.small { font-size: 1rem; letter-spacing: 0.15em; }
+.tagline { margin: 0; font-size: 0.66rem; letter-spacing: 0.3em; color: var(--magenta); text-shadow: 0 0 8px var(--magenta); }
+.card-title { font-family: 'Orbitron', monospace; font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
+.hint { font-size: 0.6rem; color: rgba(0,245,255,0.4); line-height: 1.5; margin: 4px 0 0; }
+
+.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.row .btn-primary, .row .btn-ghost { flex: 1; min-width: 0; }
+#btn-lobby-refresh { flex: 0 0 auto; }
+
+.btn-ghost {
+  background: transparent; color: rgba(0,245,255,0.7);
+  border: 1px solid rgba(0,245,255,0.3); border-radius: 2px;
+  padding: 8px 16px; font-family: 'Orbitron', monospace; font-size: 0.66rem;
+  font-weight: 600; letter-spacing: 0.12em; cursor: pointer; touch-action: manipulation;
+}
+.btn-ghost:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.25); }
+.btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: default; }
+
+#account-bar { border-top: 1px solid rgba(0,245,255,0.12); padding-top: 12px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+#account-line { font-size: 0.72rem; color: rgba(0,245,255,0.6); }
+#account-line strong { color: var(--cyan); }
+.account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ---- Top bars ---- */
+.bar { display: flex; align-items: center; gap: 10px; }
+/* Right padding clears the shared menu button (fixed top-right by account-ui). */
+.game-bar { padding: 8px 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
+#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 44px; }
+.chip {
+  background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);
+  color: rgba(0,245,255,0.8); border-radius: 999px; padding: 5px 12px;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.64rem; letter-spacing: 0.08em;
+  cursor: pointer; touch-action: manipulation; white-space: nowrap;
+}
+.chip strong { color: var(--cyan); letter-spacing: 0.12em; }
+.conn { color: var(--yellow); }
+.conn.live { color: #2bd576; border-color: rgba(43,213,118,0.4); }
+
+/* ---- Lobby list ---- */
+.lobby-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.lobby-game {
+  position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
+  text-align: left; width: 100%; background: rgba(0,245,255,0.04);
+  border: 1px solid transparent; border-radius: 3px; padding: 12px 14px;
+  color: var(--cyan); cursor: pointer; font-family: 'Share Tech Mono', monospace;
+}
+.lobby-game:hover { border-color: rgba(0,245,255,0.35); }
+.lobby-game.live { border-color: var(--cyan); }
+.lobby-opp { font-weight: 600; }
+.lobby-status { font-size: 0.66rem; color: rgba(0,245,255,0.5); }
+.lobby-game.live .lobby-status { color: var(--cyan); }
+.lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Orbitron', monospace; font-size: 0.9rem; }
+.lobby-dismiss { position: absolute; top: 2px; right: 6px; color: rgba(0,245,255,0.4); font-size: 16px; cursor: pointer; padding: 2px 6px; }
+.lobby-dismiss:hover { color: var(--magenta); }
+.lobby-empty { text-align: center; color: rgba(0,245,255,0.4); line-height: 1.6; padding: 10px; }
+
+/* ---- Players strip ---- */
+.players-strip { display: flex; gap: 8px; padding: 8px 12px; overflow-x: auto; }
+.pchip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.2);
+  border-radius: 3px; padding: 5px 12px; min-width: 64px;
+}
+.pchip.me { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.2); }
+.pchip .pname { font-size: 0.64rem; color: rgba(0,245,255,0.75); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pchip .pscore { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1rem; color: var(--cyan); }
+.pchip .pdot { width: 6px; height: 6px; border-radius: 50%; background: #2bd576; box-shadow: 0 0 6px #2bd576; }
+.pchip .pdot.off { background: #555; box-shadow: none; }
+
+/* ---- Board ---- */
+.board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 0; }
+.board {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  width: min(92vw, 60vh); aspect-ratio: 1;
+  touch-action: none;
+}
+.bcell {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.25);
+  border-radius: 6px; color: var(--cyan);
+  font-family: 'Orbitron', monospace; font-weight: 800;
+  font-size: clamp(1.2rem, 7vw, 2.4rem); text-transform: uppercase;
+  cursor: pointer; user-select: none; transition: background 0.08s, box-shadow 0.08s, transform 0.05s;
+}
+.bcell.sel { background: rgba(0,245,255,0.22); border-color: var(--cyan); box-shadow: 0 0 14px rgba(0,245,255,0.4); transform: scale(0.96); }
+.bcell.last { background: var(--cyan); color: var(--dark); }
+
+/* ---- Overlays over the board ---- */
+.board-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4,4,15,0.82); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  border-radius: 8px;
+}
+.overlay-card {
+  background: var(--panel); border: 1px solid rgba(0,245,255,0.25); border-radius: 4px;
+  padding: 24px 26px; text-align: center; max-width: 90%;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+  box-shadow: 0 0 40px rgba(0,245,255,0.1);
+}
+.overlay-title { font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.15em; color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
+.countdown-num {
+  font-family: 'Orbitron', monospace; font-weight: 800; font-size: 7rem; color: var(--cyan);
+  text-shadow: 0 0 24px var(--cyan), 0 0 60px rgba(0,245,255,0.5);
+  animation: pop 1s ease-in-out infinite;
+}
+@keyframes pop { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.7; } }
+.results-list { text-align: left; margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+.results-list li { display: flex; align-items: baseline; gap: 10px; font-size: 0.86rem; }
+.results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); width: 1.6em; }
+.results-list .r-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); }
+.results-list li.me .r-name { color: #fff; }
+
+/* ---- Play foot ---- */
+.play-foot { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; align-items: center; }
+.timer { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.5rem; color: var(--cyan); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+.timer.warn { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
+.timer.danger { color: #ff4040; text-shadow: 0 0 12px #ff4040; }
+.current-word { min-height: 1.4em; font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.1rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
+.foot-actions { width: min(420px, 90vw); }
+.foot-actions .btn-primary, .foot-actions .btn-ghost { flex: 1; }
+.found-head { font-size: 0.8rem; }
+.found-head .score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); }
+.found-list { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; max-height: 4.4em; overflow-y: auto; width: min(440px, 92vw); }
+.found-list .fw { font-size: 0.72rem; color: rgba(0,245,255,0.7); }
+.found-list .fw.flash { color: var(--yellow); }
+
+/* shared.css gives .status-line a fixed colour; keep it compact here */
+.status-line { min-height: 1.2em; font-size: 0.7rem; text-align: center; }
+
+.help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.78rem; line-height: 1.55; color: rgba(0,245,255,0.7); }
+.help-body strong { color: var(--cyan); }
+
+@media (max-width: 420px) {
+  .logo { font-size: 1.7rem; }
+  .timer { font-size: 1.3rem; }
+}

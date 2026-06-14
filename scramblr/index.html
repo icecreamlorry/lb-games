@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SCRAMBLR // LB GAMES</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#04040f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Scramblr">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js) for this game.
+    window.LB_CONFIG = { gameSlug: 'scramblr', gameName: 'Scramblr' };
+  </script>
+</head>
+<body>
+
+  <!-- Landing (guests): set a name, create or join a room -->
+  <section id="screen-landing" class="screen">
+    <div class="card">
+      <h1 class="logo">SCRAMBLR</h1>
+      <p class="tagline">// FAST MULTIPLAYER WORD HUNT //</p>
+
+      <div class="row">
+        <button id="btn-create" class="btn-primary">CREATE ROOM</button>
+        <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
+      </div>
+      <div id="join-box" class="row hidden">
+        <input id="code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="landing-error" class="status-line"></p>
+
+      <div id="account-bar">
+        <div id="account-line">Playing as a guest</div>
+        <div class="account-actions">
+          <button id="btn-set-name" class="link-btn">SET NAME</button>
+          <button id="btn-login" class="link-btn">LOG IN</button>
+          <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
+          <button id="btn-go-lobby" class="link-btn hidden">MY GAMES</button>
+        </div>
+        <p class="hint">Log in to keep several games going and get notified when one starts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — signed-in players -->
+  <section id="screen-lobby" class="screen hidden">
+    <div class="card wide">
+      <header class="bar">
+        <span class="logo small">SCRAMBLR</span>
+        <span class="grow muted">Hi, <strong id="lobby-name"></strong></span>
+        <button id="btn-notify-lobby" class="chip hidden" title="Notify me when a game starts">🔔</button>
+        <button id="btn-logout-lobby" class="chip">LOG OUT</button>
+      </header>
+      <h2 class="card-title">Your games</h2>
+      <div class="row">
+        <button id="btn-lobby-new" class="btn-primary">NEW GAME</button>
+        <button id="btn-lobby-challenge" class="btn-ghost">CHALLENGE A FRIEND</button>
+        <button id="btn-lobby-join" class="btn-ghost">JOIN BY CODE</button>
+        <button id="btn-lobby-refresh" class="btn-ghost" title="Refresh">↻</button>
+      </div>
+      <div id="lobby-join-box" class="row hidden">
+        <input id="lobby-code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-lobby-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="lobby-error" class="status-line"></p>
+      <div id="lobby-list" class="lobby-list"></div>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen hidden">
+    <header class="bar game-bar">
+      <span class="logo small">SCRAMBLR</span>
+      <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
+      <span id="conn-badge" class="chip conn">connecting…</span>
+      <span class="grow"></span>
+      <button id="btn-notify" class="chip hidden" title="Notify me when the game starts">🔔</button>
+      <button id="btn-leave" class="chip">LEAVE</button>
+    </header>
+
+    <div id="players-strip" class="players-strip"></div>
+
+    <div class="board-wrap">
+      <div id="board" class="board"></div>
+
+      <div id="prestart-overlay" class="board-overlay">
+        <div class="overlay-card">
+          <div id="start-title" class="overlay-title">WAITING FOR PLAYERS</div>
+          <p id="start-info" class="muted"></p>
+          <button id="btn-start" class="btn-primary hidden">START GAME</button>
+          <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
+        </div>
+      </div>
+
+      <div id="countdown-overlay" class="board-overlay hidden">
+        <div id="countdown-num" class="countdown-num">3</div>
+      </div>
+
+      <div id="results-overlay" class="board-overlay hidden">
+        <div class="overlay-card">
+          <div class="overlay-title">TIME!</div>
+          <ol id="results-list" class="results-list"></ol>
+          <p id="results-waiting" class="muted hidden">Waiting for everyone's words…</p>
+          <button id="btn-results-done" class="btn-primary">BACK</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="play-foot">
+      <div id="timer" class="timer">3:00</div>
+      <div id="current-word" class="current-word"></div>
+      <div class="row foot-actions">
+        <button id="btn-clear" class="btn-ghost" disabled>CLEAR</button>
+        <button id="btn-accept" class="btn-primary" disabled>ACCEPT</button>
+      </div>
+      <div class="found-head"><span id="my-score" class="score">0</span><span class="muted"> pts · </span><span id="found-count" class="muted">0 words</span></div>
+      <div id="found-list" class="found-list"></div>
+      <p id="status-line" class="status-line"></p>
+    </div>
+  </section>
+
+  <!-- Challenge a friend -->
+  <div id="modal-challenge" class="modal hidden">
+    <div class="modal-panel">
+      <button class="modal-close" data-close="modal-challenge">✕</button>
+      <div class="modal-title">CHALLENGE A FRIEND</div>
+      <p class="modal-intro">Start a room addressed to a friend — it appears in their games list to accept.</p>
+      <ul id="challenge-list" class="friend-list"></ul>
+    </div>
+  </div>
+
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="help-close" class="modal-close">✕</button>
+      <div class="modal-title">HOW TO PLAY</div>
+      <div class="help-body">
+        <p>Find as many words as you can in the 4×4 grid before the 3-minute timer runs out.</p>
+        <p><strong>Make a word</strong> two ways: tap letters one by one (each must touch the last — including diagonally) then hit <strong>ACCEPT</strong>, or drag your finger across the letters and release.</p>
+        <p>Words must be <strong>3+ letters</strong>, real dictionary words, and can't reuse a tile within the same word.</p>
+        <p><strong>Scoring:</strong> 3–4 letters = 1, 5 = 2, 6 = 3, 7 = 5, 8+ = 11. A word found by <strong>more than one player scores for nobody</strong> — so the rarer your words, the better.</p>
+        <p>The host starts the round once everyone's in; a 3-2-1 countdown runs for all players, then go!</p>
+      </div>
+      <button id="help-got-it" class="btn-primary">GOT IT</button>
+    </div>
+  </div>
+
+  <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
