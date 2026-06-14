@@ -521,6 +521,184 @@
       box-shadow: 0 0 6px var(--cyan);
     }
 
+    /* ── account bar (start overlay) ────────────────────────────────────── */
+    #account-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      margin-top: 4px;
+      font-size: 0.7rem;
+      letter-spacing: 0.05em;
+    }
+    #account-line { color: rgba(0,245,255,0.6); }
+    #account-line strong { color: var(--cyan); font-weight: 600; }
+    .account-actions { display: flex; gap: 8px; }
+    .link-btn {
+      background: none;
+      border: none;
+      padding: 2px 4px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.56rem;
+      letter-spacing: 0.12em;
+      color: rgba(0,245,255,0.55);
+      text-shadow: none;
+      box-shadow: none;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .link-btn:hover { color: var(--cyan); background: none; box-shadow: none; }
+
+    /* ── shared modal shell (auth / name / leaderboard) ─────────────────── */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 950;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4,4,15,0.88);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      padding: 20px;
+      overflow-y: auto;
+      animation: ov-fade 0.3s ease;
+    }
+    .modal-panel {
+      position: relative;
+      max-width: 360px;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 4px;
+      padding: 26px 26px 22px;
+      box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border-radius: 2px;
+      font-size: 0.7rem;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    .modal-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      text-align: center;
+    }
+    .modal-intro {
+      font-size: 0.66rem;
+      color: rgba(0,245,255,0.5);
+      letter-spacing: 0.04em;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .auth-tabs { display: flex; gap: 8px; }
+    .auth-tabs .tab {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 0.58rem;
+      color: rgba(0,245,255,0.5);
+      border-color: rgba(0,245,255,0.2);
+      text-shadow: none;
+      box-shadow: none;
+    }
+    .auth-tabs .tab.active {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0,245,255,0.25);
+    }
+    .field {
+      width: 100%;
+      background: rgba(0,245,255,0.04);
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 3px;
+      padding: 10px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--cyan);
+      letter-spacing: 0.04em;
+    }
+    .field::placeholder { color: rgba(0,245,255,0.3); }
+    .field:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.2); }
+    .btn-primary {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      box-shadow: 0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+    }
+    .btn-primary:hover { background: rgba(0,245,255,0.12); color: #fff; }
+    .auth-or {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(0,245,255,0.3);
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+    }
+    .auth-or::before, .auth-or::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0,245,255,0.15);
+    }
+    .status-line {
+      min-height: 1em;
+      font-size: 0.66rem;
+      color: var(--yellow);
+      text-shadow: 0 0 6px rgba(255,230,0,0.4);
+      letter-spacing: 0.04em;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── leaderboard ────────────────────────────────────────────────────── */
+    #lb-panel {
+      width: 100%;
+      max-width: 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    #lb-status { min-height: 1em; }
+    #lb-status strong { color: var(--cyan); font-weight: 600; }
+    .lb-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .lb-item {
+      display: grid;
+      grid-template-columns: 26px 1fr auto;
+      gap: 8px;
+      align-items: baseline;
+      padding: 4px 8px;
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.7);
+      border-radius: 2px;
+    }
+    .lb-item.lb-me {
+      background: rgba(0,245,255,0.1);
+      color: var(--cyan);
+      box-shadow: inset 0 0 0 1px rgba(0,245,255,0.3);
+    }
+    .lb-rank { font-family: 'Orbitron', monospace; font-size: 0.62rem; color: var(--magenta); }
+    .lb-me .lb-rank { color: var(--yellow); }
+    .lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lb-score { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .lb-empty { padding: 8px; text-align: center; font-size: 0.7rem; color: rgba(0,245,255,0.4); }
+    #lb-actions { display: flex; gap: 10px; justify-content: center; }
+    .score-action-btn.trophy svg { width: 12px; height: 12px; }
+
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
       body  { padding: 6px 12px 8px; gap: 6px; }
@@ -551,7 +729,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v62</span></h1>
+        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v63</span></h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -575,12 +753,28 @@
               <span class="cbm-slider"></span>
             </label>
           </div>
+          <div id="account-bar">
+            <div id="account-line">Playing as a guest</div>
+            <div class="account-actions">
+              <button id="btn-set-name" class="link-btn">SET NAME</button>
+              <button id="btn-login" class="link-btn">LOG IN</button>
+              <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
+            </div>
+          </div>
         </div>
 
         <div id="gameover-overlay" class="hidden">
           <div class="go-title">GAME OVER</div>
           <div class="go-score-label">SCORE</div>
           <div id="go-score">0</div>
+          <div id="lb-panel" class="hidden">
+            <div id="lb-status" class="status-line"></div>
+            <ul id="lb-list" class="lb-list"></ul>
+            <div id="lb-actions" class="hidden">
+              <button id="lb-set-name" class="link-btn">SET NAME</button>
+              <button id="lb-login" class="link-btn">LOG IN</button>
+            </div>
+          </div>
           <button id="btn-play-again">PLAY AGAIN</button>
         </div>
       </div>
@@ -593,6 +787,14 @@
       <div class="status-bar" id="status"></div>
       <div id="best-score-bar">
         <span>HIGH SCORE &nbsp;<span id="best-val">—</span></span>
+        <button class="score-action-btn trophy" id="btn-leaderboard" title="Leaderboard">
+          <svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 1.5h8v3a4 4 0 0 1-8 0v-3Z"/>
+            <path d="M3 2.5H1.5v1A2 2 0 0 0 3 5.4M11 2.5h1.5v1A2 2 0 0 1 11 5.4"/>
+            <line x1="7" y1="8.5" x2="7" y2="10.5"/>
+            <path d="M4.5 12.5h5l-.5-2h-4l-.5 2Z"/>
+          </svg>
+        </button>
         <button class="score-action-btn" id="btn-copy" title="Copy link">
           <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <rect x="1" y="3" width="8" height="10" rx="1"/>
@@ -668,6 +870,46 @@
       <button id="help-got-it">GOT IT</button>
     </div>
   </div>
+
+  <div id="auth-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="auth-close" class="modal-close">✕</button>
+      <div id="auth-title" class="modal-title">LOG IN</div>
+      <p id="auth-intro" class="modal-intro">One account works across this and the other games on the project — no separate sign-up.</p>
+      <div class="auth-tabs">
+        <button id="auth-tab-signin" class="tab active">SIGN IN</button>
+        <button id="auth-tab-signup" class="tab">CREATE</button>
+      </div>
+      <input id="auth-name" class="field hidden" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
+      <input id="auth-email" class="field" type="email" placeholder="Email" autocomplete="email">
+      <input id="auth-password" class="field" type="password" placeholder="Password" autocomplete="current-password">
+      <button id="btn-auth-primary" class="btn-primary">SIGN IN</button>
+      <div class="auth-or">OR</div>
+      <button id="btn-auth-magic">EMAIL ME A SIGN-IN LINK</button>
+      <p id="auth-status" class="status-line"></p>
+    </div>
+  </div>
+
+  <div id="name-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="name-close" class="modal-close">✕</button>
+      <div class="modal-title">YOUR NAME</div>
+      <p class="modal-intro">Pick a name to appear on the leaderboard. No account needed.</p>
+      <input id="name-input" class="field" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
+      <button id="btn-name-save" class="btn-primary">SAVE</button>
+      <p id="name-status" class="status-line"></p>
+    </div>
+  </div>
+
+  <div id="lb-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="lb-modal-close" class="modal-close">✕</button>
+      <div class="modal-title">LEADERBOARD</div>
+      <ul id="lb-modal-list" class="lb-list"></ul>
+    </div>
+  </div>
+
+  <script type="module" src="js/account-ui.js"></script>
 
   <script>
     const COLORS = [
@@ -1660,8 +1902,10 @@
       document.getElementById('go-score').textContent = score.toLocaleString();
       gameoverOverlay.classList.remove('hidden');
       updateStatus();
-      // submit the finished run to the high score table
+      // submit the finished run to the local high score table
       if (isHighScore(score)) autoSaveScore(score);
+      // hand the final score to the account/leaderboard layer (account-ui.js)
+      window.dispatchEvent(new CustomEvent('chromagrid:gameover', { detail: { score } }));
     }
 
     // ── high scores (persisted in localStorage) ───────────────────────────
