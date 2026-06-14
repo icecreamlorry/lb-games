@@ -63,6 +63,16 @@ export async function topScores(limit = 10) {
   return data ?? [];
 }
 
+// Leaderboard filtered to the signed-in player and their accepted friends,
+// highest first. Requires being logged in (friends need accounts); guests get
+// an empty list. Backed by the friends_leaderboard() RPC.
+export async function friendScores(limit = 50) {
+  if (!configReady()) throw new Error('Leaderboard not configured');
+  const { data, error } = await supabase().rpc('friends_leaderboard', { p_game: GAME_SLUG });
+  if (error) throw error;
+  return (data ?? []).slice(0, limit);
+}
+
 // The current player's stored best (0 if none yet).
 export async function myBest({ user }) {
   if (!configReady()) return 0;

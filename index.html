@@ -698,6 +698,91 @@
     .lb-empty { padding: 8px; text-align: center; font-size: 0.7rem; color: rgba(0,245,255,0.4); }
     #lb-actions { display: flex; gap: 10px; justify-content: center; }
     .score-action-btn.trophy svg { width: 12px; height: 12px; }
+    .lb-tabs .tab { padding: 6px 0; }
+    .lb-tabs { margin-bottom: 2px; }
+
+    /* ── profile button + modal ─────────────────────────────────────────── */
+    #btn-profile {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 900;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 3px;
+      background: rgba(4,4,15,0.6);
+      border: 1px solid rgba(0,245,255,0.3);
+      color: rgba(0,245,255,0.7);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    #btn-profile:hover {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0,245,255,0.3);
+    }
+    #profile-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 3px;
+      border-radius: 8px;
+      background: var(--magenta);
+      color: #fff;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.5rem;
+      line-height: 15px;
+      text-align: center;
+      box-shadow: 0 0 8px var(--magenta);
+    }
+    #profile-signedout { display: flex; flex-direction: column; gap: 14px; }
+    #profile-signedin { display: flex; flex-direction: column; gap: 12px; }
+    #profile-line { font-size: 0.7rem; color: rgba(0,245,255,0.6); letter-spacing: 0.05em; text-align: center; }
+    #profile-line strong { color: var(--cyan); font-weight: 600; }
+    #profile-signedin .account-actions { justify-content: center; }
+    .profile-block { display: flex; flex-direction: column; gap: 6px; }
+    .profile-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.52rem;
+      letter-spacing: 0.18em;
+      color: rgba(255,0,200,0.7);
+      text-transform: uppercase;
+    }
+    .profile-code-row { display: flex; align-items: center; gap: 10px; }
+    #profile-code {
+      flex: 1;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      letter-spacing: 0.25em;
+      color: var(--cyan);
+      background: rgba(0,245,255,0.05);
+      border: 1px solid rgba(0,245,255,0.2);
+      border-radius: 3px;
+      padding: 8px 10px;
+    }
+    .profile-add-row { display: flex; gap: 8px; }
+    .profile-add-row .field { flex: 1; text-transform: uppercase; }
+    .profile-add-row .btn-primary { padding: 8px 14px; white-space: nowrap; }
+    .friend-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .friend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      font-size: 0.72rem;
+      color: rgba(0,245,255,0.8);
+      background: rgba(0,245,255,0.04);
+      border-radius: 2px;
+    }
+    .friend-item .friend-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .friend-item .friend-actions { display: flex; gap: 6px; }
+    .friend-item.empty { justify-content: center; color: rgba(0,245,255,0.4); background: none; }
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
@@ -725,6 +810,14 @@
   </style>
 </head>
 <body>
+
+  <button id="btn-profile" title="Profile">
+    <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="5" r="3"/>
+      <path d="M2.5 14a5.5 5.5 0 0 1 11 0"/>
+    </svg>
+    <span id="profile-badge" class="hidden"></span>
+  </button>
 
   <div id="stage">
     <div id="board-col">
@@ -905,7 +998,59 @@
     <div class="modal-panel">
       <button id="lb-modal-close" class="modal-close">✕</button>
       <div class="modal-title">LEADERBOARD</div>
+      <div class="auth-tabs lb-tabs">
+        <button id="lb-tab-global" class="tab active">GLOBAL</button>
+        <button id="lb-tab-friends" class="tab">FRIENDS</button>
+      </div>
       <ul id="lb-modal-list" class="lb-list"></ul>
+    </div>
+  </div>
+
+  <div id="profile-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="profile-close" class="modal-close">✕</button>
+      <div class="modal-title">PROFILE</div>
+
+      <div id="profile-signedout">
+        <p class="modal-intro">Log in to set a display name and add friends across every game on this project.</p>
+        <button id="profile-login" class="btn-primary">LOG IN</button>
+      </div>
+
+      <div id="profile-signedin" class="hidden">
+        <div id="profile-line">Signed in as <strong id="profile-name"></strong></div>
+        <div class="account-actions">
+          <button id="profile-change-name" class="link-btn">CHANGE NAME</button>
+          <button id="profile-signout" class="link-btn">SIGN OUT</button>
+        </div>
+
+        <div class="profile-block">
+          <div class="profile-label">YOUR FRIEND CODE</div>
+          <div class="profile-code-row">
+            <code id="profile-code">––––––––</code>
+            <button id="profile-copy-code" class="link-btn">COPY</button>
+          </div>
+          <p class="modal-intro" style="text-align:left">Share this so friends can add you.</p>
+        </div>
+
+        <div class="profile-block">
+          <div class="profile-label">ADD A FRIEND</div>
+          <div class="profile-add-row">
+            <input id="friend-code-input" class="field" type="text" maxlength="8" placeholder="Friend code" autocomplete="off" autocapitalize="characters">
+            <button id="btn-add-friend" class="btn-primary">ADD</button>
+          </div>
+          <p id="friend-add-status" class="status-line"></p>
+        </div>
+
+        <div id="friend-requests-block" class="profile-block hidden">
+          <div class="profile-label">REQUESTS</div>
+          <ul id="friend-requests" class="friend-list"></ul>
+        </div>
+
+        <div class="profile-block">
+          <div class="profile-label">FRIENDS</div>
+          <ul id="friend-list" class="friend-list"></ul>
+        </div>
+      </div>
     </div>
   </div>
 
