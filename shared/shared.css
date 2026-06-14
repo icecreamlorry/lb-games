@@ -290,9 +290,11 @@ button:disabled:hover {
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
+.menu-item.menu-sep { border-top: 1px solid rgba(0,245,255,0.12); margin-top: 3px; padding-top: 11px; }
 .menu-item:hover { background: rgba(0,245,255,0.1); color: var(--cyan); }
 .menu-item svg   { flex-shrink: 0; opacity: 0.85; }
 #profile-badge {

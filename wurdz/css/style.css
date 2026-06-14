@@ -748,9 +748,11 @@ input, textarea { user-select: text; }
   font-size: 15px;
   font-weight: 600;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background 0.12s;
 }
+.menu-item.menu-sep { border-top: 1px solid var(--panel-light); margin-top: 4px; padding-top: 13px; }
 .menu-item:hover { background: var(--panel-light); }
 .menu-item svg { flex-shrink: 0; opacity: 0.9; }
 .profile-badge {

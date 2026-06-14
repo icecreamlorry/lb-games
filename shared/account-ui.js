@@ -64,6 +64,15 @@ function injectHTML() {
         </svg>
         <span>Profile</span>
       </button>
+      <a class="menu-item menu-sep" href="../" title="Back to all games">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="5" height="5" rx="1"/>
+          <rect x="9" y="2" width="5" height="5" rx="1"/>
+          <rect x="2" y="9" width="5" height="5" rx="1"/>
+          <rect x="9" y="9" width="5" height="5" rx="1"/>
+        </svg>
+        <span>More Games</span>
+      </a>
     </div>
 
     <div id="auth-modal" class="modal hidden">
