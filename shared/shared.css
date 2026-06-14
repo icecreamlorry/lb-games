@@ -297,6 +297,35 @@ button:disabled:hover {
 .menu-item.menu-sep { border-top: 1px solid rgba(0,245,255,0.12); margin-top: 3px; padding-top: 11px; }
 .menu-item:hover { background: rgba(0,245,255,0.1); color: var(--cyan); }
 .menu-item svg   { flex-shrink: 0; opacity: 0.85; }
+
+/* ── landing account bar ──────────────────────────────────────────────── */
+.lb-account {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+.lb-acct-guest { display: flex; gap: 10px; width: 100%; }
+.lb-acct-guest .field { flex: 1; }
+.lb-acct-guest .btn-primary { white-space: nowrap; }
+.lb-acct-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0;
+}
+.lb-acct-line { font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(0,245,255,0.7); }
+.lb-acct-line strong { color: var(--cyan); }
+.lb-acct-hint {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  text-align: center;
+  color: rgba(0,245,255,0.4);
+}
 #profile-badge {
   position: absolute;
   top: -5px; right: -5px;

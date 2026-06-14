@@ -8,9 +8,11 @@
 //     gameSlug:      'mygame',
 //     gameName:      'My Game',
 //     gameoverEvent: 'mygame:gameover',   // detail.score expected
-//     nameKey:       'mygame.name',       // localStorage key for guest name
 //     guestIdKey:    'mygame.guestId',    // localStorage key for guest id
 //   };
+//
+// The guest display name is NOT per-game — it lives in one shared key
+// (see guest-name.js) so it syncs across every title and the landing page.
 //
 // The game's HTML must include the elements account-ui writes into:
 //   #gameover-overlay, #lb-panel, #lb-status, #lb-list, #lb-actions,
@@ -29,11 +31,11 @@ import {
   listFriends, listFriendRequests, respondToRequest, removeFriend,
 } from './friends.js';
 import { configReady } from './supabase-config.js';
+import { getGuestName, setGuestName } from './guest-name.js';
 
 // ---- config helpers -------------------------------------------------------
 
 function cfg() { return window.LB_CONFIG || {}; }
-const NAME_KEY = () => cfg().nameKey || ('lb.name.' + (cfg().gameSlug || 'game'));
 
 // ---- inject shared HTML ---------------------------------------------------
 
@@ -335,7 +337,7 @@ async function saveName() {
   const v = $('name-input').value.trim().slice(0, 20);
   if (!v) { $('name-status').textContent = 'Enter a name.'; return; }
   app.name = v;
-  localStorage.setItem(NAME_KEY(), v);
+  setGuestName(v);
   if (app.user) {
     try { await setDisplayName(v); } catch { /* keep local */ }
     try { app.profile = await ensureProfile(v); } catch {}
@@ -687,8 +689,8 @@ function wire() {
 async function init() {
   injectHTML();
 
-  // Seed name from localStorage (before we know if the user is signed in).
-  app.name = (localStorage.getItem(NAME_KEY()) || '').trim();
+  // Seed name from the shared guest-name key (before we know if signed in).
+  app.name = getGuestName();
 
   // Stamp the auth intro with this game's name.
   const intro = $('auth-intro');

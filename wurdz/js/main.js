@@ -24,6 +24,7 @@ import {
   subscribeToPush, unsubscribeFromPush,
 } from './notify.js';
 import { configReady } from './config.js';
+import { getGuestName, setGuestName } from '../../shared/guest-name.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -68,6 +69,7 @@ function getName() {
     landingError('Please enter your name first.');
     return null;
   }
+  setGuestName(name); // sync this guest name across every LB Games title
   return name;
 }
 
@@ -1619,6 +1621,11 @@ document.querySelectorAll('.modal').forEach((m) => {
 
 async function boot() {
   registerServiceWorker();
+
+  // Seed the guest name field from the shared key (set on the landing page or
+  // any other game) and keep it in sync as it's edited here.
+  $('name-input').value = getGuestName();
+  $('name-input').addEventListener('input', () => setGuestName($('name-input').value));
 
   if (!configReady()) {
     landingError('Setup needed: paste your Supabase anon key into js/config.js (see README).');
