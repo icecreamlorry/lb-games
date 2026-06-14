@@ -471,7 +471,8 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      body  { padding: 6px 12px 8px; gap: 6px; }
+      /* Extra top padding clears the fixed menu button so it doesn't overlap the timer. */
+      body  { padding: 28px 12px 8px; gap: 6px; }
       #grid { padding: 3px; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
@@ -719,11 +720,12 @@
         const cellByW = Math.floor(
           (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * GAP) / COLS
         );
-        const cellByH = Math.floor((window.innerHeight - 225) / ROWS);
+        // Reserve extra for the top padding that clears the menu button.
+        const cellByH = Math.floor((window.innerHeight - 248) / ROWS);
         CELL = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
       } else {
         GAP = 6;
-        const cellByH = Math.floor((window.innerHeight - 270) / ROWS);
+        const cellByH = Math.floor((window.innerHeight - 320) / ROWS);
         CELL = Math.min(52, Math.max(34, cellByH));
       }
     }

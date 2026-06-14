@@ -108,6 +108,17 @@ function injectHTML() {
       </div>
     </div>
 
+    <div id="confirm-modal" class="modal hidden" style="z-index:960">
+      <div class="modal-panel">
+        <div id="confirm-title" class="modal-title">ARE YOU SURE?</div>
+        <p id="confirm-message" class="modal-intro"></p>
+        <div class="confirm-actions">
+          <button id="confirm-cancel" class="link-btn">CANCEL</button>
+          <button id="confirm-ok" class="btn-primary">CONFIRM</button>
+        </div>
+      </div>
+    </div>
+
     <div id="profile-modal" class="modal hidden">
       <div class="modal-panel">
         <button id="profile-close" class="modal-close">✕</button>
@@ -186,6 +197,32 @@ function gameoverVisible() {
   const go = $('gameover-overlay');
   return go && !go.classList.contains('hidden');
 }
+
+// ---- confirm dialog -------------------------------------------------------
+// Themed replacement for window.confirm. Layers above all other modals.
+
+let confirmResolver = null;
+
+function confirmDialog({ title, message, confirmText = 'CONFIRM', danger = false }) {
+  $('confirm-title').textContent   = title;
+  $('confirm-message').textContent = message;
+  const okBtn = $('confirm-ok');
+  okBtn.textContent = confirmText;
+  okBtn.classList.toggle('btn-danger',   danger);
+  okBtn.classList.toggle('btn-primary', !danger);
+  $('confirm-modal').classList.remove('hidden');
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+
+function settleConfirm(value) {
+  if (!confirmResolver) return;
+  $('confirm-modal').classList.add('hidden');
+  const resolve = confirmResolver;
+  confirmResolver = null;
+  resolve(value);
+}
+
+function confirmOpen() { return !$('confirm-modal').classList.contains('hidden'); }
 
 // ---- account bar (start screen) ------------------------------------------
 
@@ -432,13 +469,18 @@ function renderFriendList(friends) {
     li.innerHTML =
       '<span class="friend-name">' + esc(f.display_name || 'Player') + '</span>' +
       '<span class="friend-actions"><button class="link-btn" data-remove="' + f.id + '">REMOVE</button></span>';
+    li.querySelector('[data-remove]').addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title:       'REMOVE FRIEND?',
+        message:     'Remove ' + (f.display_name || 'this player') + ' from your friends? You can add them again later with their friend code.',
+        confirmText: 'REMOVE',
+        danger:      true,
+      });
+      if (!ok) return;
+      try { await removeFriend(f.id); await loadFriends(); } catch {}
+    });
     el.appendChild(li);
   }
-  el.querySelectorAll('[data-remove]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try { await removeFriend(btn.dataset.remove); await loadFriends(); } catch {}
-    });
-  });
 }
 
 function renderRequests(requests) {
@@ -614,7 +656,17 @@ function wire() {
     const m = $(id);
     m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
+
+  // Confirm dialog (sits above the other modals).
+  $('confirm-ok').addEventListener('click',     () => settleConfirm(true));
+  $('confirm-cancel').addEventListener('click', () => settleConfirm(false));
+  $('confirm-modal').addEventListener('click',  e => { if (e.target.id === 'confirm-modal') settleConfirm(false); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (confirmOpen()) { settleConfirm(false); return; } // cancel confirm, leave modal behind it open
+    closeAllModals();
+  });
 
   // Listen for the game's gameover event.
   const eventName = cfg().gameoverEvent || (cfg().gameSlug + ':gameover');
