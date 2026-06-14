@@ -285,7 +285,8 @@ function handleRoomUpdate(room) {
 }
 
 function setConn(mode) {
-  const b = $('conn-badge');
+  const b = $('conn-badge'); // optional — the header no longer shows a badge
+  if (!b) return;
   b.textContent = mode === 'live' ? 'live' : 'syncing…';
   b.classList.toggle('live', mode === 'live');
 }

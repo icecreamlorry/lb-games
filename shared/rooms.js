@@ -7,6 +7,7 @@
 
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 import { supabase } from './supabaseClient.js';
+import { getGuestId } from './guest-id.js';
 
 export { supabase };
 
@@ -46,6 +47,7 @@ export function userSeat(room, userId) {
 export async function createRoom(hostName, hostUserId = null, invite = null, gameSlug, maxPlayers = 2) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const hostPlayer = { seat: 0, name: hostName, userId: hostUserId ?? null };
+  if (!hostUserId) hostPlayer.guestId = getGuestId(); // distinguish same-named guests
   for (let attempt = 0; attempt < 5; attempt++) {
     const code = randomCode();
     const row = {
@@ -85,13 +87,16 @@ export async function joinRoom(code, name, userId = null) {
 
   const players = room.players ?? [];
 
-  // Resume an existing seat.
+  // Resume an existing seat. Signed-in players match by account; guests match
+  // by their per-session guest id (NOT name — two guests can share a name), so
+  // a genuinely new player never resumes someone else's seat. Older rooms whose
+  // player records predate guest ids fall back to name matching.
   if (userId) {
     const seat = players.findIndex((p) => p.userId === userId);
     if (seat !== -1) return { room, playerIndex: seat };
   } else {
-    // Anonymous: resume by name; never claim a seat owned by an account.
-    const seat = players.findIndex((p) => !p.userId && p.name === name);
+    const gid = getGuestId();
+    const seat = players.findIndex((p) => !p.userId && (p.guestId === gid || (!p.guestId && p.name === name)));
     if (seat !== -1) return { room, playerIndex: seat };
   }
 
@@ -100,7 +105,9 @@ export async function joinRoom(code, name, userId = null) {
   }
 
   const nextSeat = room.player_count;
-  const newPlayers = [...players, { seat: nextSeat, name, userId: userId ?? null }];
+  const newPlayer = { seat: nextSeat, name, userId: userId ?? null };
+  if (!userId) newPlayer.guestId = getGuestId();
+  const newPlayers = [...players, newPlayer];
   const newStatus = nextSeat + 1 >= room.max_players ? 'full' : 'waiting';
 
   const { data: updated, error: updErr } = await supabase()

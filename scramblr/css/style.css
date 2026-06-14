@@ -45,7 +45,9 @@ body {
 .hint { font-size: 0.6rem; color: rgba(0,245,255,0.4); line-height: 1.5; margin: 4px 0 0; }
 
 .row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.row .btn-primary, .row .btn-ghost { flex: 1; min-width: 0; }
+/* Grow to share space but never shrink below the label (min-width:0 let the
+   text spill out of the boxes); wrap to the next line instead when too tight. */
+.row .btn-primary, .row .btn-ghost { flex: 1 1 auto; white-space: nowrap; }
 #btn-lobby-refresh { flex: 0 0 auto; }
 
 .btn-ghost {
@@ -66,7 +68,7 @@ body {
 .bar { display: flex; align-items: center; gap: 10px; }
 /* Right padding clears the shared menu button (fixed top-right by account-ui). */
 .game-bar { padding: 8px 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
-#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 44px; }
+#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);
   color: rgba(0,245,255,0.8); border-radius: 999px; padding: 5px 12px;
