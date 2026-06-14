@@ -806,7 +806,11 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      body  { padding: 6px 12px 8px; gap: 6px; }
+      /* Extra top padding drops the header/score-bar below the fixed menu
+         button (top-right) so it no longer overlaps the timer. There's spare
+         room at the bottom, and initLayout() reserves for this so the board
+         still fits without scrolling. */
+      body  { padding: 28px 12px 8px; gap: 6px; }
       #grid { padding: 3px; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }
@@ -1165,15 +1169,17 @@
         const cellByW = Math.floor(
           (window.innerWidth - 2 * bodyPadX - 2 * gridPadX - (COLS - 1) * GAP) / COLS
         );
-        // Height: fill remaining vertical space after fixed UI (see git history)
-        const cellByH = Math.floor((window.innerHeight - 225) / ROWS);
+        // Height: fill remaining vertical space after fixed UI (incl. the
+        // extra top padding that clears the menu button — see mobile CSS).
+        const cellByH = Math.floor((window.innerHeight - 248) / ROWS);
         CELL = Math.min(52, Math.max(28, Math.min(cellByW, cellByH)));
       } else {
         GAP = 6;
         // Desktop draws bigger tiles, but the board is now a 12-row portrait
         // grid, so cap the cell to the viewport height to avoid overflow on
-        // shorter laptop screens. Caps at 52px when there's room.
-        const cellByH = Math.floor((window.innerHeight - 270) / ROWS);
+        // shorter laptop screens. The reservation must exceed the non-board
+        // chrome plus inter-row gaps, or the page scrolls. Caps at 52px.
+        const cellByH = Math.floor((window.innerHeight - 320) / ROWS);
         CELL = Math.min(52, Math.max(34, cellByH));
       }
     }
