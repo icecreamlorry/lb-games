@@ -271,6 +271,13 @@ input, textarea { user-select: text; }
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
+/* The most recent play, so the last turn is easy to spot (green ring + glow,
+   distinct from the gold "pending" outline of tiles you're placing now). */
+.cell.last-move {
+  outline: 2px solid var(--good);
+  outline-offset: -2px;
+  box-shadow: inset 0 -2px 0 var(--tile-edge), 0 0 10px rgba(76, 209, 126, 0.6);
+}
 .cell.blank-tile .t-letter { color: #8a6d3b; }
 
 .cell .t-letter {

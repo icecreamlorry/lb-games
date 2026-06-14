@@ -681,6 +681,9 @@ async function enterRoom(code, playerIndex, name, room) {
   renderNotifyBtns();
   refreshPushSub();
   renderAll();
+  // Show what last happened in THIS room (the status box is otherwise stale
+  // from a previous room / game when re-entering).
+  announceLastMove();
 }
 
 // ---- Turn notifications --------------------------------------------------
@@ -892,7 +895,7 @@ function handleRoomUpdate(room) {
 
 function announceLastMove() {
   const lm = app.state.lastMove;
-  if (!lm) return;
+  if (!lm) { setStatus(''); return; } // nothing has happened in this room yet
   const who = lm.player === app.playerIndex ? 'You' : playerName(lm.player);
   if (lm.type === 'place') {
     const words = lm.words.join(', ');
@@ -1348,6 +1351,12 @@ function renderConnBadge(mode) {
 function renderBoard() {
   const boardEl = $('board');
   boardEl.innerHTML = '';
+  // Tiles placed by the most recent play, so the last turn is visible at a
+  // glance. Only 'place' moves put tiles on the board.
+  const lm = app.state.lastMove;
+  const lastCells = (lm && lm.type === 'place' && Array.isArray(lm.cells))
+    ? new Set(lm.cells.map((p) => `${p.r},${p.c}`))
+    : null;
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const cell = document.createElement('div');
@@ -1361,6 +1370,7 @@ function renderBoard() {
         const t = tile || pend;
         cell.classList.add('has-tile');
         if (pend) cell.classList.add('pending');
+        else if (lastCells && lastCells.has(`${r},${c}`)) cell.classList.add('last-move');
         cell.innerHTML = `<span class="t-letter">${t.letter}</span><span class="t-pts">${t.blank ? '' : TILE_POINTS[t.letter]}</span>`;
         if (t.blank) cell.classList.add('blank-tile');
       } else if (prem) {
