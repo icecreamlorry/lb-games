@@ -1,3 +1,10 @@
+# Dependencies
+node_modules/
+
+# Supabase CLI local state (generated; not source)
+supabase/.temp/
+supabase/.branches/
+
 # Local agent / editor settings
 .claude/
 .vscode/

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wurdz</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1c2733">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Wurdz">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <button id="btn-menu" class="menu-fab" title="Menu" aria-haspopup="true" aria-expanded="false">
+    <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <line x1="2.5" y1="4" x2="13.5" y2="4"/>
+      <line x1="2.5" y1="8" x2="13.5" y2="8"/>
+      <line x1="2.5" y1="12" x2="13.5" y2="12"/>
+    </svg>
+    <span id="profile-badge" class="profile-badge hidden"></span>
+  </button>
+  <div id="app-menu" class="app-menu hidden">
+    <button class="menu-item" id="btn-profile" title="Profile">
+      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="5" r="3"/>
+        <path d="M2.5 14a5.5 5.5 0 0 1 11 0"/>
+      </svg>
+      <span>Profile</span>
+    </button>
+    <button class="menu-item" id="btn-help" title="How to play">
+      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="8" cy="8" r="6.5"/>
+        <path d="M6.1 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/>
+        <line x1="8" y1="11.4" x2="8" y2="11.5"/>
+      </svg>
+      <span>How to play</span>
+    </button>
+  </div>
+
+  <!-- Landing screen -->
+  <section id="screen-landing" class="screen">
+    <div class="landing-card">
+      <h1 class="logo">Wurdz<span class="ver">v22</span></h1>
+      <p class="tagline">Two-player word game, anywhere.</p>
+      <input id="name-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
+      <div class="landing-buttons">
+        <button id="btn-create" class="btn btn-primary">Create a Room</button>
+        <button id="btn-join" class="btn btn-secondary">Join a Room</button>
+      </div>
+      <div id="join-box" class="join-box hidden">
+        <input id="code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
+        <button id="btn-join-go" class="btn btn-primary">Join</button>
+      </div>
+      <p id="landing-error" class="error-text"></p>
+
+      <div id="landing-account" class="landing-account">
+        <button id="btn-show-login" class="link-btn">Log in or sign up</button>
+        <div id="account-info" class="account-info hidden">
+          <span>Signed in as <strong id="account-name"></strong></span>
+          <button id="btn-go-lobby" class="btn btn-secondary">My Games</button>
+          <button id="btn-logout" class="link-btn">Log out</button>
+        </div>
+        <p class="account-hint muted">Optional — log in to keep several games going at once and get notified across all of them.</p>
+      </div>
+
+      <button id="btn-help-landing" class="help-link">How to play ?</button>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — shown to signed-in players -->
+  <section id="screen-lobby" class="screen hidden">
+    <div class="lobby-card">
+      <header class="lobby-header">
+        <span class="logo logo-small">Wurdz</span>
+        <span class="lobby-account">Hi, <strong id="lobby-name"></strong></span>
+        <button id="btn-notify-lobby" class="chip chip-button hidden" title="Enable turn notifications">🔔</button>
+        <button id="btn-help-lobby" class="chip chip-button" title="How to play">?</button>
+        <button id="btn-logout-lobby" class="chip chip-button">Log out</button>
+      </header>
+      <h2 class="lobby-title">Your games</h2>
+      <div class="lobby-actions">
+        <button id="btn-lobby-new" class="btn btn-primary">New game</button>
+        <button id="btn-lobby-challenge" class="btn btn-secondary">Challenge a friend</button>
+        <button id="btn-lobby-join" class="btn btn-secondary">Join by code</button>
+        <button id="btn-lobby-refresh" class="btn" title="Refresh">↻</button>
+      </div>
+      <div id="lobby-join-box" class="join-box hidden">
+        <input id="lobby-code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
+        <button id="btn-lobby-join-go" class="btn btn-primary">Join</button>
+      </div>
+      <p id="lobby-error" class="error-text"></p>
+      <div id="lobby-list" class="lobby-list"></div>
+    </div>
+  </section>
+
+  <!-- Game screen -->
+  <section id="screen-game" class="screen hidden">
+    <header class="game-header">
+      <span class="logo logo-small">Wurdz<span class="ver">v22</span></span>
+      <button id="room-code-chip" class="chip" title="Click to copy">Room: <strong id="room-code-text"></strong></button>
+      <span id="conn-badge" class="chip conn-db">connecting…</span>
+      <button id="btn-notify" class="chip chip-button hidden" title="Enable turn notifications">🔔</button>
+      <button id="btn-resign" class="chip chip-button chip-danger hidden" title="Forfeit this game">Resign</button>
+      <button id="btn-leave" class="chip chip-button">Leave</button>
+    </header>
+
+    <div class="table">
+      <!-- Opponent sits across the board -->
+      <div id="opp-panel" class="player-panel opp-panel">
+        <span id="opp-online" class="online-dot offline" title="offline"></span>
+        <span id="opp-name" class="player-name">Waiting for opponent…</span>
+        <span id="opp-tiles" class="tile-count"></span>
+        <span id="opp-score" class="score">0</span>
+        <span id="opp-turn" class="turn-marker hidden">their turn</span>
+      </div>
+
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
+        <div id="start-overlay" class="board-overlay hidden">
+          <div class="overlay-card">
+            <h2 id="start-title">Ready to play?</h2>
+            <p id="start-versus"></p>
+            <p id="start-share" class="hidden">Share the room code <strong id="start-code"></strong> with a friend to begin.</p>
+            <button id="btn-start" class="btn btn-primary hidden">Start Game</button>
+            <p id="start-waiting" class="muted hidden">Waiting for the host to start the game…</p>
+          </div>
+        </div>
+        <div id="gameover-overlay" class="board-overlay hidden">
+          <div class="overlay-card">
+            <h2 id="gameover-title"></h2>
+            <div id="gameover-detail"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-panel my-panel">
+        <span id="my-name" class="player-name"></span>
+        <span id="my-score" class="score">0</span>
+        <span id="my-turn" class="turn-marker hidden">your turn</span>
+        <span id="bag-count" class="tile-count"></span>
+      </div>
+
+      <div id="rack" class="rack"></div>
+
+      <p id="status-line" class="status-line"></p>
+
+      <div class="controls">
+        <button id="btn-play" class="btn btn-primary" disabled>Play</button>
+        <button id="btn-challenge" class="btn btn-challenge" disabled>Challenge</button>
+        <button id="btn-exchange" class="btn" disabled>Exchange</button>
+        <button id="btn-pass" class="btn" disabled>Pass</button>
+        <button id="btn-shuffle" class="btn btn-icon" title="Shuffle rack" aria-label="Shuffle rack">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 5h3.6l8.8 10H18"/><polyline points="15.4 12.4 18 15 15.4 17.6"/>
+            <path d="M2 15h3.6l2.3-2.6"/><path d="M12.1 7.6 14.4 5H18"/><polyline points="15.4 2.4 18 5 15.4 7.6"/>
+          </svg>
+        </button>
+        <button id="btn-recall" class="btn btn-icon" title="Recall tiles" aria-label="Recall tiles">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="7.5 3.5 3 8 7.5 12.5"/><path d="M3 8h9.5a4.5 4.5 0 0 1 0 9H6"/>
+          </svg>
+        </button>
+        <button id="btn-words" class="btn btn-ref">2-Letter Words</button>
+      </div>
+      <div id="exchange-bar" class="exchange-bar hidden">
+        <span>Select tiles to swap, then confirm.</span>
+        <button id="btn-exchange-go" class="btn btn-primary">Swap 0 tiles</button>
+        <button id="btn-exchange-cancel" class="btn">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Log in / sign up -->
+  <div id="modal-auth" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head">
+        <h2 id="auth-title">Log in</h2>
+        <button class="modal-close" data-close="modal-auth">&times;</button>
+      </div>
+      <p class="muted auth-intro">Your login works across all of these games — one account, no separate sign-ups.</p>
+      <div class="auth-tabs">
+        <button id="auth-tab-signin" class="tab active">Sign in</button>
+        <button id="auth-tab-signup" class="tab">Create account</button>
+      </div>
+      <div class="auth-form">
+        <input id="auth-name" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
+        <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
+        <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password">
+        <button id="btn-auth-primary" class="btn btn-primary">Sign in</button>
+        <div class="auth-or"><span>or</span></div>
+        <button id="btn-auth-magic" class="btn btn-secondary">Email me a sign-in link</button>
+        <p id="auth-status" class="status-line"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile / friends -->
+  <div id="modal-profile" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head">
+        <h2>Profile</h2>
+        <button class="modal-close" data-close="modal-profile">&times;</button>
+      </div>
+
+      <div id="profile-signedout">
+        <p class="muted">Log in to set a display name and add friends. One account works across every game on this project.</p>
+        <button id="profile-login" class="btn btn-primary">Log in or sign up</button>
+      </div>
+
+      <div id="profile-signedin" class="hidden">
+        <div class="profile-id">
+          <span>Signed in as <strong id="profile-name"></strong></span>
+          <div class="profile-id-actions">
+            <button id="profile-change-name" class="link-btn">Change name</button>
+            <button id="profile-signout" class="link-btn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="profile-block">
+          <span class="profile-label">Your friend code</span>
+          <div class="profile-code-row">
+            <code id="profile-code">––––––––</code>
+            <button id="profile-copy-code" class="btn btn-secondary">Copy</button>
+          </div>
+        </div>
+
+        <div class="profile-block">
+          <span class="profile-label">Add a friend by code</span>
+          <div class="profile-add-row">
+            <input id="friend-code-input" type="text" maxlength="8" placeholder="Friend code" autocomplete="off" autocapitalize="characters">
+            <button id="btn-add-friend" class="btn btn-primary">Add</button>
+          </div>
+          <p id="friend-add-status" class="status-line"></p>
+        </div>
+
+        <div id="friend-requests-block" class="profile-block hidden">
+          <span class="profile-label">Friend requests</span>
+          <div id="friend-requests" class="friend-list"></div>
+        </div>
+
+        <div class="profile-block">
+          <span class="profile-label">Friends</span>
+          <div id="friend-list" class="friend-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Name change -->
+  <div id="modal-name" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head">
+        <h2>Display name</h2>
+        <button class="modal-close" data-close="modal-name">&times;</button>
+      </div>
+      <p class="muted">This is how you appear to opponents and friends.</p>
+      <div class="auth-form">
+        <input id="name-edit-input" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
+        <button id="btn-name-save" class="btn btn-primary">Save</button>
+        <p id="name-edit-status" class="status-line"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-letter word reference -->
+  <div id="modal-words" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>Two-Letter Words</h2>
+        <button class="modal-close" data-close="modal-words">&times;</button>
+      </div>
+      <div class="words-tabs">
+        <button id="tab-nwl" class="tab active">NWL (North America)</button>
+        <button id="tab-collins" class="tab">Collins (International)</button>
+      </div>
+      <input id="words-filter" type="text" placeholder="Filter…">
+      <div id="words-grid" class="words-grid"></div>
+    </div>
+  </div>
+
+  <!-- Generic confirmation dialog -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head">
+        <h2 id="confirm-title">Are you sure?</h2>
+      </div>
+      <p id="confirm-message"></p>
+      <div class="confirm-buttons">
+        <button id="confirm-cancel" class="btn">Cancel</button>
+        <button id="confirm-ok" class="btn btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blank tile letter picker -->
+  <div id="modal-blank" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head">
+        <h2>Blank tile</h2>
+      </div>
+      <p>Choose the letter this blank will stand for:</p>
+      <div id="blank-letters" class="blank-grid"></div>
+    </div>
+  </div>
+
+  <!-- How to play -->
+  <div id="modal-help" class="modal hidden">
+    <div class="modal-card modal-help-card">
+      <div class="modal-head">
+        <h2>How to play</h2>
+        <button class="modal-close" data-close="modal-help">&times;</button>
+      </div>
+      <div class="help-body">
+        <section class="help-section">
+          <h3>Placing tiles</h3>
+          <p>Two ways: <strong>tap</strong> a tile in your rack to select it (it highlights gold), then tap an empty square to drop it — or <strong>drag</strong> the tile straight onto a square. Tap a placed tile to take it back. <strong>Recall</strong> returns everything to your rack at once.</p>
+        </section>
+        <section class="help-section">
+          <h3>Rearranging your rack</h3>
+          <p>Drag a tile left or right within the rack to reorder your letters. <strong>Shuffle</strong> randomizes them for you.</p>
+        </section>
+        <section class="help-section">
+          <h3>Challenge</h3>
+          <p>After your opponent plays, <strong>Challenge</strong> checks their word(s) against the dictionary. If a word isn't valid, their tiles come back and they lose the turn. If every word is valid, the challenge fails and you lose your turn instead — so challenge wisely.</p>
+        </section>
+        <section class="help-section">
+          <h3>Playing a word</h3>
+          <p>Once your tiles are on the board the <strong>Play</strong> button shows a live score preview. Press it to confirm your move. The first word must cover the centre star ★. Every word after that must connect to at least one tile already on the board.</p>
+        </section>
+        <section class="help-section">
+          <h3>Blanks</h3>
+          <p>Tap a blank tile (empty square in your rack) and place it — a letter picker appears. Blanks score 0 points regardless of the letter chosen.</p>
+        </section>
+        <section class="help-section">
+          <h3>Bingo</h3>
+          <p>Playing all 7 tiles in one turn earns a +50 bonus on top of the word score.</p>
+        </section>
+        <section class="help-section">
+          <h3>Exchange</h3>
+          <p>Tap <strong>Exchange</strong>, select the tiles you want to swap, then tap <strong>Swap</strong>. Only available while at least 7 tiles remain in the bag. Forfeits your turn.</p>
+        </section>
+        <section class="help-section">
+          <h3>Pass &amp; Shuffle</h3>
+          <p><strong>Pass</strong> skips your turn (forfeits it). The game ends if both players pass twice in a row, or after six scoreless turns overall — so the Pass button turns red once you're one round away, and passing then could finish the game. <strong>Shuffle</strong> randomly reorders your rack without spending a turn.</p>
+        </section>
+        <section class="help-section">
+          <h3>Turn notifications</h3>
+          <p>Tap the 🔔 in the header to be notified when it becomes your turn while the game is in the background. Tap again to mute. With Web Push set up, notifications arrive even if the browser is fully closed. <strong>On iPhone</strong>, first add Wurdz to your Home Screen (Share → Add to Home Screen) and open it from there — Apple only allows notifications for installed web apps.</p>
+        </section>
+        <section class="help-section">
+          <h3>Game end</h3>
+          <p>The game ends when a player uses their last tile with an empty bag, or when both players pass twice in a row (four passes), or after six scoreless turns overall — whichever comes first. Unplayed tiles are deducted from each player's score and added to the player who went out.</p>
+        </section>
+        <section class="help-section">
+          <h3>Leaving &amp; resigning</h3>
+          <p><strong>Leave</strong> just exits to your games list — the game stays put and you can return any time. <strong>Resign</strong> gives up the game for good: your opponent wins and it's removed from your list. Once a game is finished you can also tap the <strong>×</strong> on it in your games list to clear it.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
