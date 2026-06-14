@@ -541,6 +541,33 @@ input, textarea { user-select: text; }
 
 .help-section p strong { color: var(--text); }
 
+/* ---- Desktop: freeze board size so it fits and never shifts ------------ */
+
+@media (min-width: 561px) {
+  /* Size the board-wrap from dvh rather than column width. This solves two
+     problems at once: (1) the board fits within the viewport so nothing
+     scrolls on a normal-sized PC window; (2) the board is immune to any
+     dynamic height changes during gameplay (exchange bar appearing, status
+     text changing, scrollbar coming and going) because dvh doesn't change
+     unless the user actually resizes the window.
+
+     The constant 440px accounts for the game header (~54px), both player
+     panels (~84px), rack (~74px), status line (~21px), controls (~40px),
+     exchange bar when visible (~60px), and all gaps + table padding (~107px).
+     A small extra buffer keeps the arithmetic comfortable. */
+  .board-wrap {
+    width: min(100%, calc(100dvh - 440px));
+    margin-inline: auto;
+  }
+
+  /* Reserve scrollbar space permanently so the column width never changes
+     if content overflows on an unusually short or zoomed viewport. Without
+     this, a scrollbar appearing would narrow the column and resize the board. */
+  .table { scrollbar-gutter: stable; }
+}
+
+/* ---- Mobile ---- */
+
 @media (max-width: 560px) {
   .rack-tile { width: 42px; height: 42px; }
   .landing-card { padding: 32px 22px; }
