@@ -221,6 +221,9 @@ input, textarea { user-select: text; }
 }
 .online-dot.online { background: var(--good); }
 .online-dot.offline { background: #5b6b7c; }
+/* My connection dot: amber while moves are syncing through the DB (websocket
+   down) instead of arriving live — the game still works, just less instant. */
+.online-dot.syncing { background: var(--accent); }
 
 /* ---- Board ---- */
 
@@ -793,6 +796,7 @@ input, textarea { user-select: text; }
 }
 .menu-item.menu-sep { border-top: 1px solid var(--panel-light); margin-top: 4px; padding-top: 13px; }
 .menu-item:hover { background: var(--panel-light); }
+.menu-item.on { color: var(--accent); }
 .menu-item svg { flex-shrink: 0; opacity: 0.9; }
 .profile-badge {
   position: absolute;

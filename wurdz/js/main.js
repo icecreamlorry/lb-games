@@ -44,6 +44,7 @@ const app = {
   exchangeMode: false,
   exchangeSel: new Set(),
   oppOnline: false,
+  connMode: 'db',          // 'live' (websocket) or 'db' (polling fallback)
   pendingMoves: new Map(), // out-of-order moves waiting for their turn
   profile: null,           // { id, display_name, friend_code } once signed in
   requestCount: 0,         // pending incoming friend requests
@@ -668,12 +669,12 @@ async function enterRoom(code, playerIndex, name, room) {
   app.conn = new RoomConnection(code, playerIndex, name, {
     onMove: handleIncomingMove,
     onPresence: handlePresence,
-    onMode: (mode) => renderConnBadge(mode),
+    onMode: (mode) => { app.connMode = mode; renderMyOnline(); },
     onRoomUpdate: handleRoomUpdate,
   });
   app.conn.setNextIndex(app.state.moveCount);
   app.conn.connect();
-  renderConnBadge('db'); // shown until the websocket subscribes
+  app.connMode = 'db'; // until the websocket subscribes
 
   stopLobbyPolling();
   showScreen('game');
@@ -695,23 +696,17 @@ function onNotifyPermissionResolved() {
   if (notifyEnabled()) refreshPushSub();
 }
 
-const NOTIFY_BTN_IDS = ['btn-notify', 'btn-notify-lobby'];
-
+// Turn-notification toggle now lives in the hamburger menu (saves header space).
 function renderNotifyBtns() {
+  const item = $('menu-notify');
+  if (!item) return;
+  if (!notificationsSupported()) { item.classList.add('hidden'); return; }
+  item.classList.remove('hidden');
   const on = notifyEnabled();
-  for (const id of NOTIFY_BTN_IDS) {
-    const btn = $(id);
-    if (!btn) continue;
-    if (!notificationsSupported()) { btn.classList.add('hidden'); continue; }
-    btn.classList.remove('hidden');
-    btn.textContent = on ? '🔔' : '🔕';
-    btn.classList.toggle('chip-on', on);
-    btn.title = on
-      ? 'Turn notifications on — tap to mute'
-      : (notificationPermission() === 'denied'
-        ? 'Notifications blocked in browser settings'
-        : 'Enable turn notifications');
-  }
+  item.classList.toggle('on', on);
+  const label = $('menu-notify-label');
+  if (notificationPermission() === 'denied') label.textContent = 'Turn alerts: blocked';
+  else label.textContent = on ? 'Turn alerts: on' : 'Turn alerts: off';
 }
 
 async function onToggleNotify() {
@@ -732,8 +727,9 @@ async function onToggleNotify() {
   else if (!app.userId) unsubscribeFromPush().catch(() => {}); // guests drop their seat sub
 }
 
-$('btn-notify').addEventListener('click', onToggleNotify);
-$('btn-notify-lobby').addEventListener('click', onToggleNotify);
+// Toggle from the menu; stopPropagation keeps the menu open so the label
+// updates in place rather than the dropdown closing on you.
+$('menu-notify').addEventListener('click', (e) => { e.stopPropagation(); onToggleNotify(); });
 
 // Push the opponent if our move handed them the turn (covers all move types,
 // since app.state.turn already reflects the applied move). Fire-and-forget.
@@ -1335,17 +1331,16 @@ function renderAll() {
   renderOverlays();
 }
 
-function renderConnBadge(mode) {
-  const badge = $('conn-badge');
-  if (mode === 'live') {
-    badge.textContent = '● live';
-    badge.className = 'chip conn-live';
-    badge.title = 'Connected via websocket — moves arrive instantly';
-  } else {
-    badge.textContent = '● database sync';
-    badge.className = 'chip conn-db';
-    badge.title = 'Websocket unavailable — moves sync through the database';
-  }
+// My connection health shows as a dot beside my name (mirrors the opponent's
+// online dot): green when moves arrive live over the websocket, amber while
+// they sync through the database. No separate badge or alert — the fallback is
+// graceful, so it isn't worth a message of its own.
+function renderMyOnline() {
+  const dot = $('my-online');
+  if (!dot) return;
+  const live = app.connMode === 'live';
+  dot.className = `online-dot ${live ? 'online' : 'syncing'}`;
+  dot.title = live ? 'Connected — moves arrive instantly' : 'Syncing through the database';
 }
 
 function renderBoard() {
@@ -1420,6 +1415,7 @@ function renderMyPanel() {
   $('my-score').textContent = app.state.scores[app.playerIndex];
   $('my-turn').classList.toggle('hidden', !isMyTurn());
   $('bag-count').textContent = app.state.started ? `bag: ${app.state.bag.length}` : '';
+  renderMyOnline();
 }
 
 function renderControls() {
@@ -1631,6 +1627,7 @@ document.querySelectorAll('.modal').forEach((m) => {
 
 async function boot() {
   registerServiceWorker();
+  renderNotifyBtns(); // set the menu's notification label/visibility up-front
 
   // Seed the guest name field from the shared key (set on the landing page or
   // any other game) and keep it in sync as it's edited here.
