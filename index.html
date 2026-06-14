@@ -622,6 +622,14 @@
       box-shadow: 0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
     }
     .btn-primary:hover { background: rgba(0,245,255,0.12); color: #fff; }
+    .btn-danger {
+      color: #ff5a5a;
+      border-color: #ff5a5a;
+      text-shadow: 0 0 10px rgba(255,80,80,0.55);
+      box-shadow: 0 0 14px rgba(255,64,64,0.22), inset 0 0 12px rgba(255,64,64,0.06);
+    }
+    .btn-danger:hover { background: rgba(255,64,64,0.14); color: #fff; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; align-items: center; margin-top: 2px; }
     .auth-or {
       display: flex;
       align-items: center;
@@ -1091,6 +1099,17 @@
           <div class="profile-label">FRIENDS</div>
           <ul id="friend-list" class="friend-list"></ul>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirm-modal" class="modal hidden" style="z-index:960">
+    <div class="modal-panel">
+      <div id="confirm-title" class="modal-title">ARE YOU SURE?</div>
+      <p id="confirm-message" class="modal-intro"></p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="link-btn">CANCEL</button>
+        <button id="confirm-ok" class="btn-primary">CONFIRM</button>
       </div>
     </div>
   </div>

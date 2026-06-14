@@ -43,6 +43,30 @@ function gameoverVisible() {
   return go && !go.classList.contains('hidden');
 }
 
+// ---- confirm dialog -----------------------------------------------------
+// Themed replacement for window.confirm. Resolves true (confirmed) or false
+// (cancelled / dismissed). Layers above the profile modal (z-index in markup).
+
+let confirmResolver = null;
+function confirmDialog({ title, message, confirmText = 'CONFIRM', danger = false }) {
+  $('confirm-title').textContent = title;
+  $('confirm-message').textContent = message;
+  const okBtn = $('confirm-ok');
+  okBtn.textContent = confirmText;
+  okBtn.classList.toggle('btn-danger', danger);
+  okBtn.classList.toggle('btn-primary', !danger);
+  $('confirm-modal').classList.remove('hidden');
+  return new Promise(resolve => { confirmResolver = resolve; });
+}
+function settleConfirm(value) {
+  if (!confirmResolver) return;
+  $('confirm-modal').classList.add('hidden');
+  const resolve = confirmResolver;
+  confirmResolver = null;
+  resolve(value);
+}
+function confirmOpen() { return !$('confirm-modal').classList.contains('hidden'); }
+
 // ---- account bar (start screen) -----------------------------------------
 
 function renderAccount() {
@@ -284,13 +308,19 @@ function renderFriendList(friends) {
     li.className = 'friend-item';
     li.innerHTML = '<span class="friend-name">' + esc(f.display_name || 'Player') + '</span>'
       + '<span class="friend-actions"><button class="link-btn" data-remove="' + f.id + '">REMOVE</button></span>';
+    li.querySelector('[data-remove]').addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: 'REMOVE FRIEND?',
+        message: 'Remove ' + (f.display_name || 'this player') + ' from your friends? '
+          + 'You can add them again later with their friend code.',
+        confirmText: 'REMOVE',
+        danger: true,
+      });
+      if (!ok) return;
+      try { await removeFriend(f.id); await loadFriends(); } catch {}
+    });
     el.appendChild(li);
   }
-  el.querySelectorAll('[data-remove]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try { await removeFriend(btn.dataset.remove); await loadFriends(); } catch {}
-    });
-  });
 }
 
 function renderRequests(requests) {
@@ -417,7 +447,17 @@ function wire() {
     const m = $(id);
     m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); });
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
+
+  // Confirm dialog (sits above the other modals).
+  $('confirm-ok').addEventListener('click', () => settleConfirm(true));
+  $('confirm-cancel').addEventListener('click', () => settleConfirm(false));
+  $('confirm-modal').addEventListener('click', e => { if (e.target.id === 'confirm-modal') settleConfirm(false); });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (confirmOpen()) { settleConfirm(false); return; } // cancel the confirm, leave the modal behind it open
+    closeAllModals();
+  });
 
   window.addEventListener('chromagrid:gameover', e => showLeaderboard(e.detail?.score ?? 0));
 }
