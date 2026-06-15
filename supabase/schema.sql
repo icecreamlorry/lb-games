@@ -236,3 +236,24 @@ end;
 $$;
 
 grant execute on function finish_room(text, jsonb, boolean) to anon, authenticated;
+
+-- IMPORTANT: my_rooms() above uses `select *`, and a `language sql` function
+-- freezes its `*`-expansion at creation time — so the copy created earlier in
+-- this file does NOT include the `result` column we just added, and finished
+-- games would come back with result = null (empty Game History). Recreate it
+-- now that `result` exists so the column is returned. (Kept here, after the
+-- column add, so a single top-to-bottom run leaves the function correct.)
+drop function if exists my_rooms(uuid, text);
+create function my_rooms(p_user_id uuid, p_game text)
+returns setof rooms
+language sql stable security definer as $$
+  select * from rooms
+  where game = p_game
+    and (
+      players @> jsonb_build_array(jsonb_build_object('userId', p_user_id))
+      or invited_user_id = p_user_id
+    )
+  order by last_move_at desc;
+$$;
+
+grant execute on function my_rooms(uuid, text) to anon, authenticated;
