@@ -79,6 +79,26 @@ export async function setDisplayName(name) {
   if (error) throw error;
 }
 
+export async function resetPasswordForEmail(email) {
+  const { error } = await supabase().auth.resetPasswordForEmail(email, {
+    redirectTo: redirectUrl(),
+  });
+  if (error) throw error;
+}
+
+export async function updatePassword(newPassword) {
+  const { error } = await supabase().auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
+// Fires when the user arrives via a password-reset email link.
+export function onPasswordRecovery(cb) {
+  const { data } = supabase().auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') cb(session);
+  });
+  return () => data?.subscription?.unsubscribe();
+}
+
 function redirectUrl() {
   return location.origin + location.pathname;
 }

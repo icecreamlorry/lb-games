@@ -24,6 +24,7 @@
 import {
   currentUser, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut, setDisplayName,
+  resetPasswordForEmail, updatePassword, onPasswordRecovery,
 } from './auth.js';
 import { submitScore, topScores, friendScores, playerKey } from './leaderboard.js';
 import {
@@ -82,15 +83,17 @@ function injectHTML() {
         <button id="auth-close" class="modal-close">✕</button>
         <div id="auth-title" class="modal-title">LOG IN</div>
         <p id="auth-intro" class="modal-intro">One account works across every LB Games title — no separate sign-up per game.</p>
-        <div class="auth-tabs">
+        <div id="auth-tabs" class="auth-tabs">
           <button id="auth-tab-signin" class="tab active">SIGN IN</button>
           <button id="auth-tab-signup" class="tab">CREATE</button>
         </div>
         <input id="auth-name"     class="field hidden" type="text"     maxlength="20" placeholder="Display name" autocomplete="name">
         <input id="auth-email"    class="field"        type="email"    placeholder="Email"    autocomplete="email">
         <input id="auth-password" class="field"        type="password" placeholder="Password" autocomplete="current-password">
+        <button id="btn-auth-forgot" class="link-btn">Forgot password?</button>
+        <button id="btn-auth-back"   class="link-btn hidden">← Back to sign in</button>
         <button id="btn-auth-primary" class="btn-primary">SIGN IN</button>
-        <div class="auth-or">OR</div>
+        <div id="auth-or" class="auth-or">OR</div>
         <button id="btn-auth-magic">EMAIL ME A SIGN-IN LINK</button>
         <p id="auth-status" class="status-line"></p>
       </div>
@@ -263,24 +266,37 @@ function openAuth(mode = 'signin') {
   setAuthMode(mode);
   authStatus('');
   $('auth-modal').classList.remove('hidden');
-  $('auth-email').focus();
+  (mode === 'newpassword' ? $('auth-password') : $('auth-email')).focus();
 }
 function closeAuth() { $('auth-modal').classList.add('hidden'); }
 
 function setAuthMode(mode) {
   authMode = mode;
   const signup = mode === 'signup';
-  $('auth-title').textContent        = signup ? 'CREATE ACCOUNT' : 'LOG IN';
-  $('btn-auth-primary').textContent  = signup ? 'CREATE ACCOUNT' : 'SIGN IN';
+  const signin = mode === 'signin';
+  const reset  = mode === 'reset';
+  const newpw  = mode === 'newpassword';
+  $('auth-title').textContent = reset ? 'RESET PASSWORD' : newpw ? 'SET NEW PASSWORD' : signup ? 'CREATE ACCOUNT' : 'LOG IN';
+  $('btn-auth-primary').textContent = reset ? 'SEND RESET EMAIL' : newpw ? 'SET PASSWORD' : signup ? 'CREATE ACCOUNT' : 'SIGN IN';
   $('auth-name').classList.toggle('hidden', !signup);
-  $('auth-password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
-  $('auth-tab-signin').classList.toggle('active', !signup);
-  $('auth-tab-signup').classList.toggle('active',  signup);
+  $('auth-email').classList.toggle('hidden', newpw);
+  $('auth-password').classList.toggle('hidden', reset);
+  $('auth-password').setAttribute('autocomplete', signup || newpw ? 'new-password' : 'current-password');
+  $('auth-tabs').classList.toggle('hidden', reset || newpw);
+  $('auth-tab-signin').classList.toggle('active', signin);
+  $('auth-tab-signup').classList.toggle('active', signup);
+  $('auth-intro').classList.toggle('hidden', reset || newpw);
+  $('btn-auth-forgot').classList.toggle('hidden', !signin);
+  $('btn-auth-back').classList.toggle('hidden', !reset);
+  $('auth-or').classList.toggle('hidden', reset || newpw);
+  $('btn-auth-magic').classList.toggle('hidden', reset || newpw);
 }
 
 function authStatus(msg) { $('auth-status').textContent = msg || ''; }
 
 async function doAuthPrimary() {
+  if (authMode === 'reset')       { await doAuthForgot();      return; }
+  if (authMode === 'newpassword') { await doAuthSetPassword(); return; }
   const email    = $('auth-email').value.trim();
   const password = $('auth-password').value;
   const name     = $('auth-name').value.trim() || app.name;
@@ -320,6 +336,37 @@ async function doAuthMagic() {
     authStatus(e.message || 'Could not send the link.');
   } finally {
     $('btn-auth-magic').disabled = false;
+  }
+}
+
+async function doAuthForgot() {
+  const email = $('auth-email').value.trim();
+  if (!email) return authStatus('Enter your email address.');
+  $('btn-auth-primary').disabled = true;
+  authStatus('Sending…');
+  try {
+    await resetPasswordForEmail(email);
+    authStatus('Check your email for a password reset link.');
+  } catch (e) {
+    authStatus(e.message || 'Could not send reset email.');
+  } finally {
+    $('btn-auth-primary').disabled = false;
+  }
+}
+
+async function doAuthSetPassword() {
+  const pw = $('auth-password').value;
+  if (!pw || pw.length < 6) return authStatus('Choose a password (at least 6 characters).');
+  $('btn-auth-primary').disabled = true;
+  authStatus('Saving…');
+  try {
+    await updatePassword(pw);
+    authStatus('Password updated — you\'re signed in!');
+    setTimeout(closeAuth, 1800);
+  } catch (e) {
+    authStatus(e.message || 'Could not update password.');
+  } finally {
+    $('btn-auth-primary').disabled = false;
   }
 }
 
@@ -637,10 +684,13 @@ function wire() {
   $('btn-set-name')?.addEventListener('click', openName);
 
   $('auth-close').addEventListener('click',      closeAuth);
-  $('auth-tab-signin').addEventListener('click', () => setAuthMode('signin'));
-  $('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
+  $('auth-tab-signin').addEventListener('click', () => { authStatus(''); setAuthMode('signin'); });
+  $('auth-tab-signup').addEventListener('click', () => { authStatus(''); setAuthMode('signup'); });
   $('btn-auth-primary').addEventListener('click', doAuthPrimary);
   $('btn-auth-magic').addEventListener('click',   doAuthMagic);
+  $('btn-auth-forgot').addEventListener('click',  () => { authStatus(''); setAuthMode('reset'); $('auth-email').focus(); });
+  $('btn-auth-back').addEventListener('click',    () => { authStatus(''); setAuthMode('signin'); $('auth-email').focus(); });
+  $('auth-email').addEventListener('keydown',     e => { if (e.key === 'Enter') doAuthPrimary(); });
   $('auth-password').addEventListener('keydown',  e => { if (e.key === 'Enter') doAuthPrimary(); });
 
   $('name-close').addEventListener('click',    closeName);
@@ -711,6 +761,7 @@ async function init() {
   }
 
   onAuthChange(onUser);
+  onPasswordRecovery(() => { closeAllModals(); openAuth('newpassword'); });
 }
 
 init();
