@@ -403,10 +403,17 @@ function showLetters(show) {
   renderPath();
 }
 
-function cellIndexFromPoint(x, y) {
+function cellIndexFromPoint(x, y, circular = false) {
   const el = document.elementFromPoint(x, y);
-  if (el && el.classList.contains('bcell')) return Number(el.dataset.i);
-  return -1;
+  if (!el || !el.classList.contains('bcell')) return -1;
+  if (circular) {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const radius = Math.min(r.width, r.height) / 2;
+    if ((x - cx) ** 2 + (y - cy) ** 2 > radius * radius) return -1;
+  }
+  return Number(el.dataset.i);
 }
 
 function tryAdd(i) {
@@ -434,7 +441,7 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   if (!app.dragging || app.phase !== 'playing') return;
-  const i = cellIndexFromPoint(e.clientX, e.clientY);
+  const i = cellIndexFromPoint(e.clientX, e.clientY, app.path.length > 0);
   if (i < 0) return;
   const before = app.path.length;
   const last = app.path[app.path.length - 1];
