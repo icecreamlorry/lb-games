@@ -142,6 +142,28 @@ export async function updateRoomStatus(code, status) {
   if (error) throw error;
 }
 
+// Mark a room finished and store its final result (see schema: rooms.result).
+// `result` shape: { scores: number[] by seat, winner: seat|'tie'|null, reason }.
+// purgeMoves deletes the room's move log too (Wurdz: the stored result makes it
+// redundant). Safe to call from both clients — it's idempotent.
+export async function finishRoom(code, result, purgeMoves = false) {
+  const payload = { ...result, endedAt: result.endedAt || new Date().toISOString() };
+  const { error } = await supabase()
+    .rpc('finish_room', { p_code: code, p_result: payload, p_purge_moves: purgeMoves });
+  if (error) {
+    logError('finishRoom failed:', error.message || error);
+    throw error;
+  }
+  return payload;
+}
+
+// Finished rooms this player took part in, newest first, each with its stored
+// result. (History is a signed-in feature — guest rooms aren't user-routed.)
+export async function fetchFinishedRooms(userId, gameSlug) {
+  const rooms = await fetchMyRooms(userId, gameSlug);
+  return rooms.filter((r) => r.status === 'finished' && r.result);
+}
+
 // ---- Web Push -------------------------------------------------------------
 
 // Two modes:

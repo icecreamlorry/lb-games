@@ -32,6 +32,7 @@ import {
 } from './friends.js';
 import { configReady } from './supabase-config.js';
 import { getGuestName, setGuestName } from './guest-name.js';
+import { openHistory } from './history.js';
 
 // ---- config helpers -------------------------------------------------------
 
@@ -474,12 +475,19 @@ function renderFriendList(friends) {
     el.innerHTML = '<li class="friend-item empty">No friends yet — add one with their code.</li>';
     return;
   }
+  const showHistory = !!cfg().history;
   for (const f of friends) {
     const li = document.createElement('li');
     li.className = 'friend-item';
     li.innerHTML =
       '<span class="friend-name">' + esc(f.display_name || 'Player') + '</span>' +
-      '<span class="friend-actions"><button class="link-btn" data-remove="' + f.id + '">REMOVE</button></span>';
+      '<span class="friend-actions">' +
+      (showHistory ? '<button class="link-btn" data-history="' + f.id + '">HISTORY</button>' : '') +
+      '<button class="link-btn" data-remove="' + f.id + '">REMOVE</button></span>';
+    li.querySelector('[data-history]')?.addEventListener('click', () => {
+      closeProfile();
+      openHistory({ userId: app.user?.id, gameSlug: cfg().gameSlug, friendId: f.id, friendName: f.display_name });
+    });
     li.querySelector('[data-remove]').addEventListener('click', async () => {
       const ok = await confirmDialog({
         title:       'REMOVE FRIEND?',

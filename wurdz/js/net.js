@@ -6,8 +6,11 @@ import { GAME_SLUG } from './config.js';
 import * as rooms from '../../shared/rooms.js';
 
 export { supabase, seatName, seatUserId, userSeat } from '../../shared/rooms.js';
-export { fetchRoom, fetchMoves, updateRoomStatus, triggerPush, RoomConnection } from '../../shared/rooms.js';
+export { fetchRoom, fetchMoves, updateRoomStatus, finishRoom, triggerPush, RoomConnection } from '../../shared/rooms.js';
 export { deletePushSubscription } from '../../shared/rooms.js';
+
+export const fetchFinishedRooms = (userId) =>
+  rooms.fetchFinishedRooms(userId, GAME_SLUG);
 
 export const createRoom = (hostName, hostUserId = null, invite = null, maxPlayers = 2) =>
   rooms.createRoom(hostName, hostUserId, invite, GAME_SLUG, maxPlayers);

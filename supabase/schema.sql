@@ -206,3 +206,33 @@ language sql stable security definer as $$
 $$;
 
 grant execute on function my_rooms(uuid, text) to anon, authenticated;
+
+-- ---- Finished-game results ----------------------------------------------
+--
+-- When a game ends we store its final result on the room so history and the
+-- lobby can show outcomes WITHOUT replaying the move log. Shape (per game):
+--   { "scores": [bySeat...], "winner": <seat>|"tie"|null, "reason": "...",
+--     "endedAt": "<iso>" }
+-- `scores` is indexed by seat so it lines up with rooms.players.
+alter table rooms add column if not exists result jsonb;
+
+-- finish_room: mark a room finished and store its result in one shot, and
+-- optionally purge the move log (Wurdz does this — once the result is stored
+-- the moves are dead weight). SECURITY DEFINER so it can delete moves without
+-- a broad DELETE grant on the table; both clients may call it idempotently.
+drop function if exists finish_room(text, jsonb, boolean);
+create function finish_room(p_code text, p_result jsonb, p_purge_moves boolean default false)
+returns void
+language plpgsql security definer as $$
+begin
+  update rooms
+     set status = 'finished',
+         result = p_result
+   where code = p_code;
+  if p_purge_moves then
+    delete from moves where room_code = p_code;
+  end if;
+end;
+$$;
+
+grant execute on function finish_room(text, jsonb, boolean) to anon, authenticated;

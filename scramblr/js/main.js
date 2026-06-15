@@ -9,11 +9,12 @@ import {
 import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
-  RoomConnection, triggerPush, seatName,
+  finishRoom, RoomConnection, triggerPush, seatName,
 } from './net.js';
-import { configReady } from './config.js';
+import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { listFriends } from '../../shared/friends.js';
+import { openHistory } from '../../shared/history.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import { registerServiceWorker } from './notify.js';
 
@@ -38,6 +39,8 @@ const app = {
   results: {},             // seat -> string[] of submitted words
   submittedResult: false,
   timerInt: null,
+  resultPersisted: false,  // have we stored the final result on the room yet
+  persistedCount: 0,       // how many seats' results were in that stored copy
 };
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
@@ -128,6 +131,7 @@ $('btn-lobby-join-go').addEventListener('click', () => doJoin($('lobby-code-inpu
 $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-lobby-join-go').click(); });
 $('btn-lobby-refresh').addEventListener('click', renderLobby);
 $('btn-lobby-challenge').addEventListener('click', openChallenge);
+$('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
 $('btn-logout-lobby').addEventListener('click', async () => { const { signOut } = await import('../../shared/auth.js'); try { await signOut(); } catch {} });
 
 function dismissedKey() { return `scramblr.dismissed.${app.userId}`; }
@@ -165,7 +169,9 @@ function lobbyCard(room) {
   card.className = 'lobby-game' + (live ? ' live' : '');
   card.innerHTML = `<span class="lobby-opp">${esc(label)}</span><span class="lobby-status">${esc(status)}</span>`
     + `<span class="lobby-score">${room.code}</span>`;
-  card.addEventListener('click', () => openFromLobby(room, invitedMe));
+  card.addEventListener('click', () => (
+    finished ? openHistory({ userId: app.userId, gameSlug: GAME_SLUG }) : openFromLobby(room, invitedMe)
+  ));
   if (finished) {
     const x = document.createElement('span');
     x.className = 'lobby-dismiss'; x.textContent = '×'; x.title = 'Remove';
@@ -223,6 +229,7 @@ function resetGame() {
   app.found = new Set(); app.foundOrder = []; app.myScore = 0;
   app.path = []; app.dragging = false; app.dragMoved = false;
   app.results = {}; app.submittedResult = false;
+  app.resultPersisted = false; app.persistedCount = 0;
   if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
 }
 
@@ -571,6 +578,40 @@ async function showResults() {
   const submitted = Object.keys(app.results).length;
   $('results-waiting').classList.toggle('hidden', submitted >= seats);
   renderPlayers();
+  persistResultIfReady(submitted, seats);
+}
+
+// Store the final standings on the room so the lobby and Game History can show
+// outcomes without recomputing. We write once everyone has submitted (so every
+// client computes identical standings), or when the clock is up; if more
+// results arrive later we re-write the more complete copy. Idempotent across
+// clients, last (most complete) write wins.
+async function persistResultIfReady(submitted, seats) {
+  if (!lastStandings || !app.code) return;
+  const complete = submitted >= seats;
+  if (!complete && !isOver()) return;
+  if (app.resultPersisted && submitted <= app.persistedCount) return;
+  app.persistedCount = submitted;
+  app.resultPersisted = true;
+
+  const scores = lastStandings.map((s) => s?.score ?? 0);
+  const result = { scores, winner: winnerSeat(scores), reason: 'time' };
+  try {
+    await finishRoom(app.code, result, false); // keep Scramblr's tiny move log
+    if (app.room) { app.room.status = 'finished'; app.room.result = result; }
+  } catch {
+    app.resultPersisted = false; // allow a later attempt to retry
+  }
+}
+
+// Seat with the top score, or 'tie' when the best score is shared (or all zero).
+function winnerSeat(scores) {
+  let best = -Infinity, who = null, ties = 0;
+  scores.forEach((s, i) => {
+    if (s > best) { best = s; who = i; ties = 1; }
+    else if (s === best) { ties += 1; }
+  });
+  return ties > 1 || best <= 0 ? 'tie' : who;
 }
 
 // ---- Resume / boot --------------------------------------------------------

@@ -5,8 +5,9 @@ import {
 } from './engine.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
-  RoomConnection, triggerPush, seatName, userSeat,
+  finishRoom, RoomConnection, triggerPush, seatName, userSeat,
 } from './net.js';
+import { openHistory } from '../../shared/history.js';
 import {
   currentUser, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut, setDisplayName,
@@ -23,7 +24,7 @@ import {
   isEnabled as notifyEnabled, isMuted, setMuted,
   subscribeToPush, unsubscribeFromPush,
 } from './notify.js';
-import { configReady } from './config.js';
+import { configReady, GAME_SLUG } from './config.js';
 import { getGuestName, setGuestName } from '../../shared/guest-name.js';
 
 const $ = (id) => document.getElementById(id);
@@ -228,6 +229,7 @@ $('btn-lobby-join-go').addEventListener('click', doLobbyJoin);
 $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLobbyJoin(); });
 $('btn-lobby-refresh').addEventListener('click', () => renderLobby());
 $('btn-lobby-challenge').addEventListener('click', () => openProfile());
+$('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
 
 function lobbyError(msg) {
   $('lobby-error').textContent = msg || '';
@@ -288,11 +290,27 @@ async function summarizeRoom(room) {
   const myIndex = userSeat(room, app.userId);
   const oppIndex = myIndex === 0 ? 1 : 0;
   const oppName = seatName(room, oppIndex);
+  // Finished games are read straight from the stored result — their move log
+  // has been purged, so there's nothing to replay.
+  if (room.status === 'finished' && room.result) {
+    return { room, myIndex, oppIndex, oppName, state: stateFromResult(room.result) };
+  }
   let state = null;
   try {
     state = replayMoves(room.seed, await fetchMoves(room.code));
   } catch { /* show what we can without a replay */ }
   return { room, myIndex, oppIndex, oppName, state };
+}
+
+// A minimal "game over" state built from a stored result — enough for the
+// lobby card (it reads started / gameOver / winner / scores only).
+function stateFromResult(result) {
+  return {
+    started: true,
+    gameOver: true,
+    winner: result.winner,
+    scores: Array.isArray(result.scores) ? result.scores : [0, 0],
+  };
 }
 
 function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
@@ -340,9 +358,12 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
     <span class="lobby-status">${esc(status)}</span>
     ${score}
   `;
-  card.addEventListener('click', () => (
-    challengedMe ? acceptInvite(room) : openRoomFromLobby(room, myIndex)
-  ));
+  const finished = !!(state && state.gameOver);
+  card.addEventListener('click', () => {
+    if (challengedMe) return acceptInvite(room);
+    if (finished) return openHistory({ userId: app.userId, gameSlug: GAME_SLUG });
+    openRoomFromLobby(room, myIndex);
+  });
 
   // Finished games can be cleared from this player's list (the other player
   // keeps their own copy until they dismiss it too).
@@ -523,9 +544,14 @@ function renderFriendList(friends) {
     row.innerHTML = `<span class="friend-name">${esc(f.display_name || 'Player')}</span>`
       + '<span class="friend-actions">'
       + `<button class="btn btn-primary" data-challenge="${f.id}">Challenge</button>`
+      + `<button class="btn" data-history="${f.id}">History</button>`
       + `<button class="btn" data-remove="${f.id}">Remove</button>`
       + '</span>';
     row.querySelector('[data-challenge]').addEventListener('click', () => challengeFriend(f));
+    row.querySelector('[data-history]').addEventListener('click', () => {
+      $('modal-profile').classList.add('hidden');
+      openHistory({ userId: app.userId, gameSlug: GAME_SLUG, friendId: f.id, friendName: f.display_name });
+    });
     row.querySelector('[data-remove]').addEventListener('click', async () => {
       const ok = await confirmDialog({
         title: 'Remove friend?',
@@ -662,9 +688,15 @@ async function enterRoom(code, playerIndex, name, room) {
   app.room = room;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, playerIndex, name }));
 
+  app.finishPersisted = room.status === 'finished';
   app.state = newGameState(room.seed);
   const moves = await fetchMoves(code);
   app.state = replayMoves(room.seed, moves);
+  // A finished room's moves may have been purged after the result was stored;
+  // rebuild the end state from the stored result so we can still show it.
+  if (room.status === 'finished' && room.result && !app.state.gameOver) {
+    applyStoredResult(app.state, room.result);
+  }
 
   app.conn = new RoomConnection(code, playerIndex, name, {
     onMove: handleIncomingMove,
@@ -862,6 +894,7 @@ function handleIncomingMove(move) {
     renderAll();
     announceLastMove();
     maybeNotifyTurn();
+    maybeFinish();
   } else if (move.move_index > app.state.moveCount) {
     // We have a gap — fetch the missing moves from the database.
     app.conn.pollOnce().catch(() => {});
@@ -885,6 +918,14 @@ async function handlePresence(present) {
 function handleRoomUpdate(room) {
   const hadSecondPlayer = (app.room?.player_count ?? 0) >= 2;
   app.room = room;
+  // The opponent finished (and may have purged the moves) while we were a move
+  // behind: show the stored result rather than waiting for moves that are gone.
+  if (room.status === 'finished' && room.result && app.state && !app.state.gameOver) {
+    applyStoredResult(app.state, room.result);
+    app.finishPersisted = true;
+    renderAll();
+    return;
+  }
   if (!hadSecondPlayer && room.player_count >= 2) renderAll();
   else renderOverlays();
 }
@@ -956,6 +997,7 @@ async function submitMove(type, payload) {
   try {
     await app.conn.sendMove(move);
     pushOpponentIfTheirTurn();
+    maybeFinish();
   } catch (e) {
     // The database write failed (e.g. brief offline blip). Re-sync from the
     // database so we never diverge from the source of truth.
@@ -966,6 +1008,38 @@ async function submitMove(type, payload) {
     recallTiles(false);
     renderAll();
   }
+}
+
+// Once the game is over, store the final result on the room (so the lobby and
+// Game History can show it without replaying) and purge the now-redundant move
+// log. Both players reach game-over independently and call this; the write is
+// idempotent and the move purge is a no-op the second time.
+async function maybeFinish() {
+  if (!app.state?.gameOver || app.finishPersisted) return;
+  app.finishPersisted = true;
+  const result = {
+    scores: app.state.scores.slice(),
+    winner: app.state.winner,
+    reason: app.state.endDetail?.reason ?? 'out',
+    endDetail: app.state.endDetail ?? null,
+  };
+  try {
+    await finishRoom(app.code, result, true); // true = purge the move log
+    if (app.room) { app.room.status = 'finished'; app.room.result = result; }
+    app.conn?.broadcastRoom(app.room);
+  } catch {
+    app.finishPersisted = false; // let a later attempt retry
+  }
+}
+
+// Force a state object into the stored finished result (used when the moves are
+// already purged, e.g. opening a finished game or a late room update).
+function applyStoredResult(stateObj, result) {
+  stateObj.started = true;
+  stateObj.gameOver = true;
+  stateObj.winner = result.winner;
+  if (Array.isArray(result.scores)) stateObj.scores = result.scores.slice();
+  stateObj.endDetail = result.endDetail || { reason: result.reason || 'out', outPlayer: result.winner };
 }
 
 $('btn-start').addEventListener('click', async () => {
