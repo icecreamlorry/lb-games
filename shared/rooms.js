@@ -8,6 +8,7 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 import { supabase } from './supabaseClient.js';
 import { getGuestId } from './guest-id.js';
+import { logError } from './devlog.js';
 
 export { supabase };
 
@@ -154,12 +155,18 @@ export async function savePushSubscription(subscription, { userId = null, roomCo
   const { error } = await supabase()
     .from('push_subscriptions')
     .upsert(row, { onConflict: 'endpoint', returning: 'minimal' });
-  if (error) throw error;
+  if (error) {
+    logError('savePushSubscription failed:', error.message || error);
+    throw error;
+  }
 }
 
 export async function deletePushSubscription(endpoint) {
   const { error } = await supabase().from('push_subscriptions').delete().eq('endpoint', endpoint);
-  if (error) throw error;
+  if (error) {
+    logError('deletePushSubscription failed:', error.message || error);
+    throw error;
+  }
 }
 
 // Ask the Edge Function to push someone. Target a seat ({ room_code, player })
@@ -174,7 +181,10 @@ export async function triggerPush({ room_code, player, user_id, title, body, url
     },
     body: JSON.stringify({ room_code, player, user_id, title, body, url }),
   });
-  if (!res.ok) throw new Error(`push trigger failed (${res.status})`);
+  if (!res.ok) {
+    logError(`triggerPush failed (${res.status}):`, await res.text().catch(() => ''));
+    throw new Error(`push trigger failed (${res.status})`);
+  }
   return res.json();
 }
 
