@@ -148,6 +148,13 @@ body {
   animation: pop 1s ease-in-out infinite;
 }
 @keyframes pop { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.7; } }
+.results-winner {
+  font-family: 'Orbitron', monospace; font-weight: 800;
+  font-size: 1rem; letter-spacing: 0.12em; text-align: center;
+  color: var(--cyan); text-shadow: 0 0 14px var(--cyan);
+  min-height: 1.4em;
+}
+.results-winner.loss { color: rgba(0,245,255,0.55); text-shadow: none; }
 .results-list { text-align: left; margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
 .results-list li { display: flex; align-items: baseline; gap: 10px; font-size: 0.86rem; }
 .results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); width: 1.6em; }
