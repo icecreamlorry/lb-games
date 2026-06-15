@@ -389,3 +389,58 @@ button:disabled:hover {
 .friend-item .friend-name    { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friend-item .friend-actions { display: flex; gap: 6px; }
 .friend-item.empty { justify-content: center; color: rgba(0,245,255,0.4); background: none; }
+
+/* ── themes ──────────────────────────────────────────────────────────────── */
+/* Synth = the :root defaults above. Maritime and Pastel are overrides. */
+
+:root[data-theme="maritime"] {
+  --cyan:    #f5b942;   /* warm gold  — takes the primary accent role */
+  --magenta: #4cd17e;   /* mint green — secondary action colour       */
+  --yellow:  #f0e060;   /* amber      — status / key highlights       */
+  --dark:    #15202b;   /* deep navy background                       */
+  --panel:   #1c2e3d;   /* mid-navy panel                             */
+}
+
+:root[data-theme="pastel"] {
+  --cyan:    #7b9ec8;   /* steel blue — primary accent */
+  --magenta: #c87bb0;   /* soft mauve — secondary      */
+  --yellow:  #d4a042;   /* warm ochre — highlights     */
+  --dark:    #f0ede8;   /* cream background             */
+  --panel:   #fdf9f5;   /* near-white panel             */
+}
+
+/* ── theme picker (used inside chromagrid help modal & any shared container) */
+
+.theme-picker-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.theme-picker-label {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--magenta);
+  text-shadow: 0 0 6px var(--magenta);
+}
+.theme-picker { display: flex; gap: 6px; }
+.theme-btn {
+  flex: 1;
+  padding: 7px 4px;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  /* Override base button magenta defaults */
+  color: var(--cyan);
+  border: 1px solid var(--cyan);
+  text-shadow: none;
+  box-shadow: none;
+  opacity: 0.45;
+}
+.theme-btn:hover {
+  opacity: 0.75;
+  background: transparent;
+  color: var(--cyan);
+  box-shadow: none;
+}
+.theme-btn.active { opacity: 1; box-shadow: 0 0 10px var(--cyan); color: var(--cyan); }

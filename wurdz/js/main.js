@@ -26,8 +26,12 @@ import {
 } from './notify.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { getGuestName, setGuestName } from '../../shared/guest-name.js';
+import { loadTheme, createThemePicker } from '../../shared/themes.js';
 
 const $ = (id) => document.getElementById(id);
+
+// Apply stored theme immediately; Maritime is Wurdz's natural default.
+loadTheme('maritime');
 
 // ---- App state ----------------------------------------------------------
 
@@ -500,6 +504,10 @@ document.addEventListener('click', (e) => {
   if (!appMenuEl.classList.contains('hidden') && !appMenuEl.contains(e.target) && !btnMenuEl.contains(e.target)) closeAppMenu();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAppMenu(); });
+
+// Insert theme picker before the "More Games" link in the menu.
+const moreGamesEl = appMenuEl.querySelector('a.menu-sep');
+appMenuEl.insertBefore(createThemePicker(), moreGamesEl);
 
 function openProfile() {
   $('modal-profile').classList.remove('hidden');

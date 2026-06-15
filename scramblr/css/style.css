@@ -148,6 +148,13 @@ body {
   animation: pop 1s ease-in-out infinite;
 }
 @keyframes pop { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.7; } }
+.results-winner {
+  font-family: 'Orbitron', monospace; font-weight: 800;
+  font-size: 1rem; letter-spacing: 0.12em; text-align: center;
+  color: var(--cyan); text-shadow: 0 0 14px var(--cyan);
+  min-height: 1.4em;
+}
+.results-winner.loss { color: rgba(0,245,255,0.55); text-shadow: none; }
 .results-list { text-align: left; margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
 .results-list li { display: flex; align-items: baseline; gap: 10px; font-size: 0.86rem; }
 .results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); width: 1.6em; }
@@ -155,8 +162,22 @@ body {
 .results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); }
 .results-list li.me .r-name { color: #fff; }
 
+/* ---- Rotate button (below board) ---- */
+.board-actions { display: flex; justify-content: center; padding: 4px 0 2px; }
+.btn-rotate {
+  background: transparent;
+  border: 1px solid rgba(0,245,255,0.3);
+  border-radius: 50%;
+  color: rgba(0,245,255,0.65);
+  font-size: 1.8rem;
+  width: 50px; height: 50px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; touch-action: manipulation; line-height: 1;
+}
+.btn-rotate:hover { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 14px rgba(0,245,255,0.3); }
+
 /* ---- Play foot ---- */
-.play-foot { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 12px; align-items: center; }
+.play-foot { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px 12px; align-items: center; }
 .timer { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.5rem; color: var(--cyan); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 .timer.warn { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 .timer.danger { color: #ff4040; text-shadow: 0 0 12px #ff4040; }
@@ -165,12 +186,12 @@ body {
 .foot-actions .btn-primary, .foot-actions .btn-ghost { flex: 1; }
 .found-head { font-size: 0.8rem; }
 .found-head .score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); }
-.found-list { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; max-height: 4.4em; overflow-y: auto; width: min(440px, 92vw); }
-.found-list .fw { font-size: 0.72rem; color: rgba(0,245,255,0.7); }
+.found-list { display: flex; flex-wrap: wrap; gap: 4px 8px; justify-content: center; min-height: 4.4em; max-height: 4.4em; overflow-y: auto; width: min(440px, 92vw); }
+.found-list .fw { font-size: 0.82rem; color: rgba(0,245,255,0.7); }
 .found-list .fw.flash { color: var(--yellow); }
 
-/* shared.css gives .status-line a fixed colour; keep it compact here */
-.status-line { min-height: 1.2em; font-size: 0.7rem; text-align: center; }
+/* Reserve height so text appearing here never shifts the layout */
+.status-line { margin: 0; font-size: 0.7rem; text-align: center; min-height: 1.4em; line-height: 1.4; }
 
 .help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.78rem; line-height: 1.55; color: rgba(0,245,255,0.7); }
 .help-body strong { color: var(--cyan); }

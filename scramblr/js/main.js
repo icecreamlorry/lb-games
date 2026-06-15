@@ -41,6 +41,7 @@ const app = {
   timerInt: null,
   resultPersisted: false,  // have we stored the final result on the room yet
   persistedCount: 0,       // how many seats' results were in that stored copy
+  rotation: 0,             // 0 | 1 | 2 | 3 — number of 90° CW quarter-turns
 };
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
@@ -322,7 +323,10 @@ $('btn-start').addEventListener('click', async () => {
   } catch (e) { $('btn-start').disabled = false; setStatus(e.message || 'Could not start.'); }
 });
 
-$('btn-results-done').addEventListener('click', () => $('btn-leave').click());
+$('btn-results-done').addEventListener('click', () => {
+  if (app.code) dismissGame(app.code);
+  $('btn-leave').click();
+});
 
 // ---- Phase + timers -------------------------------------------------------
 
@@ -376,6 +380,7 @@ function endPlay() {
     setPhase('results');
     clearPath();
     submitMyResult();
+    if (app.code) updateRoomStatus(app.code, 'finished').catch(() => {});
   }
   showResults();
 }
@@ -390,30 +395,63 @@ function submitMyResult() {
 
 // ---- Board rendering + input ---------------------------------------------
 
+let cellEls = []; // indexed by original cell index (data-i), persists across rotations
+
 function buildBoard() {
   const el = $('board');
   el.innerHTML = '';
+  cellEls = [];
+  app.rotation = 0;
   for (let i = 0; i < 16; i++) {
     const c = document.createElement('div');
     c.className = 'bcell';
     c.dataset.i = String(i);
+    cellEls.push(c);
     el.appendChild(c);
   }
 }
 
+// Compute the display order for r quarter-turns clockwise on a 4×4 grid.
+// Returns an array of 16 original cell indices, one per display position.
+function rotationOrder(r) {
+  const N = 4;
+  return Array.from({ length: N * N }, (_, k) => {
+    let row = Math.floor(k / N), col = k % N;
+    for (let t = 0; t < r; t++) { const nr = N - 1 - col; col = row; row = nr; }
+    return row * N + col;
+  });
+}
+
+function applyRotation() {
+  const el = $('board');
+  rotationOrder(app.rotation).forEach(origIdx => el.appendChild(cellEls[origIdx]));
+}
+
+$('btn-rotate').addEventListener('click', () => {
+  if (app.phase !== 'playing' && app.phase !== 'results') return;
+  app.rotation = (app.rotation + 1) % 4;
+  applyRotation();
+});
+
 function showLetters(show) {
-  const cells = $('board').children;
-  for (let i = 0; i < cells.length; i++) {
+  for (let i = 0; i < cellEls.length; i++) {
     const t = app.board[i];
-    cells[i].textContent = show ? (t === 'QU' ? 'Qu' : t) : '';
+    cellEls[i].textContent = show ? (t === 'QU' ? 'Qu' : t) : '';
   }
   renderPath();
 }
 
-function cellIndexFromPoint(x, y) {
+function cellIndexFromPoint(x, y, circular = false) {
   const el = document.elementFromPoint(x, y);
-  if (el && el.classList.contains('bcell')) return Number(el.dataset.i);
-  return -1;
+  if (!el || !el.classList.contains('bcell')) return -1;
+  if (circular) {
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const radius = Math.min(r.width, r.height) / 2;
+    if ((x - cx) ** 2 + (y - cy) ** 2 > radius * radius) return -1;
+  }
+  return Number(el.dataset.i);
 }
 
 function tryAdd(i) {
@@ -441,7 +479,7 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   if (!app.dragging || app.phase !== 'playing') return;
-  const i = cellIndexFromPoint(e.clientX, e.clientY);
+  const i = cellIndexFromPoint(e.clientX, e.clientY, app.path.length > 0);
   if (i < 0) return;
   const before = app.path.length;
   const last = app.path[app.path.length - 1];
@@ -455,12 +493,11 @@ function onPointerUp() {
 }
 
 function renderPath() {
-  const cells = $('board').children;
   const set = new Set(app.path);
   const last = app.path[app.path.length - 1];
-  for (let i = 0; i < cells.length; i++) {
-    cells[i].classList.toggle('sel', set.has(i));
-    cells[i].classList.toggle('last', i === last);
+  for (let i = 0; i < cellEls.length; i++) {
+    cellEls[i].classList.toggle('sel', set.has(i));
+    cellEls[i].classList.toggle('last', i === last);
   }
   const word = app.path.length ? wordFromPath(app.board, app.path) : '';
   $('current-word').textContent = word === '' ? '' : (word === 'QU' ? 'Qu' : titleWord(word));
@@ -575,6 +612,31 @@ async function showResults() {
       + `<span class="r-score">${r.score}</span>`;
     ol.appendChild(li);
   });
+
+  const winnerEl = $('results-winner');
+  if (ranked.length <= 1) {
+    winnerEl.textContent = '';
+    winnerEl.className = 'results-winner';
+  } else {
+    const topScore = ranked[0].score;
+    const tied = ranked.filter(r => r.score === topScore);
+    const iWon = tied.some(r => r.seat === app.seat);
+    const isTie = tied.length > 1;
+    if (isTie && iWon) {
+      winnerEl.textContent = "It's a tie!";
+      winnerEl.className = 'results-winner';
+    } else if (iWon) {
+      winnerEl.textContent = 'You won!';
+      winnerEl.className = 'results-winner';
+    } else if (isTie) {
+      winnerEl.textContent = `${tied.map(r => r.name).join(' & ')} tied`;
+      winnerEl.className = 'results-winner loss';
+    } else {
+      winnerEl.textContent = `${ranked[0].name} won`;
+      winnerEl.className = 'results-winner loss';
+    }
+  }
+
   const submitted = Object.keys(app.results).length;
   $('results-waiting').classList.toggle('hidden', submitted >= seats);
   renderPlayers();

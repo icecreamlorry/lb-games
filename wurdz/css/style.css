@@ -871,3 +871,79 @@ input, textarea { user-select: text; }
 .friend-row .friend-actions { display: flex; gap: 6px; }
 .friend-row .btn { padding: 6px 10px; font-size: 13px; }
 .friend-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 6px; }
+
+/* ── themes ──────────────────────────────────────────────────────────────── */
+/* Maritime = the :root defaults above. Synth and Pastel are overrides. */
+
+:root[data-theme="synth"] {
+  --bg:          #04040f;
+  --panel:       #07071a;
+  --panel-light: #12122e;
+  --text:        #e8f4ff;
+  --muted:       #5577aa;
+  --accent:      #00f5ff;
+  --accent-dark: #00ccdd;
+  --tile:        #1a0833;
+  --tile-edge:   #6600bb;
+  --tile-text:   #e0e8ff;
+  --board-line:  #04040f;
+  --cell:        #0a0a20;
+  --tw:          #ff00c8;
+  --dw:          #880055;
+  --tl:          #00f5ff;
+  --dl:          #005566;
+  --good:        #00f5ff;
+  --bad:         #ff00c8;
+}
+
+:root[data-theme="pastel"] {
+  --bg:          #f0ede8;
+  --panel:       #fdf9f5;
+  --panel-light: #e8e2da;
+  --text:        #2c3340;
+  --muted:       #8a96a8;
+  --accent:      #7b9ec8;
+  --accent-dark: #5f84b0;
+  --tile:        #fdf5e4;
+  --tile-edge:   #c8a878;
+  --tile-text:   #3d2e18;
+  --board-line:  #ccc6be;
+  --cell:        #d8e8f0;
+  --tw:          #d97c7c;
+  --dw:          #f0b0b0;
+  --tl:          #7b9ec8;
+  --dl:          #b8d4e8;
+  --good:        #6db890;
+  --bad:         #d97070;
+}
+
+/* ── theme picker (wurdz app-menu style) ─────────────────────────────────── */
+
+.theme-picker-section {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--panel-light);
+  margin-top: 4px;
+}
+.theme-picker-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.theme-picker { display: flex; gap: 6px; }
+.theme-btn {
+  flex: 1;
+  padding: 7px 0;
+  border: 2px solid var(--panel-light);
+  border-radius: 8px;
+  background: var(--panel-light);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--panel-light); }
+.theme-btn.active { border-color: var(--accent); background: transparent; color: var(--accent); }

@@ -493,6 +493,16 @@
       #timer { font-size: 1.2rem; min-width: 62px; }
       #score-delta { display: none; }
     }
+
+    /* Chromagrid-specific adjustments for non-Synth themes */
+    :root[data-theme="maritime"] body,
+    :root[data-theme="pastel"] body {
+      background-image: none;
+    }
+    :root[data-theme="maritime"] body::after,
+    :root[data-theme="pastel"] body::after {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -637,6 +647,11 @@
         </div>
       </div>
 
+      <div class="help-section" id="help-theme-section">
+        <div class="help-label">THEME</div>
+        <!-- theme buttons inserted by themes.js module script -->
+      </div>
+
       <button id="help-got-it">GOT IT</button>
     </div>
   </div>
@@ -651,6 +666,15 @@
     };
   </script>
   <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module">
+    import { loadTheme, createThemePicker } from '../shared/themes.js';
+    loadTheme('synth');
+    const themeSection = document.getElementById('help-theme-section');
+    const picker = createThemePicker();
+    // Replace the placeholder div content — keep the help-label, append the picker row
+    themeSection.appendChild(picker.querySelector('.theme-picker'));
+    picker.remove();
+  </script>
 
   <script>
     const COLORS = [
