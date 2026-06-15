@@ -111,10 +111,11 @@ body {
 .pchip .pdot.off { background: #555; box-shadow: none; }
 
 /* ---- Board ---- */
-.board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 0; }
+.board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 0; overflow: hidden; }
 .board {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
   width: min(92vw, 60vh); aspect-ratio: 1;
+  max-width: 100%; max-height: 100%;
   touch-action: none;
 }
 .bcell {
