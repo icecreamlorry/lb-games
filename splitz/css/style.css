@@ -78,7 +78,7 @@ body {
 
 /* ---- Top bars ---- */
 .bar { display: flex; align-items: center; gap: 10px; }
-.game-bar { padding: 8px 52px 8px 12px; }
+.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 52px 8px 12px; }
 #screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
@@ -122,13 +122,20 @@ body {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   background: var(--panel); border: 1.5px solid color-mix(in srgb, var(--cyan) 18%, transparent);
   border-radius: 14px; padding: 5px 12px; min-width: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
 }
 .pchip.me { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.pchip.viewing { border-color: var(--cyan); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 30%, transparent); }
 .pchip.peeled { border-color: var(--magenta); box-shadow: 0 0 0 2px color-mix(in srgb, var(--magenta) 25%, transparent); }
 .pchip .pname { font-size: 0.64rem; color: color-mix(in srgb, var(--cyan) 75%, transparent); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pchip .ptiles { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--cyan); }
 .pchip .pdot { width: 7px; height: 7px; border-radius: 50%; background: #5ec98a; }
 .pchip .pdot.off { background: color-mix(in srgb, var(--cyan) 25%, transparent); }
+
+.spectate-hint {
+  flex: 0 0 auto; text-align: center; font-size: 0.66rem; font-weight: 500;
+  color: color-mix(in srgb, var(--cyan) 55%, transparent); padding: 0 12px 4px;
+}
 
 /* ---- The pannable grid ---- */
 .board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
@@ -191,6 +198,13 @@ body {
   display: flex; flex-direction: column; gap: 14px; align-items: center;
   box-shadow: 0 16px 40px rgba(0,0,0,0.16);
 }
+.overlay-card { position: relative; }
+.overlay-close {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: none; padding: 0; line-height: 1;
+  font-size: 1.1rem; cursor: pointer; color: color-mix(in srgb, var(--cyan) 55%, transparent);
+}
+.overlay-close:hover { color: var(--magenta); }
 .overlay-title { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.02em; color: var(--cyan); }
 #gameover-title.loss { color: color-mix(in srgb, var(--cyan) 60%, transparent); }
 

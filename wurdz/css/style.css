@@ -742,12 +742,12 @@ input, textarea { user-select: text; }
    z-index sits below the modal backdrop (50) so an open modal covers it. */
 .menu-fab {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: calc(env(safe-area-inset-top, 0px) + 9px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   z-index: 40;
-  width: 40px;
-  height: 40px;
-  border: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--panel-light);
   border-radius: 50%;
   background: var(--panel-light);
   color: var(--text);
@@ -765,8 +765,8 @@ input, textarea { user-select: text; }
 /* Dropdown anchored under the menu button. */
 .app-menu {
   position: fixed;
-  top: 56px;
-  right: 10px;
+  top: calc(env(safe-area-inset-top, 0px) + 52px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   z-index: 41;
   display: flex;
   flex-direction: column;
@@ -814,8 +814,9 @@ input, textarea { user-select: text; }
   text-align: center;
 }
 
-/* Keep the in-header controls clear of the fixed profile button. */
-.game-header, .lobby-header { padding-right: 58px; }
+/* Keep the in-header controls clear of the fixed profile button, and below the
+   iPhone safe-area / notch. */
+.game-header, .lobby-header { padding-right: 58px; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 
 #profile-signedout { display: flex; flex-direction: column; gap: 14px; }
 #profile-signedout .muted { line-height: 1.5; margin: 0; }

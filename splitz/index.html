@@ -85,6 +85,7 @@
     </header>
 
     <div id="players-strip" class="players-strip"></div>
+    <div id="spectate-hint" class="spectate-hint hidden">Tap a player to see their board</div>
 
     <div class="board-wrap">
       <!-- The private, pannable grid. Tiles are absolutely positioned inside. -->
@@ -101,9 +102,13 @@
 
       <div id="gameover-overlay" class="board-overlay hidden">
         <div class="overlay-card">
+          <button id="btn-gameover-close" class="overlay-close" title="Look around the final boards">✕</button>
           <div id="gameover-title" class="overlay-title">BANANAS!</div>
           <div id="gameover-detail" class="muted"></div>
-          <button id="btn-gameover-done" class="btn-primary">LEAVE</button>
+          <div class="row">
+            <button id="btn-gameover-look" class="btn-ghost">SEE BOARDS</button>
+            <button id="btn-gameover-done" class="btn-primary">LEAVE</button>
+          </div>
         </div>
       </div>
     </div>

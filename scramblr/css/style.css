@@ -67,7 +67,7 @@ body {
 /* ---- Top bars ---- */
 .bar { display: flex; align-items: center; gap: 10px; }
 /* Right padding clears the shared menu button (fixed top-right by account-ui). */
-.game-bar { padding: 8px 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
+.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
 #screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);

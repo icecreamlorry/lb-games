@@ -471,8 +471,8 @@
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
-      /* Extra top padding clears the fixed menu button so it doesn't overlap the timer. */
-      body  { padding: 28px 12px 8px; gap: 6px; }
+      /* Extra top padding clears the fixed menu button (and the iPhone notch) so it doesn't overlap the timer. */
+      body  { padding: calc(env(safe-area-inset-top, 0px) + 22px) 12px 8px; gap: 6px; }
       #grid { padding: 3px; }
       #board-col { gap: 6px; }
       h1 { font-size: 1.1rem; }

@@ -46,6 +46,12 @@ const app = {
   prevPeels: 0,
   finishPersisted: false,
   online: new Set(),
+  // Spectating: at game over every client publishes its board so anyone can
+  // tap a player to review their final grid + leftover tiles.
+  spectateSeat: null,         // null = my own board; otherwise a seat to watch
+  boards: new Map(),          // seat -> { placed: Map, hand: [] } from 'board' moves
+  boardPublished: false,
+  gameoverDismissed: false,
 };
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
@@ -233,6 +239,18 @@ function resetGame() {
   app.prevPeels = 0;
   app.finishPersisted = false;
   app.online = new Set();
+  app.spectateSeat = null;
+  app.boards = new Map();
+  app.boardPublished = false;
+  app.gameoverDismissed = false;
+  // Wipe any stale end-of-game UI so a previous "BANANAS!" can't linger.
+  $('gameover-overlay')?.classList.add('hidden');
+  const gt = $('gameover-title'); if (gt) { gt.textContent = 'BANANAS!'; gt.classList.remove('loss'); }
+  if ($('gameover-detail')) $('gameover-detail').textContent = '';
+  $('btn-peel')?.classList.add('hidden');
+  if ($('btn-dump')) { $('btn-dump').classList.remove('armed'); $('btn-dump').textContent = 'DUMP'; }
+  $('spectate-hint')?.classList.add('hidden');
+  setStatus('');
 }
 
 async function enterRoom(code, seat, name, room) {
@@ -326,9 +344,23 @@ function handleRoomUpdate(room) {
   renderPrestart();
 }
 
+// Collect published end-of-game boards (type 'board' moves) for spectating.
+function collectBoards() {
+  app.boards = new Map();
+  for (const m of app.moves) {
+    if (m.type === 'board') {
+      app.boards.set(m.player, {
+        placed: new Map(m.payload?.placed || []),
+        hand: Array.isArray(m.payload?.hand) ? m.payload.hand : [],
+      });
+    }
+  }
+}
+
 // Recompute derived pool state + this player's hand from the log.
 function recompute() {
   app.state = deriveState(app.seed, app.moves);
+  collectBoards();
   // Before the deal lands (e.g. resuming while the log is still loading) keep
   // the restored grid untouched — there's no entitlement to reconcile against
   // yet, and wiping it here would lose the player's crossword.
@@ -359,7 +391,25 @@ function reactToState() {
   }
   app.prevPeels = st.peels;
 
-  if (st.gameOver && !app.finishPersisted) persistFinish();
+  if (st.gameOver) {
+    if (!app.finishPersisted) persistFinish();
+    publishBoard(); // share my final board so others can spectate it
+  }
+}
+
+// Publish my final grid + leftover tiles (once) so everyone can review it.
+// Sparse, per-seat index keeps it clear of the sequential pool log.
+async function publishBoard() {
+  if (app.boardPublished || app.seat == null) return;
+  app.boardPublished = true;
+  const move = {
+    move_index: 900000 + app.seat,
+    player: app.seat,
+    type: 'board',
+    payload: { placed: [...app.placed], hand: app.hand },
+  };
+  try { await app.conn.sendMove(move); handleMove(move); }
+  catch { /* already published, or offline — best effort */ }
 }
 
 async function persistFinish() {
@@ -411,14 +461,36 @@ function renderPlayers() {
   players.forEach((p) => {
     const entitled = app.state?.entitled?.[p.seat]?.length;
     const div = document.createElement('div');
+    const viewing = (app.spectateSeat ?? app.seat) === p.seat;
     div.className = 'pchip' + (p.seat === app.seat ? ' me' : '')
+      + (viewing ? ' viewing' : '')
       + (app.state?.lastPeelBy === p.seat ? ' peeled' : '');
     const online = app.online.has(String(p.seat));
     div.innerHTML = `<span class="pdot ${online ? '' : 'off'}"></span>`
       + `<span class="pname">${esc(p.name || `P${p.seat + 1}`)}</span>`
       + `<span class="ptiles">${entitled == null ? '·' : entitled}</span>`;
+    div.addEventListener('click', () => spectate(p.seat));
     strip.appendChild(div);
   });
+  $('spectate-hint').classList.toggle('hidden', !app.state?.started || players.length < 2);
+}
+
+// ---- Spectating other players' boards -------------------------------------
+
+function isSpectating() { return app.spectateSeat != null && app.spectateSeat !== app.seat; }
+function viewPlaced() { return isSpectating() ? (app.boards.get(app.spectateSeat)?.placed || new Map()) : app.placed; }
+function viewHand() { return isSpectating() ? (app.boards.get(app.spectateSeat)?.hand || []) : app.hand; }
+
+function spectate(seat) {
+  if (seat === app.seat) { app.spectateSeat = null; }
+  else if (app.boards.has(seat)) { app.spectateSeat = seat; }
+  else { setStatus("That player's board appears once the game ends."); return; }
+  recenter();
+  renderAll();
+  if (isSpectating()) {
+    const who = seatName(app.room, app.spectateSeat) || `Player ${app.spectateSeat + 1}`;
+    setStatus(`Spectating ${who} — tap your own name to go back.`);
+  } else setStatus('');
 }
 
 function updatePool() {
@@ -450,9 +522,10 @@ function centerOrigin() {
 
 function recenter() {
   const rect = gridLayer.getBoundingClientRect();
-  if (!app.placed.size) { centerOrigin(); renderGrid(); return; }
+  const placed = viewPlaced();
+  if (!placed.size) { centerOrigin(); renderGrid(); return; }
   let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
-  for (const k of app.placed.keys()) {
+  for (const k of placed.keys()) {
     const [r, c] = k.split(',').map(Number);
     minR = Math.min(minR, r); maxR = Math.max(maxR, r);
     minC = Math.min(minC, c); maxC = Math.max(maxC, c);
@@ -466,21 +539,21 @@ function recenter() {
 $('btn-recenter').addEventListener('click', recenter);
 
 // Tiles that belong to an invalid (non-dictionary) run, for red highlighting.
-function badTileKeys() {
+function badTileKeys(placed) {
   const bad = new Set();
-  if (!dictionaryLoaded() || app.placed.size < 2) return bad;
-  const has = (r, c) => app.placed.has(cellKey(r, c));
-  for (const k of app.placed.keys()) {
+  if (!dictionaryLoaded() || placed.size < 2) return bad;
+  const has = (r, c) => placed.has(cellKey(r, c));
+  for (const k of placed.keys()) {
     const [r, c] = k.split(',').map(Number);
     // horizontal run start
     if (!has(r, c - 1) && has(r, c + 1)) {
       let w = '', cc = c; const keys = [];
-      while (has(r, cc)) { w += app.placed.get(cellKey(r, cc)); keys.push(cellKey(r, cc)); cc++; }
+      while (has(r, cc)) { w += placed.get(cellKey(r, cc)); keys.push(cellKey(r, cc)); cc++; }
       if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
     }
     if (!has(r - 1, c) && has(r + 1, c)) {
       let w = '', rr = r; const keys = [];
-      while (has(rr, c)) { w += app.placed.get(cellKey(rr, c)); keys.push(cellKey(rr, c)); rr++; }
+      while (has(rr, c)) { w += placed.get(cellKey(rr, c)); keys.push(cellKey(rr, c)); rr++; }
       if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
     }
   }
@@ -488,11 +561,12 @@ function badTileKeys() {
 }
 
 function renderGrid() {
+  const placed = viewPlaced();
   gridLayer.style.backgroundSize = `${CELL}px ${CELL}px`;
   gridLayer.style.backgroundPosition = `${app.pan.x}px ${app.pan.y}px`;
   gridLayer.querySelectorAll('.gtile').forEach((el) => el.remove());
-  const bad = badTileKeys();
-  for (const [k, letter] of app.placed) {
+  const bad = badTileKeys(placed);
+  for (const [k, letter] of placed) {
     const [r, c] = k.split(',').map(Number);
     const el = document.createElement('div');
     el.className = 'gtile' + (bad.has(k) ? ' bad' : '');
@@ -509,16 +583,18 @@ function renderGrid() {
 
 function renderHand() {
   const el = $('hand');
-  el.classList.toggle('armed', app.dumpArmed);
+  const hand = viewHand();
+  el.classList.toggle('armed', app.dumpArmed && !isSpectating());
   el.innerHTML = '';
-  if (!app.hand.length) {
+  if (!hand.length) {
     const span = document.createElement('span');
     span.className = 'hand-empty';
-    span.textContent = app.state?.started ? 'Hand empty — peel or place is done!' : 'Waiting to start…';
+    span.textContent = isSpectating() ? 'No tiles left in hand.'
+      : app.state?.started ? 'Hand empty — peel or place is done!' : 'Waiting to start…';
     el.appendChild(span);
     return;
   }
-  app.hand.forEach((letter, i) => {
+  hand.forEach((letter, i) => {
     const t = document.createElement('div');
     t.className = 'htile';
     t.textContent = letter;
@@ -535,6 +611,7 @@ let panning = null; // { startX, startY, panX, panY, moved }
 
 function onHandPointerDown(e, letter) {
   e.preventDefault();
+  if (isSpectating()) return;
   if (app.dumpArmed) { doDump(letter); return; }
   if (!app.state?.started || app.state.gameOver) return;
   beginDrag({ kind: 'hand', letter }, e);
@@ -543,7 +620,7 @@ function onHandPointerDown(e, letter) {
 function onTilePointerDown(e, key) {
   e.preventDefault();
   e.stopPropagation();
-  if (!app.state?.started || app.state.gameOver) return;
+  if (isSpectating() || !app.state?.started || app.state.gameOver) return;
   const letter = app.placed.get(key);
   if (letter == null) return;
   app.placed.delete(key); // lift it off the board
@@ -670,6 +747,13 @@ $('btn-peel').addEventListener('click', async () => {
 
 function updateControls() {
   const st = app.state;
+  // When watching another player's board, all my action controls are off.
+  if (isSpectating()) {
+    $('btn-dump').disabled = true;
+    $('btn-shuffle').disabled = true;
+    $('btn-peel').classList.add('hidden');
+    return;
+  }
   const playing = !!st?.started && !st.gameOver;
   const handLen = app.hand.length;
   $('btn-dump').disabled = !(playing && handLen > 0 && st.poolRemaining >= 3);
@@ -698,7 +782,7 @@ function updateControls() {
 function renderGameOver() {
   const ov = $('gameover-overlay');
   const over = !!app.state?.gameOver;
-  ov.classList.toggle('hidden', !over);
+  ov.classList.toggle('hidden', !over || app.gameoverDismissed);
   if (!over) return;
   const iWon = app.state.winner === app.seat;
   const winner = seatName(app.room, app.state.winner) || `Player ${app.state.winner + 1}`;
@@ -707,6 +791,15 @@ function renderGameOver() {
   title.classList.toggle('loss', !iWon);
   $('gameover-detail').textContent = iWon ? 'You emptied your hand with the bunch too low to peel.' : `${winner} went bananas first.`;
 }
+
+// Dismiss the winner box to look around the final boards (tap a player to view).
+function dismissGameover() {
+  app.gameoverDismissed = true;
+  $('gameover-overlay').classList.add('hidden');
+  setStatus('Tap a player up top to see their final board.');
+}
+$('btn-gameover-close').addEventListener('click', dismissGameover);
+$('btn-gameover-look').addEventListener('click', dismissGameover);
 
 // ---- Status + render-all --------------------------------------------------
 

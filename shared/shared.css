@@ -241,39 +241,41 @@ button:disabled:hover {
 
 #btn-menu {
   position: fixed;
-  top: 12px; right: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 9px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   z-index: 901;
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border-radius: 3px;
-  background: rgba(4,4,15,0.6);
-  border: 1px solid rgba(0,245,255,0.3);
-  color: rgba(0,245,255,0.7);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cyan) 12%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+  color: var(--cyan);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 #btn-menu:hover,
 #btn-menu[aria-expanded="true"] {
-  color: var(--cyan);
   border-color: var(--cyan);
-  box-shadow: 0 0 12px rgba(0,245,255,0.3);
+  background: color-mix(in srgb, var(--cyan) 22%, var(--panel));
 }
 #app-menu {
   position: fixed;
-  top: 52px; right: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 54px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   z-index: 901;
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 5px;
   min-width: 170px;
-  background: rgba(8,8,20,0.97);
-  border: 1px solid rgba(0,245,255,0.28);
-  border-radius: 4px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.55), 0 0 24px rgba(0,245,255,0.08);
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.32);
   animation: ov-fade 0.15s ease;
 }
 .menu-item {
@@ -283,9 +285,9 @@ button:disabled:hover {
   width: 100%;
   padding: 9px 12px;
   border: none;
-  border-radius: 3px;
+  border-radius: 6px;
   background: none;
-  color: rgba(0,245,255,0.82);
+  color: color-mix(in srgb, var(--cyan) 85%, transparent);
   font-family: 'Share Tech Mono', monospace;
   font-size: 0.78rem;
   letter-spacing: 0.08em;
@@ -294,8 +296,8 @@ button:disabled:hover {
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
-.menu-item.menu-sep { border-top: 1px solid rgba(0,245,255,0.12); margin-top: 3px; padding-top: 11px; }
-.menu-item:hover { background: rgba(0,245,255,0.1); color: var(--cyan); }
+.menu-item.menu-sep { border-top: 1px solid color-mix(in srgb, var(--cyan) 14%, transparent); margin-top: 3px; padding-top: 11px; }
+.menu-item:hover { background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--cyan); }
 .menu-item svg   { flex-shrink: 0; opacity: 0.85; }
 
 /* ── landing account bar ──────────────────────────────────────────────── */
