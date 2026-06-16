@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SPLITZ // LB GAMES</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#04040f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Splitz">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js) for this game.
+    window.LB_CONFIG = { gameSlug: 'splitz', gameName: 'Splitz', history: true };
+  </script>
+</head>
+<body>
+
+  <!-- Landing (guests): set a name, create or join a room -->
+  <section id="screen-landing" class="screen">
+    <div class="card">
+      <h1 class="logo">SPLITZ</h1>
+      <p class="tagline">// BANANAGRAMS, MULTIPLAYER //</p>
+
+      <div class="row">
+        <button id="btn-create" class="btn-primary">CREATE ROOM</button>
+        <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
+      </div>
+      <div id="join-box" class="row hidden">
+        <input id="code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="landing-error" class="status-line"></p>
+
+      <div id="account-bar">
+        <div id="account-line">Playing as a guest</div>
+        <div class="account-actions">
+          <button id="btn-set-name" class="link-btn">SET NAME</button>
+          <button id="btn-login" class="link-btn">LOG IN</button>
+          <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
+          <button id="btn-go-lobby" class="link-btn hidden">MY GAMES</button>
+        </div>
+        <p class="hint">Log in to keep several games going and get notified when one starts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — signed-in players -->
+  <section id="screen-lobby" class="screen hidden">
+    <div class="card wide">
+      <header class="bar">
+        <span class="logo small">SPLITZ</span>
+        <span class="grow muted">Hi, <strong id="lobby-name"></strong></span>
+        <button id="btn-notify-lobby" class="chip hidden" title="Notify me when a game starts">🔔</button>
+        <button id="btn-logout-lobby" class="chip">LOG OUT</button>
+      </header>
+      <h2 class="card-title">Your games</h2>
+      <div class="row">
+        <button id="btn-lobby-new" class="btn-primary">NEW GAME</button>
+        <button id="btn-lobby-challenge" class="btn-ghost">CHALLENGE</button>
+        <button id="btn-lobby-join" class="btn-ghost">JOIN BY CODE</button>
+        <button id="btn-lobby-history" class="btn-ghost">HISTORY</button>
+        <button id="btn-lobby-refresh" class="btn-ghost" title="Refresh">↻</button>
+      </div>
+      <div id="lobby-join-box" class="row hidden">
+        <input id="lobby-code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-lobby-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="lobby-error" class="status-line"></p>
+      <div id="lobby-list" class="lobby-list"></div>
+    </div>
+  </section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen hidden">
+    <header class="bar game-bar">
+      <span class="logo small">SPLITZ</span>
+      <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
+      <span class="grow"></span>
+      <span id="pool-chip" class="chip pool-chip" title="Tiles left in the bunch">BUNCH <strong id="pool-count">–</strong></span>
+      <button id="btn-leave" class="chip">LEAVE</button>
+    </header>
+
+    <div id="players-strip" class="players-strip"></div>
+
+    <div class="board-wrap">
+      <!-- The private, pannable grid. Tiles are absolutely positioned inside. -->
+      <div id="grid-layer" class="grid-layer"></div>
+
+      <div id="prestart-overlay" class="board-overlay">
+        <div class="overlay-card">
+          <div id="start-title" class="overlay-title">WAITING FOR PLAYERS</div>
+          <p id="start-info" class="muted"></p>
+          <button id="btn-start" class="btn-primary hidden">SPLIT!</button>
+          <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
+        </div>
+      </div>
+
+      <div id="gameover-overlay" class="board-overlay hidden">
+        <div class="overlay-card">
+          <div id="gameover-title" class="overlay-title">BANANAS!</div>
+          <div id="gameover-detail" class="muted"></div>
+          <button id="btn-gameover-done" class="btn-primary">LEAVE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="play-foot">
+      <p id="status-line" class="status-line"></p>
+      <div id="hand" class="hand"></div>
+      <div class="row foot-actions">
+        <button id="btn-dump" class="btn-ghost" disabled>DUMP</button>
+        <button id="btn-shuffle" class="btn-ghost" disabled>SHUFFLE</button>
+        <button id="btn-peel" class="btn-primary hidden">PEEL!</button>
+        <button id="btn-recenter" class="btn-ghost" title="Re-center the grid">⌖</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Challenge a friend -->
+  <div id="modal-challenge" class="modal hidden">
+    <div class="modal-panel">
+      <button class="modal-close" data-close="modal-challenge">✕</button>
+      <div class="modal-title">CHALLENGE A FRIEND</div>
+      <p class="modal-intro">Start a room addressed to a friend — it appears in their games list to accept.</p>
+      <ul id="challenge-list" class="friend-list"></ul>
+    </div>
+  </div>
+
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="help-close" class="modal-close">✕</button>
+      <div class="modal-title">HOW TO PLAY</div>
+      <div class="help-body">
+        <p>Everyone draws a hand of tiles from a shared <strong>bunch</strong> and races to arrange <em>all</em> of them into their own connected crossword — every across and down run must be a real word.</p>
+        <p><strong>Place tiles</strong> by dragging them from your hand onto the grid. Drag a placed tile to move it, or back to your hand to pick it up. Drag empty space to pan the grid; <strong>⌖</strong> re-centres.</p>
+        <p><strong>PEEL!</strong> — the moment your grid is valid and your hand is empty, hit Peel: <em>every</em> player draws one more tile from the bunch. The game keeps flowing until the bunch runs low.</p>
+        <p><strong>DUMP</strong> a tile you don't want back into the bunch and draw three in its place (a small penalty). Needs at least three tiles left in the bunch.</p>
+        <p><strong>BANANAS!</strong> — when the bunch is too low to peel and you finish a valid grid first, you win.</p>
+      </div>
+      <button id="help-got-it" class="btn-primary">GOT IT</button>
+    </div>
+  </div>
+
+  <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="../shared/devtools.js"></script>
+</body>
+</html>
