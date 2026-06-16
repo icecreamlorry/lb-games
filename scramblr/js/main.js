@@ -42,6 +42,8 @@ const app = {
   resultPersisted: false,  // have we stored the final result on the room yet
   persistedCount: 0,       // how many seats' results were in that stored copy
   rotation: 0,             // 0 | 1 | 2 | 3 — number of 90° CW quarter-turns
+  scoringStarted: false,   // have we kicked off the word-by-word scoring animation?
+  scoringAbort: false,     // set to true to skip/abort the animation
 };
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
@@ -231,6 +233,7 @@ function resetGame() {
   app.path = []; app.dragging = false; app.dragMoved = false;
   app.results = {}; app.submittedResult = false;
   app.resultPersisted = false; app.persistedCount = 0;
+  app.scoringStarted = false; app.scoringAbort = false;
   if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
 }
 
@@ -269,7 +272,7 @@ function handleMove(move) {
     startTimers();
   } else if (move.type === 'result') {
     app.results[move.player] = Array.isArray(move.payload?.words) ? move.payload.words : [];
-    if (app.phase === 'results' || isOver()) showResults();
+    if (app.phase === 'results' || app.phase === 'scoring' || isOver()) onResultsUpdate();
   }
 }
 
@@ -328,6 +331,8 @@ $('btn-results-done').addEventListener('click', () => {
   $('btn-leave').click();
 });
 
+$('btn-scoring-skip').addEventListener('click', () => { app.scoringAbort = true; });
+
 // ---- Phase + timers -------------------------------------------------------
 
 function isOver() {
@@ -361,8 +366,9 @@ function setPhase(p) {
   app.phase = p;
   $('prestart-overlay').classList.toggle('hidden', p !== 'waiting');
   $('countdown-overlay').classList.toggle('hidden', p !== 'countdown');
+  $('scoring-overlay').classList.toggle('hidden', p !== 'scoring');
   $('results-overlay').classList.toggle('hidden', p !== 'results');
-  const reveal = p === 'playing' || p === 'results';
+  const reveal = p === 'playing' || p === 'scoring' || p === 'results';
   showLetters(reveal);
   if (p === 'waiting') renderPrestart();
 }
@@ -374,15 +380,21 @@ function startPlay() {
 }
 
 function endPlay() {
-  if (app.phase !== 'results') {
+  if (app.phase !== 'results' && app.phase !== 'scoring') {
     if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
     renderTimer(0);
-    setPhase('results');
     clearPath();
     submitMyResult();
+    app.scoringStarted = false;
+    app.scoringAbort = false;
     if (app.code) updateRoomStatus(app.code, 'finished').catch(() => {});
+    // Show results overlay in "waiting" state (no scoreboard yet)
+    $('results-list').innerHTML = '';
+    $('results-winner').textContent = '';
+    $('results-waiting').classList.remove('hidden');
+    setPhase('results');
   }
-  showResults();
+  onResultsUpdate();
 }
 
 function submitMyResult() {
@@ -428,7 +440,7 @@ function applyRotation() {
 }
 
 $('btn-rotate').addEventListener('click', () => {
-  if (app.phase !== 'playing' && app.phase !== 'results') return;
+  if (app.phase !== 'playing' && app.phase !== 'results' && app.phase !== 'scoring') return;
   app.rotation = (app.rotation + 1) % 4;
   applyRotation();
 });
@@ -568,7 +580,7 @@ function renderPlayers() {
     const div = document.createElement('div');
     div.className = 'pchip' + (p.seat === app.seat ? ' me' : '');
     const online = app.online.has(String(p.seat));
-    const showScore = app.phase === 'results';
+    const showScore = app.phase === 'results' && lastStandings != null;
     const score = showScore ? scoreForSeat(p.seat) : null;
     div.innerHTML = `<span class="pdot ${online ? '' : 'off'}"></span>`
       + `<span class="pname">${esc(p.name || `P${p.seat + 1}`)}</span>`
@@ -592,42 +604,191 @@ function renderPrestart() {
 let lastStandings = null;
 function scoreForSeat(seat) { return lastStandings ? (lastStandings[seat]?.score ?? 0) : 0; }
 
-async function showResults() {
-  setPhase('results');
-  if (!dictionaryLoaded()) { try { await loadDictionary(); } catch {} }
+// Build validated word list per seat using all received results.
+function buildWordsBySeat(seats) {
+  const arr = [];
+  for (let s = 0; s < seats; s++) arr[s] = app.results[s] || (s === app.seat ? [...app.found] : []);
+  return arr;
+}
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Called whenever a result move arrives or the game ends.
+// Manages the transition: waiting → scoring animation → final results.
+function onResultsUpdate() {
+  if (app.phase !== 'results' && app.phase !== 'scoring') return;
   const seats = (app.room?.players ?? []).length || 1;
-  const wordsBySeat = [];
-  for (let s = 0; s < seats; s++) wordsBySeat[s] = app.results[s] || (s === app.seat ? [...app.found] : []);
+  const submitted = Object.keys(app.results).length;
+  renderPlayers();
+
+  if (app.phase === 'results' && !app.scoringStarted) {
+    const allReady = submitted >= seats;
+    $('results-waiting').classList.toggle('hidden', allReady);
+    if (allReady) {
+      app.scoringStarted = true;
+      startScoringAnimation(seats).catch(() => { renderFinalResults(); setPhase('results'); });
+    }
+  }
+}
+
+// Animate the player's own words being revealed one-by-one, with score
+// additions and cancellations shown in real time.
+async function startScoringAnimation(seats) {
+  const wordsBySeat = buildWordsBySeat(seats);
+  if (!dictionaryLoaded()) { try { await loadDictionary(); } catch {} }
   lastStandings = standings(app.board, isWord, wordsBySeat);
-  const ranked = lastStandings
+  persistResultIfReady(Object.keys(app.results).length, seats);
+
+  // Map word → seats that submitted it (raw; cancellation logic is best-effort)
+  const wordOwners = new Map();
+  for (let s = 0; s < seats; s++) {
+    for (const w of (wordsBySeat[s] || [])) {
+      const key = String(w).toUpperCase();
+      if (!wordOwners.has(key)) wordOwners.set(key, []);
+      wordOwners.get(key).push(s);
+    }
+  }
+
+  const myWords = [...(wordsBySeat[app.seat] || [])].map(w => String(w).toUpperCase()).sort();
+
+  setPhase('scoring');
+  $('scoring-list').innerHTML = '';
+  $('scoring-total').textContent = '0 pts';
+  $('scoring-total').className = 'scoring-total';
+
+  let score = 0;
+
+  for (const word of myWords) {
+    if (app.scoringAbort || app.phase !== 'scoring') break;
+
+    const owners = wordOwners.get(word) || [app.seat];
+    const pts = wordPoints(word);
+    const cancelled = owners.length > 1;
+    const otherNames = owners
+      .filter((s) => s !== app.seat)
+      .map((s) => seatName(app.room, s) || `P${s + 1}`)
+      .join(' & ');
+
+    const row = document.createElement('div');
+    row.className = 'sw';
+    const wSpan = document.createElement('span');
+    wSpan.className = 'sw-word';
+    wSpan.textContent = titleWord(word);
+    const sSpan = document.createElement('span');
+    sSpan.className = 'sw-pts';
+    sSpan.textContent = `+${pts}`;
+    row.appendChild(wSpan);
+    row.appendChild(sSpan);
+    $('scoring-list').appendChild(row);
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Slide the row in
+    requestAnimationFrame(() => requestAnimationFrame(() => row.classList.add('visible')));
+    await delay(200);
+    if (app.scoringAbort || app.phase !== 'scoring') break;
+
+    // Tentatively add pts to running total
+    score += pts;
+    $('scoring-total').textContent = `${score} pts`;
+
+    if (cancelled) {
+      await delay(380);
+      if (app.scoringAbort || app.phase !== 'scoring') break;
+
+      // Reveal the canceller's name, cross out the word, wiggle total back down
+      sSpan.className = 'sw-canceller';
+      sSpan.textContent = otherNames;
+      row.classList.add('cancelled');
+      score -= pts;
+      const totalEl = $('scoring-total');
+      totalEl.textContent = `${score} pts`;
+      totalEl.classList.remove('wiggle');
+      void totalEl.offsetWidth; // restart animation
+      totalEl.classList.add('wiggle');
+      setTimeout(() => totalEl.classList.remove('wiggle'), 650);
+      await delay(680);
+    } else {
+      await delay(180);
+    }
+  }
+
+  if (app.phase !== 'scoring') return; // user navigated away
+
+  // Pause on the final total before revealing the scoreboard
+  if (!app.scoringAbort) await delay(2200);
+
+  if (app.phase !== 'scoring') return;
+
+  app.scoringAbort = false;
+  renderFinalResults();
+  setPhase('results');
+}
+
+// Build and show the final scoreboard with expandable unique-word lists.
+function renderFinalResults() {
+  const seats = (app.room?.players ?? []).length || 1;
+  const wordsBySeat = buildWordsBySeat(seats);
+  if (dictionaryLoaded()) lastStandings = standings(app.board, isWord, wordsBySeat);
+
+  // Compute unique words per seat for the click-to-reveal feature
+  const wordOwners = new Map();
+  for (let s = 0; s < seats; s++) {
+    for (const w of (wordsBySeat[s] || [])) {
+      const key = String(w).toUpperCase();
+      if (!wordOwners.has(key)) wordOwners.set(key, []);
+      wordOwners.get(key).push(s);
+    }
+  }
+  const uniqueWords = Array.from({ length: seats }, (_, s) =>
+    (wordsBySeat[s] || [])
+      .map(w => String(w).toUpperCase())
+      .filter(w => (wordOwners.get(w) || []).length === 1)
+      .sort()
+  );
+
+  const ranked = (lastStandings || [])
     .map((r, seat) => ({ seat, ...r, name: seatName(app.room, seat) || `P${seat + 1}` }))
-    .sort((a, b) => b.score - a.score || b.unique - a.unique);
+    .sort((a, b) => b.score - a.score || (b.unique || 0) - (a.unique || 0));
+
   const ol = $('results-list');
   ol.innerHTML = '';
   ranked.forEach((r, i) => {
     const li = document.createElement('li');
     if (r.seat === app.seat) li.className = 'me';
-    li.innerHTML = `<span class="r-rank">${i + 1}</span>`
+
+    const row = document.createElement('div');
+    row.className = 'results-row';
+    row.innerHTML = `<span class="r-rank">${i + 1}</span>`
       + `<span class="r-name">${esc(r.name)}</span>`
       + `<span class="r-score">${r.score}</span>`;
+    li.appendChild(row);
+
+    const uw = uniqueWords[r.seat] || [];
+    if (uw.length) {
+      const nameEl = row.querySelector('.r-name');
+      nameEl.classList.add('has-words');
+      const wordsEl = document.createElement('div');
+      wordsEl.className = 'r-words';
+      wordsEl.textContent = uw.map(w => titleWord(w)).join('  ·  ');
+      li.appendChild(wordsEl);
+      nameEl.addEventListener('click', () => wordsEl.classList.toggle('open'));
+    }
+
     ol.appendChild(li);
   });
 
   const winnerEl = $('results-winner');
   if (ranked.length <= 1) {
-    winnerEl.textContent = '';
-    winnerEl.className = 'results-winner';
+    winnerEl.textContent = ''; winnerEl.className = 'results-winner';
   } else {
     const topScore = ranked[0].score;
     const tied = ranked.filter(r => r.score === topScore);
     const iWon = tied.some(r => r.seat === app.seat);
     const isTie = tied.length > 1;
     if (isTie && iWon) {
-      winnerEl.textContent = "It's a tie!";
-      winnerEl.className = 'results-winner';
+      winnerEl.textContent = "It's a tie!"; winnerEl.className = 'results-winner';
     } else if (iWon) {
-      winnerEl.textContent = 'You won!';
-      winnerEl.className = 'results-winner';
+      winnerEl.textContent = 'You won!'; winnerEl.className = 'results-winner';
     } else if (isTie) {
       winnerEl.textContent = `${tied.map(r => r.name).join(' & ')} tied`;
       winnerEl.className = 'results-winner loss';
@@ -637,10 +798,9 @@ async function showResults() {
     }
   }
 
-  const submitted = Object.keys(app.results).length;
-  $('results-waiting').classList.toggle('hidden', submitted >= seats);
+  $('results-waiting').classList.add('hidden');
+  persistResultIfReady(Object.keys(app.results).length, seats);
   renderPlayers();
-  persistResultIfReady(submitted, seats);
 }
 
 // Store the final standings on the room so the lobby and Game History can show

@@ -111,10 +111,11 @@ body {
 .pchip .pdot.off { background: #555; box-shadow: none; }
 
 /* ---- Board ---- */
-.board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 0; }
+.board-wrap { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-height: 0; overflow: hidden; }
 .board {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
   width: min(92vw, 60vh); aspect-ratio: 1;
+  max-width: 100%; max-height: 100%;
   touch-action: none;
 }
 .bcell {
@@ -155,12 +156,48 @@ body {
   min-height: 1.4em;
 }
 .results-winner.loss { color: rgba(0,245,255,0.55); text-shadow: none; }
-.results-list { text-align: left; margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
-.results-list li { display: flex; align-items: baseline; gap: 10px; font-size: 0.86rem; }
-.results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); width: 1.6em; }
+.results-list { text-align: left; margin: 0; padding: 0 0 0 4px; list-style: none; display: flex; flex-direction: column; gap: 8px; min-width: 220px; }
+.results-list li { display: flex; flex-direction: column; gap: 3px; font-size: 0.86rem; }
+.results-row { display: flex; align-items: baseline; gap: 10px; }
+.results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); width: 1.6em; flex-shrink: 0; }
 .results-list .r-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); }
+.results-list .r-name.has-words { cursor: pointer; text-decoration: underline dotted rgba(0,245,255,0.4); }
+.results-list .r-name.has-words:hover { color: #fff; }
+.results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
 .results-list li.me .r-name { color: #fff; }
+.r-words { display: none; font-size: 0.68rem; color: rgba(0,245,255,0.5); padding-left: 2em; line-height: 1.6; }
+.r-words.open { display: block; }
+
+/* ---- Scoring animation overlay ---- */
+.scoring-card {
+  background: var(--panel); border: 1px solid rgba(0,245,255,0.25); border-radius: 4px;
+  padding: 16px 20px 14px; width: min(340px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 0 40px rgba(0,245,255,0.1);
+}
+.scoring-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,245,255,0.15); padding-bottom: 10px; }
+.scoring-label { font-family: 'Orbitron', monospace; font-size: 0.65rem; letter-spacing: 0.1em; color: rgba(0,245,255,0.45); }
+.scoring-total { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.5rem; color: var(--cyan); text-shadow: 0 0 12px var(--cyan); transition: color 0.25s; }
+@keyframes scoring-wiggle {
+  0%,100% { transform: scale(1) translateX(0); }
+  20%     { transform: scale(1.22) translateX(-5px); }
+  45%     { transform: scale(1.14) translateX(5px); }
+  65%     { transform: scale(1.08) translateX(-3px); }
+  82%     { transform: scale(1.03) translateX(2px); }
+}
+.scoring-total.wiggle { animation: scoring-wiggle 0.55s ease; }
+.scoring-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.sw {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  opacity: 0; transform: translateY(7px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.sw.visible { opacity: 1; transform: translateY(0); }
+.sw-word { color: var(--cyan); font-size: 0.82rem; letter-spacing: 0.04em; }
+.sw.cancelled .sw-word { text-decoration: line-through; color: rgba(0,245,255,0.35); }
+.sw-pts { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 0.75rem; color: var(--cyan); white-space: nowrap; }
+.sw-canceller { font-size: 0.72rem; color: var(--magenta); text-shadow: 0 0 8px var(--magenta); white-space: nowrap; }
 
 /* ---- Rotate button (below board) ---- */
 .board-actions { display: flex; justify-content: center; padding: 4px 0 2px; }

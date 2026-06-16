@@ -147,8 +147,9 @@ function injectHTML() {
         <div id="profile-signedin" class="hidden">
           <div id="profile-line">Signed in as <strong id="profile-name"></strong></div>
           <div class="account-actions">
-            <button id="profile-change-name" class="link-btn">CHANGE NAME</button>
-            <button id="profile-signout"     class="link-btn">SIGN OUT</button>
+            <button id="profile-change-name"     class="link-btn">CHANGE NAME</button>
+            <button id="profile-change-password" class="link-btn">CHANGE PASSWORD</button>
+            <button id="profile-signout"         class="link-btn">SIGN OUT</button>
           </div>
 
           <div class="profile-block">
@@ -713,10 +714,11 @@ function wire() {
   $('lb-tab-friends').addEventListener('click',   () => setLbTab('friends'));
 
   $('btn-profile').addEventListener('click',       () => { app.user ? openProfile() : openAuth('signin'); });
-  $('profile-close').addEventListener('click',     closeProfile);
-  $('profile-login').addEventListener('click',     () => { closeProfile(); openAuth('signin'); });
-  $('profile-signout').addEventListener('click',   async () => { try { await signOut(); } catch {} closeProfile(); });
-  $('profile-change-name').addEventListener('click', openName);
+  $('profile-close').addEventListener('click',            closeProfile);
+  $('profile-login').addEventListener('click',            () => { closeProfile(); openAuth('signin'); });
+  $('profile-signout').addEventListener('click',          async () => { try { await signOut(); } catch {} closeProfile(); });
+  $('profile-change-name').addEventListener('click',      openName);
+  $('profile-change-password').addEventListener('click',  () => { closeProfile(); openAuth('newpassword'); });
   $('profile-copy-code').addEventListener('click', copyFriendCode);
   $('btn-add-friend').addEventListener('click',    doAddFriend);
   $('friend-code-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAddFriend(); });
