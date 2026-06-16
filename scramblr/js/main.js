@@ -169,12 +169,12 @@ function lobbyCard(room) {
   else { label = `${players.length} player${players.length === 1 ? '' : 's'}`; status = finished ? 'Finished' : playing ? 'In progress' : 'Waiting — tap to open'; live = playing; }
 
   const card = document.createElement('button');
-  card.className = 'lobby-game' + (live ? ' live' : '');
+  card.className = 'lobby-game' + (live ? ' live' : '') + (finished ? ' finished' : '');
   card.innerHTML = `<span class="lobby-opp">${esc(label)}</span><span class="lobby-status">${esc(status)}</span>`
     + `<span class="lobby-score">${room.code}</span>`;
-  card.addEventListener('click', () => (
-    finished ? openHistory({ userId: app.userId, gameSlug: GAME_SLUG }) : openFromLobby(room, invitedMe)
-  ));
+  // Finished games re-open to show their final results (the History button in
+  // the lobby is the way to browse all past games).
+  card.addEventListener('click', () => openFromLobby(room, invitedMe));
   if (finished) {
     const x = document.createElement('span');
     x.className = 'lobby-dismiss'; x.textContent = '×'; x.title = 'Remove';
@@ -239,6 +239,10 @@ function resetGame() {
 
 async function enterRoom(code, seat, name, room) {
   resetGame();
+  // Re-opening a finished game is review-only: pretend we've already submitted
+  // so the replayed end-of-game never clobbers our stored words with an empty
+  // set (our real result is loaded from the move log instead).
+  if (room.status === 'finished') app.submittedResult = true;
   app.code = code; app.seat = seat; app.name = name; app.room = room;
   app.board = makeBoard(Number(room.seed));
   $('room-code-text').textContent = code;

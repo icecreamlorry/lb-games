@@ -362,12 +362,11 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
     <span class="lobby-status">${esc(status)}</span>
     ${score}
   `;
-  const finished = !!(state && state.gameOver);
-  card.addEventListener('click', () => {
-    if (challengedMe) return acceptInvite(room);
-    if (finished) return openHistory({ userId: app.userId, gameSlug: GAME_SLUG });
-    openRoomFromLobby(room, myIndex);
-  });
+  // Finished games re-open to show their final result; the lobby's History
+  // button is the way to browse all past games.
+  card.addEventListener('click', () => (
+    challengedMe ? acceptInvite(room) : openRoomFromLobby(room, myIndex)
+  ));
 
   // Finished games can be cleared from this player's list (the other player
   // keeps their own copy until they dismiss it too).

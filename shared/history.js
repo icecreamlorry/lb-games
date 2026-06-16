@@ -80,11 +80,31 @@ function injectStyles() {
     .lbh-x:hover { background: rgba(255,0,200,0.14); color: #fff; }
     .lbh-filter { padding: 10px 14px; border-bottom: 1px solid rgba(0,245,255,0.12); display: flex; align-items: center; gap: 8px; }
     .lbh-filter label { font-size: 0.6rem; letter-spacing: 0.12em; color: rgba(0,245,255,0.55); text-transform: uppercase; }
-    .lbh-select {
-      flex: 1; background: rgba(0,245,255,0.05); color: #cfe9ee;
+    .lbh-dd { position: relative; flex: 1; }
+    .lbh-dd-btn {
+      width: 100%; display: flex; align-items: center; gap: 8px;
+      background: rgba(0,245,255,0.05); color: #cfe9ee;
       border: 1px solid rgba(0,245,255,0.25); border-radius: 3px;
-      padding: 6px 8px; font-family: inherit; font-size: 0.72rem;
+      padding: 7px 10px; font-family: inherit; font-size: 0.72rem; cursor: pointer; text-align: left;
     }
+    .lbh-dd-btn:hover { border-color: rgba(0,245,255,0.5); }
+    .lbh-dd-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lbh-dd-caret { color: rgba(0,245,255,0.6); font-size: 0.6rem; transition: transform 0.15s; }
+    .lbh-dd.open .lbh-dd-caret { transform: rotate(180deg); }
+    .lbh-dd-menu {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5;
+      list-style: none; margin: 0; padding: 4px;
+      max-height: 240px; overflow-y: auto;
+      background: #0a0a20; border: 1px solid rgba(0,245,255,0.3); border-radius: 4px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    }
+    .lbh-dd-menu.hidden { display: none; }
+    .lbh-dd-item {
+      padding: 8px 10px; border-radius: 3px; font-size: 0.72rem; color: #cfe9ee; cursor: pointer;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lbh-dd-item:hover { background: rgba(0,245,255,0.1); }
+    .lbh-dd-item.sel { color: #00f5ff; background: rgba(0,245,255,0.08); }
     .lbh-body { overflow-y: auto; padding: 8px 10px; }
     .lbh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
     .lbh-item {
@@ -121,28 +141,71 @@ function buildPanel() {
         <button class="lbh-x" id="lbh-close">Close</button>
       </div>
       <div class="lbh-filter">
-        <label for="lbh-friend">Vs</label>
-        <select class="lbh-select" id="lbh-friend"><option value="all">All opponents</option></select>
+        <label>Vs</label>
+        <div class="lbh-dd" id="lbh-dd">
+          <button type="button" class="lbh-dd-btn" id="lbh-dd-btn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="lbh-dd-label" id="lbh-dd-label">All opponents</span>
+            <span class="lbh-dd-caret">▾</span>
+          </button>
+          <ul class="lbh-dd-menu hidden" id="lbh-dd-menu" role="listbox"></ul>
+        </div>
       </div>
       <div class="lbh-body"><ul class="lbh-list" id="lbh-list"></ul></div>
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closePanel(); });
   $('lbh-close').addEventListener('click', closePanel);
-  $('lbh-friend').addEventListener('change', (e) => { state.filter = e.target.value; renderList(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) closePanel(); });
+  $('lbh-dd-btn').addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+  // Close the dropdown when clicking elsewhere inside the panel.
+  modal.addEventListener('click', () => closeDropdown());
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (isDropdownOpen()) closeDropdown();
+    else if (isOpen()) closePanel();
+  });
+}
+
+// Options for the friend filter: "All opponents" plus each friend.
+function filterOptions() {
+  return [{ value: 'all', label: 'All opponents' },
+    ...state.friends.map((f) => ({ value: f.id, label: f.display_name || 'Player' }))];
+}
+
+function currentFilterLabel() {
+  return filterOptions().find((o) => o.value === state.filter)?.label || 'All opponents';
 }
 
 function renderFriendSelect() {
-  const sel = $('lbh-friend');
-  sel.innerHTML = '<option value="all">All opponents</option>';
-  for (const f of state.friends) {
-    const opt = document.createElement('option');
-    opt.value = f.id;
-    opt.textContent = f.display_name || 'Player';
-    sel.appendChild(opt);
+  $('lbh-dd-label').textContent = currentFilterLabel();
+  const menu = $('lbh-dd-menu');
+  menu.innerHTML = '';
+  for (const o of filterOptions()) {
+    const li = document.createElement('li');
+    li.className = 'lbh-dd-item' + (o.value === state.filter ? ' sel' : '');
+    li.setAttribute('role', 'option');
+    li.textContent = o.label;
+    li.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.filter = o.value;
+      closeDropdown();
+      renderFriendSelect();
+      renderList();
+    });
+    menu.appendChild(li);
   }
-  sel.value = state.filter;
+}
+
+function isDropdownOpen() { return $('lbh-dd')?.classList.contains('open'); }
+function toggleDropdown() { isDropdownOpen() ? closeDropdown() : openDropdown(); }
+function openDropdown() {
+  $('lbh-dd').classList.add('open');
+  $('lbh-dd-menu').classList.remove('hidden');
+  $('lbh-dd-btn').setAttribute('aria-expanded', 'true');
+}
+function closeDropdown() {
+  $('lbh-dd')?.classList.remove('open');
+  $('lbh-dd-menu')?.classList.add('hidden');
+  $('lbh-dd-btn')?.setAttribute('aria-expanded', 'false');
 }
 
 // Turn one finished room into the data the list needs.
@@ -214,6 +277,7 @@ export async function openHistory({ userId, gameSlug, friendId = 'all', friendNa
   state.userId = userId;
   state.gameSlug = gameSlug;
   state.filter = friendId || 'all';
+  closeDropdown();
   $('lbh-modal').classList.add('lbh-open');
   $('app-menu')?.classList.add('hidden');
 
