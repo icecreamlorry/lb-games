@@ -52,6 +52,9 @@ body {
 #btn-lobby-refresh, #btn-recenter { flex: 0 0 auto; }
 
 /* ---- Buttons (soft, rounded, no glow) ---- */
+/* shared.css gives every <button> a hard-coded neon-magenta glow; clear it so
+   the pastel/cute look is clean. Cute buttons set their own soft shadow below. */
+button { box-shadow: none; text-shadow: none; }
 .btn-primary, .btn-ghost {
   font-family: 'Fredoka', sans-serif; font-weight: 600; letter-spacing: 0.03em;
   border-radius: 999px; padding: 9px 18px; cursor: pointer; touch-action: manipulation;
