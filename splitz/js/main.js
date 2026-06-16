@@ -17,10 +17,14 @@ import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { listFriends } from '../../shared/friends.js';
 import { openHistory } from '../../shared/history.js';
 import { getGuestName } from '../../shared/guest-name.js';
+import { loadTheme, createThemePicker } from '../../shared/themes.js';
 import {
   registerServiceWorker, requestNotifications, isEnabled as notifyEnabled,
   subscribeToPush, showLocalNotification, notificationsSupported, notificationPermission,
 } from './notify.js';
+
+// Splitz wears the soft Pastel theme by default (a stored preference wins).
+loadTheme('pastel');
 
 const $ = (id) => document.getElementById(id);
 const MAX_PLAYERS = 8;
@@ -767,8 +771,20 @@ async function tryResume() {
   } catch { sessionStorage.removeItem(SESSION_KEY); return false; }
 }
 
+// Drop the theme picker into the shared hamburger menu (injected by
+// account-ui), just above "More Games".
+function addThemePicker() {
+  const menu = document.getElementById('app-menu');
+  if (!menu || menu.querySelector('.theme-picker-section')) return;
+  const picker = createThemePicker();
+  picker.style.padding = '8px 12px';
+  const moreGames = menu.querySelector('a[href="../"]');
+  menu.insertBefore(picker, moreGames || null);
+}
+
 async function boot() {
   registerServiceWorker();
+  addThemePicker();
   if (!configReady()) { landingError('Backend not configured.'); }
   try { app.user = await currentUser(); } catch {}
   app.userId = app.user?.id ?? null;
