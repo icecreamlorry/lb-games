@@ -1,7 +1,7 @@
 {
   "name": "Splitz — LB Games",
   "short_name": "Splitz",
-  "description": "Multiplayer Bananagrams-style word race.",
+  "description": "Multiplayer crossword tile race.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

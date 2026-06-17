@@ -1,6 +1,12 @@
 // Word validity for Splitz. The ENABLE word list (~173k words) is fetched once
 // the game starts and cached. Splitz validates every across/down run on a
 // player's grid, so the same membership test Scramblr uses applies here.
+//
+// We also fold in the full Collins international two-letter list (the same set
+// Wurdz uses) so every legal 2-letter word plays here, including the Collins-
+// only ones the base list omits.
+
+import { TWO_LETTER_WORDS } from '../../wurdz/js/words2.js';
 
 let wordSet = null;
 let loadPromise = null;
@@ -24,6 +30,7 @@ export function loadDictionary() {
         const w = line.trim().toUpperCase();
         if (w) wordSet.add(w);
       }
+      for (const { w } of TWO_LETTER_WORDS) wordSet.add(w.toUpperCase());
       return wordSet;
     })
     .catch((err) => {

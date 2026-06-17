@@ -1,6 +1,6 @@
 // Splitz engine tests. Run: node test/engine.test.mjs
 import {
-  TOTAL_TILES, LETTER_COUNTS, handSize, makeBunch, deriveState,
+  TOTAL_TILES, LETTER_COUNTS, handSize, makePool, deriveState,
   handLetters, gridWords, isConnected, validateGrid,
 } from '../js/engine.js';
 
@@ -10,11 +10,11 @@ function ok(cond, msg) { if (cond) { pass++; console.log('  ok:', msg); } else {
 // Distribution sums to 144.
 ok(Object.values(LETTER_COUNTS).reduce((a, b) => a + b, 0) === TOTAL_TILES, 'distribution sums to 144');
 
-// Bunch is deterministic and full.
-const b1 = makeBunch(12345), b2 = makeBunch(12345), b3 = makeBunch(99);
-ok(b1.length === TOTAL_TILES, 'bunch has 144 tiles');
-ok(b1.join('') === b2.join(''), 'same seed -> same bunch');
-ok(b1.join('') !== b3.join(''), 'different seed -> different bunch');
+// Pool is deterministic and full.
+const b1 = makePool(12345), b2 = makePool(12345), b3 = makePool(99);
+ok(b1.length === TOTAL_TILES, 'pool has 144 tiles');
+ok(b1.join('') === b2.join(''), 'same seed -> same pool');
+ok(b1.join('') !== b3.join(''), 'different seed -> different pool');
 
 // Hand sizes by player count.
 ok(handSize(2) === 21 && handSize(4) === 21 && handSize(6) === 15 && handSize(8) === 11, 'hand sizes');
@@ -27,26 +27,26 @@ ok(st.started && st.players === 2, 'started with 2 players');
 ok(st.entitled[0].length === 21 && st.entitled[1].length === 21, 'each seat dealt 21');
 ok(st.poolRemaining === TOTAL_TILES - 42, 'pool remaining after deal = 102');
 
-// Initial hands match the bunch order (block deal).
-const bunch = makeBunch(seed);
-ok(st.entitled[0].join('') === bunch.slice(0, 21).join(''), 'seat 0 hand = bunch[0..21]');
-ok(st.entitled[1].join('') === bunch.slice(21, 42).join(''), 'seat 1 hand = bunch[21..42]');
+// Initial hands match the pool order (block deal).
+const pool = makePool(seed);
+ok(st.entitled[0].join('') === pool.slice(0, 21).join(''), 'seat 0 hand = pool[0..21]');
+ok(st.entitled[1].join('') === pool.slice(21, 42).join(''), 'seat 1 hand = pool[21..42]');
 
-// Peel gives everyone one tile and drops pool by player count.
-st = deriveState(seed, [start, { move_index: 1, player: 0, type: 'peel', payload: {} }]);
-ok(st.entitled[0].length === 22 && st.entitled[1].length === 22, 'peel: both seats +1');
-ok(st.poolRemaining === TOTAL_TILES - 44, 'peel: pool -2 (2 players)');
-ok(st.peels === 1 && st.lastPeelBy === 0, 'peel counted, lastPeelBy set');
+// Draw gives everyone one tile and drops pool by player count.
+st = deriveState(seed, [start, { move_index: 1, player: 0, type: 'draw', payload: {} }]);
+ok(st.entitled[0].length === 22 && st.entitled[1].length === 22, 'draw: both seats +1');
+ok(st.poolRemaining === TOTAL_TILES - 44, 'draw: pool -2 (2 players)');
+ok(st.draws === 1 && st.lastDrawBy === 0, 'draw counted, lastDrawBy set');
 
-// Dump: return 1, draw 3 -> net +2 tiles for that seat, pool -2.
-const dumpLetter = st.entitled[0][0];
-st = deriveState(seed, [start, { move_index: 1, player: 0, type: 'dump', payload: { letter: dumpLetter } }]);
-ok(st.entitled[0].length === 23, 'dump: seat 0 net +2 tiles');
-ok(st.poolRemaining === TOTAL_TILES - 44, 'dump: pool -2');
+// Swap: return 1, draw 3 -> net +2 tiles for that seat, pool -2.
+const swapLetter = st.entitled[0][0];
+st = deriveState(seed, [start, { move_index: 1, player: 0, type: 'swap', payload: { letter: swapLetter } }]);
+ok(st.entitled[0].length === 23, 'swap: seat 0 net +2 tiles');
+ok(st.poolRemaining === TOTAL_TILES - 44, 'swap: pool -2');
 
-// Bananas ends the game.
-st = deriveState(seed, [start, { move_index: 1, player: 1, type: 'bananas', payload: {} }]);
-ok(st.gameOver && st.winner === 1, 'bananas ends game, winner set');
+// Win ends the game.
+st = deriveState(seed, [start, { move_index: 1, player: 1, type: 'win', payload: {} }]);
+ok(st.gameOver && st.winner === 1, 'win ends game, winner set');
 
 // handLetters = entitled - placed.
 const hand = handLetters(['A', 'B', 'C', 'A'], ['A', 'C']);

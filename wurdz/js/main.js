@@ -6,6 +6,7 @@ import {
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName, userSeat,
+  proposeRematch, REMATCH_MOVE_INDEX,
 } from './net.js';
 import { openHistory } from '../../shared/history.js';
 import {
@@ -693,6 +694,8 @@ async function enterRoom(code, playerIndex, name, room) {
   app.playerIndex = playerIndex;
   app.name = name;
   app.room = room;
+  app.rematching = false;
+  const rb = $('btn-rematch'); if (rb) rb.disabled = false;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, playerIndex, name }));
 
   app.finishPersisted = room.status === 'finished';
@@ -881,6 +884,7 @@ async function tryResume() {
 // ---- Incoming events -----------------------------------------------------
 
 function handleIncomingMove(move) {
+  if (move.type === 'rematch') { goToRematch(move.payload?.code); return; }
   if (move.move_index < app.state.moveCount) return; // already applied
   app.pendingMoves.set(move.move_index, move);
   let applied = false;
@@ -907,6 +911,37 @@ function handleIncomingMove(move) {
     app.conn.pollOnce().catch(() => {});
   }
 }
+
+// ---- Rematch: one tap spins up a fresh room and pulls the opponent into it.
+async function doRematch() {
+  if (app.rematching) return;
+  app.rematching = true;
+  const rb = $('btn-rematch'); if (rb) rb.disabled = true;
+  try {
+    const oldCode = app.code, oldConn = app.conn;
+    const fresh = await createRoom(app.name, app.userId);
+    const { code, host } = await proposeRematch(oldCode, fresh.code, app.playerIndex);
+    if (host) {
+      oldConn?.broadcastMove({ room_code: oldCode, move_index: REMATCH_MOVE_INDEX, player: app.playerIndex, type: 'rematch', payload: { code: fresh.code } });
+      await enterRoom(fresh.code, 0, app.name, fresh);
+    } else {
+      const { room, playerIndex } = await joinRoom(code, app.name, app.userId);
+      await enterRoom(code, playerIndex, app.name, room);
+    }
+  } catch (e) {
+    app.rematching = false;
+    if (rb) rb.disabled = false;
+    setStatus(`Could not start a rematch (${e.message}).`);
+  }
+}
+function goToRematch(code) {
+  if (app.rematching || !code) return;
+  app.rematching = true;
+  joinRoom(code, app.name, app.userId)
+    .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
+    .catch(() => { app.rematching = false; });
+}
+$('btn-rematch').addEventListener('click', doRematch);
 
 async function handlePresence(present) {
   const oppKey = String(1 - app.playerIndex);

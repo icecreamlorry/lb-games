@@ -7,7 +7,7 @@ import * as rooms from '../../shared/rooms.js';
 
 export { supabase, seatName, seatUserId, userSeat } from '../../shared/rooms.js';
 export { fetchRoom, fetchMoves, updateRoomStatus, finishRoom, triggerPush, RoomConnection } from '../../shared/rooms.js';
-export { deletePushSubscription } from '../../shared/rooms.js';
+export { deletePushSubscription, proposeRematch, REMATCH_MOVE_INDEX } from '../../shared/rooms.js';
 
 export const fetchFinishedRooms = (userId) =>
   rooms.fetchFinishedRooms(userId, GAME_SLUG);

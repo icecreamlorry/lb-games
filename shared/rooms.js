@@ -221,6 +221,29 @@ export async function fetchMoves(code, fromIndex = 0) {
   return data;
 }
 
+// ---- Rematch --------------------------------------------------------------
+//
+// To rematch, a player creates a fresh room and records its code on the OLD
+// room as a single 'rematch' move at a fixed, very-high index. The unique
+// (room_code, move_index) constraint makes that insert a one-winner lock: if
+// two players hit Rematch at once, only the first lands and everyone converges
+// on that room. The code rides the move payload; peers still in the old room
+// pick it up over the live channel or the next poll and follow along.
+export const REMATCH_MOVE_INDEX = 9_000_000;
+
+export async function proposeRematch(oldCode, newCode, seat) {
+  const move = {
+    room_code: oldCode, move_index: REMATCH_MOVE_INDEX,
+    player: seat ?? 0, type: 'rematch', payload: { code: newCode },
+  };
+  const { error } = await supabase().from('moves').insert(move);
+  if (!error) return { code: newCode, host: true };
+  // Someone proposed first — follow their room instead.
+  const moves = await fetchMoves(oldCode, REMATCH_MOVE_INDEX).catch(() => []);
+  const rm = moves.find((m) => m.type === 'rematch');
+  return { code: rm?.payload?.code || newCode, host: false };
+}
+
 // ---- RoomConnection -------------------------------------------------------
 //
 // Manages the realtime channel, presence, and the polling fallback.
@@ -315,6 +338,14 @@ export class RoomConnection {
   async broadcastRoom(room) {
     if (this.mode === 'live') {
       this.channel.send({ type: 'broadcast', event: 'room', payload: { room } }).catch(() => {});
+    }
+  }
+
+  // Push a move over the live channel without persisting it (already written,
+  // or written elsewhere). Used to deliver a rematch pointer instantly.
+  broadcastMove(move) {
+    if (this.mode === 'live' && this.channel) {
+      this.channel.send({ type: 'broadcast', event: 'move', payload: { move } }).catch(() => {});
     }
   }
 

@@ -23,7 +23,7 @@
   <section id="screen-landing" class="screen">
     <div class="card">
       <h1 class="logo">SPLITZ</h1>
-      <p class="tagline">// BANANAGRAMS, MULTIPLAYER //</p>
+      <p class="tagline">// CROSSWORD TILE RACE //</p>
 
       <div class="row">
         <button id="btn-create" class="btn-primary">CREATE ROOM</button>
@@ -79,7 +79,7 @@
     <header class="bar game-bar">
       <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
       <span class="grow"></span>
-      <span id="pool-chip" class="chip pool-chip" title="Tiles left in the bunch">BUNCH <strong id="pool-count">–</strong></span>
+      <span id="pool-chip" class="chip pool-chip" title="Tiles left in the pool">POOL <strong id="pool-count">–</strong></span>
       <button id="btn-leave" class="chip">LEAVE</button>
     </header>
 
@@ -102,11 +102,12 @@
       <div id="gameover-overlay" class="board-overlay hidden">
         <div class="overlay-card">
           <button id="btn-gameover-close" class="overlay-close" title="Look around the final boards">✕</button>
-          <div id="gameover-title" class="overlay-title">BANANAS!</div>
+          <div id="gameover-title" class="overlay-title">SPLITZ!</div>
           <div id="gameover-detail" class="muted"></div>
           <div class="row">
+            <button id="btn-rematch" class="btn-primary">REMATCH</button>
             <button id="btn-gameover-look" class="btn-ghost">SEE BOARDS</button>
-            <button id="btn-gameover-done" class="btn-primary">LEAVE</button>
+            <button id="btn-gameover-done" class="btn-ghost">LEAVE</button>
           </div>
         </div>
       </div>
@@ -116,9 +117,9 @@
       <p id="status-line" class="status-line"></p>
       <div id="hand" class="hand"></div>
       <div class="row foot-actions">
-        <button id="btn-dump" class="btn-ghost" disabled>DUMP</button>
+        <button id="btn-dump" class="btn-ghost" disabled>SWAP</button>
         <button id="btn-shuffle" class="btn-ghost" disabled>SHUFFLE</button>
-        <button id="btn-peel" class="btn-primary hidden">PEEL!</button>
+        <button id="btn-peel" class="btn-primary hidden">DRAW!</button>
         <button id="btn-recenter" class="btn-ghost" title="Re-center the grid">⌖</button>
       </div>
     </div>
@@ -140,11 +141,11 @@
       <button id="help-close" class="modal-close">✕</button>
       <div class="modal-title">HOW TO PLAY</div>
       <div class="help-body">
-        <p>Everyone draws a hand of tiles from a shared <strong>bunch</strong> and races to arrange <em>all</em> of them into their own connected crossword — every across and down run must be a real word.</p>
+        <p>Everyone takes a hand of tiles from a shared <strong>pool</strong> and races to arrange <em>all</em> of them into their own connected crossword — every across and down run must be a real word.</p>
         <p><strong>Place tiles</strong> by dragging them from your hand onto the grid. Drag a placed tile to move it, or back to your hand to pick it up. Drag empty space to pan the grid; <strong>⌖</strong> re-centres.</p>
-        <p><strong>PEEL!</strong> — the moment your grid is valid and your hand is empty, hit Peel: <em>every</em> player draws one more tile from the bunch. The game keeps flowing until the bunch runs low.</p>
-        <p><strong>DUMP</strong> a tile you don't want back into the bunch and draw three in its place (a small penalty). Needs at least three tiles left in the bunch.</p>
-        <p><strong>BANANAS!</strong> — when the bunch is too low to peel and you finish a valid grid first, you win.</p>
+        <p><strong>DRAW!</strong> — the moment your grid is valid and your hand is empty, hit Draw: <em>every</em> player takes one more tile from the pool. The game keeps flowing until the pool runs low.</p>
+        <p><strong>SWAP</strong> a tile you don't want for three new ones from the pool (a small penalty). Needs at least three tiles left in the pool.</p>
+        <p><strong>SPLITZ!</strong> — when the pool is too low to draw and you finish a valid grid first, call Splitz to win.</p>
       </div>
       <button id="help-got-it" class="btn-primary">GOT IT</button>
     </div>

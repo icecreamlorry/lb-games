@@ -1,28 +1,28 @@
-// Splitz engine — pure, deterministic Bananagrams logic.
+// Splitz engine — pure, deterministic logic for the tile race.
 //
-// The shared move log (start / peel / dump / bananas) plus the room seed fully
-// determine the "bunch" (face-down tile pool) and every player's entitled set
+// The shared move log (start / draw / swap / win) plus the room seed fully
+// determine the "pool" (face-down tile supply) and every player's entitled set
 // of letters. Each client replays the log to derive identical pool state; a
 // player's private grid is local (never in the log) and only validated when
-// they peel or call Bananas.
+// they call DRAW (used all their tiles) or SPLITZ (win).
 
 export const TOTAL_TILES = 144;
 
-// Standard Bananagrams letter distribution (sums to 144).
+// Standard letter distribution (sums to 144).
 export const LETTER_COUNTS = {
   A: 13, B: 3, C: 3, D: 6, E: 18, F: 3, G: 4, H: 3, I: 12, J: 2, K: 2, L: 5,
   M: 3, N: 8, O: 11, P: 3, Q: 2, R: 9, S: 6, T: 9, U: 6, V: 3, W: 3, X: 2,
   Y: 3, Z: 2,
 };
 
-// How many tiles each player starts with, by player count (Bananagrams rules).
+// How many tiles each player starts with, by player count.
 export function handSize(players) {
   if (players <= 4) return 21;
   if (players <= 6) return 15;
   return 11; // 7-8 players
 }
 
-// Deterministic PRNG so every client shuffles the bunch identically.
+// Deterministic PRNG so every client shuffles the pool identically.
 export function mulberry32(seed) {
   let a = seed >>> 0;
   return function () {
@@ -42,8 +42,8 @@ function shuffle(arr, rng) {
   return arr;
 }
 
-// The shuffled 144-tile bunch as an array of letters, derived from the seed.
-export function makeBunch(seed) {
+// The shuffled 144-tile pool as an array of letters, derived from the seed.
+export function makePool(seed) {
   const tiles = [];
   for (const [letter, n] of Object.entries(LETTER_COUNTS)) {
     for (let i = 0; i < n; i++) tiles.push(letter);
@@ -56,7 +56,7 @@ export function makeBunch(seed) {
 //   moves  — array of { move_index, player, type, payload }
 // Returns:
 //   { started, players, hand, entitled (array by seat of letters),
-//     poolRemaining, peels, gameOver, winner, lastPeelBy }
+//     poolRemaining, draws, gameOver, winner, lastDrawBy }
 // `entitled[seat]` is the multiset of letters that seat is currently entitled
 // to hold (placed on their grid + still in hand).
 export function deriveState(seed, moves) {
@@ -65,8 +65,8 @@ export function deriveState(seed, moves) {
 
   const state = {
     started: false, players: 0, hand: 0,
-    entitled: [], poolRemaining: 0, peels: 0,
-    gameOver: false, winner: null, lastPeelBy: null,
+    entitled: [], poolRemaining: 0, draws: 0,
+    gameOver: false, winner: null, lastDrawBy: null,
   };
   if (!start) return state;
 
@@ -74,40 +74,40 @@ export function deriveState(seed, moves) {
   const hand = Number(start.payload?.hand) || handSize(players);
   if (!players) return state;
 
-  const bunch = makeBunch(seed); // mutable; dumps append returned letters
+  const pool = makePool(seed); // mutable; swaps append returned letters
   let next = 0;
   const entitled = Array.from({ length: players }, () => []);
 
   // Initial deal: block of `hand` tiles per seat, in seat order.
   for (let s = 0; s < players; s++) {
-    for (let i = 0; i < hand && next < bunch.length; i++) entitled[s].push(bunch[next++]);
+    for (let i = 0; i < hand && next < pool.length; i++) entitled[s].push(pool[next++]);
   }
 
-  let gameOver = false, winner = null, peels = 0, lastPeelBy = null;
+  let gameOver = false, winner = null, draws = 0, lastDrawBy = null;
 
   for (const m of ordered) {
     if (gameOver) break;
-    if (m.type === 'peel') {
+    if (m.type === 'draw') {
       // Everyone draws one tile (in seat order).
       for (let s = 0; s < players; s++) {
-        if (next < bunch.length) entitled[s].push(bunch[next++]);
+        if (next < pool.length) entitled[s].push(pool[next++]);
       }
-      peels += 1;
-      lastPeelBy = m.player;
-    } else if (m.type === 'dump') {
+      draws += 1;
+      lastDrawBy = m.player;
+    } else if (m.type === 'swap') {
       const letter = String(m.payload?.letter || '').toUpperCase();
       const p = m.player;
-      // Return the dumped tile to the (back of the) bunch...
+      // Return the swapped tile to the (back of the) pool...
       if (letter) {
         const idx = entitled[p].indexOf(letter);
         if (idx !== -1) entitled[p].splice(idx, 1);
-        bunch.push(letter);
+        pool.push(letter);
       }
       // ...and draw three.
       for (let i = 0; i < 3; i++) {
-        if (next < bunch.length) entitled[p].push(bunch[next++]);
+        if (next < pool.length) entitled[p].push(pool[next++]);
       }
-    } else if (m.type === 'bananas') {
+    } else if (m.type === 'win') {
       gameOver = true;
       winner = m.player;
     }
@@ -117,11 +117,11 @@ export function deriveState(seed, moves) {
   state.players = players;
   state.hand = hand;
   state.entitled = entitled;
-  state.poolRemaining = Math.max(0, bunch.length - next);
-  state.peels = peels;
+  state.poolRemaining = Math.max(0, pool.length - next);
+  state.draws = draws;
   state.gameOver = gameOver;
   state.winner = winner;
-  state.lastPeelBy = lastPeelBy;
+  state.lastDrawBy = lastDrawBy;
   return state;
 }
 
@@ -192,9 +192,6 @@ export function validateGrid(placed, isWord) {
   if (!isConnected(placed)) return { valid: false, reason: 'All tiles must connect into one group.', words: [] };
 
   const words = gridWords(placed);
-  // Every tile must belong to at least one >=2 run; a lone tile sticking out
-  // would create no word for itself, but connectivity + the across/down sweep
-  // guarantees each tile is covered as long as no 1-length stragglers exist.
   const bad = words.filter((w) => !isWord(w));
   if (bad.length) {
     return { valid: false, reason: `Not a word: ${bad.slice(0, 3).join(', ')}`, words };

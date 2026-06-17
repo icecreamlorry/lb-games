@@ -1,16 +1,17 @@
-// Splitz — multiplayer Bananagrams. Reuses the shared rooms/account layer
-// (account-ui.js handles login/profile/friends/menu); this module handles the
-// landing/lobby/room flow and the Splitz gameplay.
+// Splitz — multiplayer crossword tile race. Reuses the shared rooms/account
+// layer (account-ui.js handles login/profile/friends/menu); this module handles
+// the landing/lobby/room flow and the Splitz gameplay.
 //
-// The shared move log carries only pool-affecting events (start / peel / dump /
-// bananas). Each player's crossword grid is PRIVATE and local (persisted to
-// sessionStorage); it's only validated when they peel or call Bananas.
+// The shared move log carries only pool-affecting events (start / draw / swap /
+// win). Each player's crossword grid is PRIVATE and local (persisted to
+// localStorage); it's only validated when they DRAW (used all tiles) or SPLITZ.
 
 import { deriveState, handLetters, handSize, validateGrid } from './engine.js';
 import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName, userSeat,
+  proposeRematch, REMATCH_MOVE_INDEX,
 } from './net.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
@@ -42,8 +43,8 @@ const app = {
   placed: new Map(),         // "r,c" -> letter (this player's private grid)
   hand: [],                  // letters not yet placed (derived)
   pan: { x: 0, y: 0 },
-  dumpArmed: false,
-  prevPeels: 0,
+  swapArmed: false,
+  prevDraws: 0,
   finishPersisted: false,
   online: new Set(),
   // Spectating: at game over every client publishes its board so anyone can
@@ -235,20 +236,22 @@ function resetGame() {
   app.placed = new Map();
   app.hand = [];
   app.pan = { x: 0, y: 0 };
-  app.dumpArmed = false;
-  app.prevPeels = 0;
+  app.swapArmed = false;
+  app.prevDraws = 0;
   app.finishPersisted = false;
   app.online = new Set();
   app.spectateSeat = null;
   app.boards = new Map();
   app.boardPublished = false;
   app.gameoverDismissed = false;
-  // Wipe any stale end-of-game UI so a previous "BANANAS!" can't linger.
+  app.rematching = false;
+  // Wipe any stale end-of-game UI so a previous "SPLITZ!" can't linger.
   $('gameover-overlay')?.classList.add('hidden');
-  const gt = $('gameover-title'); if (gt) { gt.textContent = 'BANANAS!'; gt.classList.remove('loss'); }
+  const gt = $('gameover-title'); if (gt) { gt.textContent = 'SPLITZ!'; gt.classList.remove('loss'); }
   if ($('gameover-detail')) $('gameover-detail').textContent = '';
   $('btn-peel')?.classList.add('hidden');
-  if ($('btn-dump')) { $('btn-dump').classList.remove('armed'); $('btn-dump').textContent = 'DUMP'; }
+  if ($('btn-dump')) { $('btn-dump').classList.remove('armed'); $('btn-dump').textContent = 'SWAP'; }
+  if ($('btn-rematch')) $('btn-rematch').disabled = false;
   $('spectate-hint')?.classList.add('hidden');
   setStatus('');
 }
@@ -318,6 +321,7 @@ async function appendMove(type, payload = {}) {
 }
 
 function handleMove(move) {
+  if (move.type === 'rematch') { goToRematch(move.payload?.code); return; }
   if (app.moves.some((m) => m.move_index === move.move_index)) return; // dedup
   app.moves.push(move);
   app.moves.sort((a, b) => a.move_index - b.move_index);
@@ -381,15 +385,15 @@ function reconcilePlaced(entitled) {
   }
 }
 
-// Side effects when the log changes: peel notices and game over.
+// Side effects when the log changes: draw notices and game over.
 function reactToState() {
   const st = app.state;
-  if (st.peels > app.prevPeels && st.lastPeelBy != null && st.lastPeelBy !== app.seat) {
-    const who = seatName(app.room, st.lastPeelBy) || 'A player';
-    setStatus(`${who} peeled — everyone drew a tile.`);
-    if (document.hidden) showLocalNotification('Splitz', `${who} peeled — you drew a tile.`);
+  if (st.draws > app.prevDraws && st.lastDrawBy != null && st.lastDrawBy !== app.seat) {
+    const who = seatName(app.room, st.lastDrawBy) || 'A player';
+    setStatus(`${who} finished a grid — everyone draws a tile.`);
+    if (document.hidden) showLocalNotification('Splitz', `${who} finished — you drew a tile.`);
   }
-  app.prevPeels = st.peels;
+  app.prevDraws = st.draws;
 
   if (st.gameOver) {
     if (!app.finishPersisted) persistFinish();
@@ -416,7 +420,7 @@ async function persistFinish() {
   app.finishPersisted = true;
   const players = app.state.players;
   const scores = Array.from({ length: players }, (_, s) => (s === app.state.winner ? 1 : 0));
-  const result = { scores, winner: app.state.winner, reason: 'bananas' };
+  const result = { scores, winner: app.state.winner, reason: 'win' };
   try {
     await finishRoom(app.code, result, false);
     if (app.room) { app.room.status = 'finished'; app.room.result = result; }
@@ -464,7 +468,7 @@ function renderPlayers() {
     const viewing = (app.spectateSeat ?? app.seat) === p.seat;
     div.className = 'pchip' + (p.seat === app.seat ? ' me' : '')
       + (viewing ? ' viewing' : '')
-      + (app.state?.lastPeelBy === p.seat ? ' peeled' : '');
+      + (app.state?.lastDrawBy === p.seat ? ' drew' : '');
     const online = app.online.has(String(p.seat));
     div.innerHTML = `<span class="pdot ${online ? '' : 'off'}"></span>`
       + `<span class="pname">${esc(p.name || `P${p.seat + 1}`)}</span>`
@@ -584,13 +588,13 @@ function renderGrid() {
 function renderHand() {
   const el = $('hand');
   const hand = viewHand();
-  el.classList.toggle('armed', app.dumpArmed && !isSpectating());
+  el.classList.toggle('armed', app.swapArmed && !isSpectating());
   el.innerHTML = '';
   if (!hand.length) {
     const span = document.createElement('span');
     span.className = 'hand-empty';
     span.textContent = isSpectating() ? 'No tiles left in hand.'
-      : app.state?.started ? 'Hand empty — peel or place is done!' : 'Waiting to start…';
+      : app.state?.started ? "Hand empty — hit DRAW when your grid's valid!" : 'Waiting to start…';
     el.appendChild(span);
     return;
   }
@@ -612,7 +616,7 @@ let panning = null; // { startX, startY, panX, panY, moved }
 function onHandPointerDown(e, letter) {
   e.preventDefault();
   if (isSpectating()) return;
-  if (app.dumpArmed) { doDump(letter); return; }
+  if (app.swapArmed) { doSwap(letter); return; }
   if (!app.state?.started || app.state.gameOver) return;
   beginDrag({ kind: 'hand', letter }, e);
 }
@@ -706,23 +710,23 @@ function afterGridChange() {
   updateControls();
 }
 
-// ---- Dump / shuffle / peel / bananas --------------------------------------
+// ---- Swap / shuffle / draw / win ------------------------------------------
 
 $('btn-dump').addEventListener('click', () => {
   if ($('btn-dump').disabled) return;
-  app.dumpArmed = !app.dumpArmed;
-  $('btn-dump').classList.toggle('armed', app.dumpArmed);
-  $('btn-dump').textContent = app.dumpArmed ? 'CANCEL' : 'DUMP';
+  app.swapArmed = !app.swapArmed;
+  $('btn-dump').classList.toggle('armed', app.swapArmed);
+  $('btn-dump').textContent = app.swapArmed ? 'CANCEL' : 'SWAP';
   renderHand();
-  setStatus(app.dumpArmed ? 'Tap a tile in your hand to dump it (you draw 3).' : '');
+  setStatus(app.swapArmed ? 'Tap a tile in your hand to swap it for three.' : '');
 });
 
-async function doDump(letter) {
-  app.dumpArmed = false;
+async function doSwap(letter) {
+  app.swapArmed = false;
   $('btn-dump').classList.remove('armed');
-  $('btn-dump').textContent = 'DUMP';
-  if (!app.state || app.state.poolRemaining < 3) { setStatus('Not enough tiles left to dump.'); renderHand(); return; }
-  try { await appendMove('dump', { letter }); setStatus('Dumped 1, drew 3.'); }
+  $('btn-dump').textContent = 'SWAP';
+  if (!app.state || app.state.poolRemaining < 3) { setStatus('Not enough tiles left in the pool to swap.'); renderHand(); return; }
+  try { await appendMove('swap', { letter }); setStatus('Swapped 1 tile for 3.'); }
   catch (e) { setStatus(e.message); }
 }
 
@@ -738,10 +742,10 @@ $('btn-peel').addEventListener('click', async () => {
   const v = validateGrid(app.placed, isWord);
   if (!v.valid) { setStatus(v.reason); return; }
   if (app.hand.length) { setStatus('Place all your tiles first.'); return; }
-  const bananas = app.state.poolRemaining < app.state.players;
+  const win = app.state.poolRemaining < app.state.players;
   try {
-    await appendMove(bananas ? 'bananas' : 'peel', {});
-    setStatus(bananas ? 'BANANAS! 🍌' : 'You peeled — everyone drew a tile.');
+    await appendMove(win ? 'win' : 'draw', {});
+    setStatus(win ? 'SPLITZ! 🎉' : 'You finished a grid — everyone draws a tile.');
   } catch (e) { setStatus(e.message); }
 });
 
@@ -760,14 +764,14 @@ function updateControls() {
   $('btn-shuffle').disabled = !(playing && handLen > 0);
 
   const ready = playing && handLen === 0 && app.placed.size > 0 && dictionaryLoaded() && validateGrid(app.placed, isWord).valid;
-  const peelBtn = $('btn-peel');
+  const drawBtn = $('btn-peel');
   if (ready) {
-    const bananas = st.poolRemaining < st.players;
-    peelBtn.classList.remove('hidden');
-    peelBtn.classList.toggle('bananas', bananas);
-    peelBtn.textContent = bananas ? 'BANANAS!' : 'PEEL!';
+    const win = st.poolRemaining < st.players;
+    drawBtn.classList.remove('hidden');
+    drawBtn.classList.toggle('win', win);
+    drawBtn.textContent = win ? 'SPLITZ!' : 'DRAW!';
   } else {
-    peelBtn.classList.add('hidden');
+    drawBtn.classList.add('hidden');
   }
 
   // A nudge when the hand is empty but the grid isn't valid yet.
@@ -787,9 +791,9 @@ function renderGameOver() {
   const iWon = app.state.winner === app.seat;
   const winner = seatName(app.room, app.state.winner) || `Player ${app.state.winner + 1}`;
   const title = $('gameover-title');
-  title.textContent = iWon ? 'BANANAS! YOU WIN 🍌' : 'GAME OVER';
+  title.textContent = iWon ? 'SPLITZ! YOU WIN 🎉' : 'GAME OVER';
   title.classList.toggle('loss', !iWon);
-  $('gameover-detail').textContent = iWon ? 'You emptied your hand with the bunch too low to peel.' : `${winner} went bananas first.`;
+  $('gameover-detail').textContent = iWon ? 'You finished your grid with the pool too low to draw.' : `${winner} called Splitz first.`;
 }
 
 // Dismiss the winner box to look around the final boards (tap a player to view).
@@ -800,6 +804,41 @@ function dismissGameover() {
 }
 $('btn-gameover-close').addEventListener('click', dismissGameover);
 $('btn-gameover-look').addEventListener('click', dismissGameover);
+
+// ---- Rematch --------------------------------------------------------------
+// One tap spins up a fresh room and pulls everyone still here into it.
+async function doRematch() {
+  if (app.rematching) return;
+  app.rematching = true;
+  $('btn-rematch').disabled = true;
+  try {
+    const oldCode = app.code, oldConn = app.conn;
+    const fresh = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
+    const { code, host } = await proposeRematch(oldCode, fresh.code, app.seat);
+    if (host) {
+      oldConn?.broadcastMove({ room_code: oldCode, move_index: REMATCH_MOVE_INDEX, player: app.seat, type: 'rematch', payload: { code: fresh.code } });
+      await enterRoom(fresh.code, 0, app.name, fresh);
+    } else {
+      const { room, playerIndex } = await joinRoom(code, app.name, app.userId);
+      await enterRoom(code, playerIndex, app.name, room);
+    }
+  } catch (e) {
+    app.rematching = false;
+    $('btn-rematch').disabled = false;
+    setStatus(`Could not start a rematch (${e.message}).`);
+  }
+}
+
+// A peer hit Rematch — follow them into the new room.
+function goToRematch(code) {
+  if (app.rematching || !code) return;
+  app.rematching = true;
+  joinRoom(code, app.name, app.userId)
+    .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
+    .catch(() => { app.rematching = false; });
+}
+
+$('btn-rematch').addEventListener('click', doRematch);
 
 // ---- Status + render-all --------------------------------------------------
 

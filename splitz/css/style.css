@@ -52,9 +52,11 @@ body {
 #btn-lobby-refresh, #btn-recenter { flex: 0 0 auto; }
 
 /* ---- Buttons (soft, rounded, no glow) ---- */
-/* shared.css gives every <button> a hard-coded neon-magenta glow; clear it so
-   the pastel/cute look is clean. Cute buttons set their own soft shadow below. */
-button { box-shadow: none; text-shadow: none; }
+/* shared.css gives every <button> a hard-coded neon-magenta glow (incl. on
+   :hover/:focus); clear it in every state so the pastel/cute look stays clean.
+   Cute buttons set their own soft shadow below. */
+button, button:hover, button:focus, button:active { text-shadow: none; }
+button, button:hover, button:focus { box-shadow: none; }
 .btn-primary, .btn-ghost {
   font-family: 'Fredoka', sans-serif; font-weight: 600; letter-spacing: 0.03em;
   border-radius: 999px; padding: 9px 18px; cursor: pointer; touch-action: manipulation;
@@ -64,7 +66,7 @@ button { box-shadow: none; text-shadow: none; }
   background: var(--cyan); color: var(--panel); border: none;
   box-shadow: 0 4px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12);
 }
-.btn-primary:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 4px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12); }
 .btn-primary:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 3px 10px rgba(0,0,0,0.12); }
 .btn-ghost {
   background: color-mix(in srgb, var(--cyan) 8%, transparent);
@@ -129,7 +131,7 @@ button { box-shadow: none; text-shadow: none; }
 }
 .pchip.me { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
 .pchip.viewing { border-color: var(--cyan); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 30%, transparent); }
-.pchip.peeled { border-color: var(--magenta); box-shadow: 0 0 0 2px color-mix(in srgb, var(--magenta) 25%, transparent); }
+.pchip.drew { border-color: var(--magenta); box-shadow: 0 0 0 2px color-mix(in srgb, var(--magenta) 25%, transparent); }
 .pchip .pname { font-size: 0.64rem; color: color-mix(in srgb, var(--cyan) 75%, transparent); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pchip .ptiles { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--cyan); }
 .pchip .pdot { width: 7px; height: 7px; border-radius: 50%; background: #5ec98a; }
@@ -187,7 +189,7 @@ button { box-shadow: none; text-shadow: none; }
 
 .foot-actions { width: min(520px, 94vw); }
 .foot-actions .btn-primary, .foot-actions .btn-ghost { flex: 1 1 auto; }
-#btn-peel.bananas { background: var(--yellow); color: #4a3a12; box-shadow: 0 4px 0 color-mix(in srgb, var(--yellow) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12); }
+#btn-peel.win { background: var(--yellow); color: #4a3a12; box-shadow: 0 4px 0 color-mix(in srgb, var(--yellow) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12); }
 
 /* ---- Overlays over the board ---- */
 .board-overlay {

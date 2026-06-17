@@ -403,6 +403,9 @@ export function applyMove(state, move) {
 export function replayMoves(seed, moves) {
   const state = newGameState(seed);
   const ordered = [...moves].sort((a, b) => a.move_index - b.move_index);
-  for (const m of ordered) applyMove(state, m);
+  for (const m of ordered) {
+    if (m.type === 'rematch') continue; // cross-cutting control move, not gameplay
+    applyMove(state, m);
+  }
   return state;
 }

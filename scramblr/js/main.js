@@ -10,6 +10,7 @@ import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName,
+  proposeRematch, REMATCH_MOVE_INDEX,
 } from './net.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
@@ -238,6 +239,8 @@ function resetGame() {
   app.results = {}; app.submittedResult = false;
   app.resultPersisted = false; app.persistedCount = 0;
   app.scoringStarted = false; app.scoringAbort = false;
+  app.rematching = false;
+  if ($('btn-rematch')) $('btn-rematch').disabled = false;
   if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
 }
 
@@ -269,6 +272,7 @@ async function enterRoom(code, seat, name, room) {
 }
 
 function handleMove(move) {
+  if (move.type === 'rematch') { goToRematch(move.payload?.code); return; }
   // Note: result moves use sparse, per-seat indices (2 + seat) and can arrive
   // in any order, so we deliberately don't advance the connection's nextIndex
   // — handleMove is idempotent and the move count is tiny, so re-polling all
@@ -340,6 +344,37 @@ $('btn-results-done').addEventListener('click', () => {
 });
 
 $('btn-scoring-skip').addEventListener('click', () => { app.scoringAbort = true; });
+
+// ---- Rematch: one tap spins up a fresh room and pulls everyone into it. ----
+async function doRematch() {
+  if (app.rematching) return;
+  app.rematching = true;
+  $('btn-rematch').disabled = true;
+  try {
+    const oldCode = app.code, oldConn = app.conn;
+    const fresh = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
+    const { code, host } = await proposeRematch(oldCode, fresh.code, app.seat);
+    if (host) {
+      oldConn?.broadcastMove({ room_code: oldCode, move_index: REMATCH_MOVE_INDEX, player: app.seat, type: 'rematch', payload: { code: fresh.code } });
+      await enterRoom(fresh.code, 0, app.name, fresh);
+    } else {
+      const { room, playerIndex } = await joinRoom(code, app.name, app.userId);
+      await enterRoom(code, playerIndex, app.name, room);
+    }
+  } catch (e) {
+    app.rematching = false;
+    $('btn-rematch').disabled = false;
+    $('status-line').textContent = `Could not start a rematch (${e.message}).`;
+  }
+}
+function goToRematch(code) {
+  if (app.rematching || !code) return;
+  app.rematching = true;
+  joinRoom(code, app.name, app.userId)
+    .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
+    .catch(() => { app.rematching = false; });
+}
+$('btn-rematch').addEventListener('click', doRematch);
 
 // ---- Phase + timers -------------------------------------------------------
 
@@ -456,7 +491,7 @@ $('btn-rotate').addEventListener('click', () => {
 function showLetters(show) {
   for (let i = 0; i < cellEls.length; i++) {
     const t = app.board[i];
-    cellEls[i].textContent = show ? (t === 'QU' ? 'Qu' : t) : '';
+    cellEls[i].textContent = show ? t : '';
   }
   renderPath();
 }
@@ -520,11 +555,12 @@ function renderPath() {
     cellEls[i].classList.toggle('last', i === last);
   }
   const word = app.path.length ? wordFromPath(app.board, app.path) : '';
-  $('current-word').textContent = word === '' ? '' : (word === 'QU' ? 'Qu' : titleWord(word));
+  $('current-word').textContent = word;
   $('btn-accept').disabled = app.path.length === 0;
   $('btn-clear').disabled = app.path.length === 0;
 }
-function titleWord(w) { return w.replace('QU', 'Qu'); }
+// Display words as-is (uppercase). The Qu tile reads "QU" everywhere.
+function titleWord(w) { return w; }
 
 function clearPath() { app.path = []; renderPath(); }
 $('btn-clear').addEventListener('click', clearPath);
