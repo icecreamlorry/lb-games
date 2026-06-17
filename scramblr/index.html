@@ -29,6 +29,9 @@
         <button id="btn-create" class="btn-primary">CREATE ROOM</button>
         <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
       </div>
+      <div class="row">
+        <button id="btn-daily" class="btn-daily">☀ DAILY CHALLENGE</button>
+      </div>
       <div id="join-box" class="row hidden">
         <input id="code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
         <button id="btn-join-go" class="btn-primary">JOIN</button>
@@ -60,6 +63,7 @@
       <h2 class="card-title">Your games</h2>
       <div class="row">
         <button id="btn-lobby-new" class="btn-primary">NEW GAME</button>
+        <button id="btn-lobby-daily" class="btn-daily">☀ DAILY</button>
         <button id="btn-lobby-challenge" class="btn-ghost">CHALLENGE</button>
         <button id="btn-lobby-join" class="btn-ghost">JOIN BY CODE</button>
         <button id="btn-lobby-history" class="btn-ghost">HISTORY</button>
@@ -79,6 +83,7 @@
     <header class="bar game-bar">
       <span class="logo small">SCRAMBLR</span>
       <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
+      <span id="daily-chip" class="chip hidden">☀ DAILY</span>
       <span class="grow"></span>
       <button id="btn-notify" class="chip hidden" title="Notify me when the game starts">🔔</button>
       <button id="btn-leave" class="chip">LEAVE</button>
@@ -108,10 +113,7 @@
           <div id="results-winner" class="results-winner"></div>
           <ol id="results-list" class="results-list"></ol>
           <p id="results-waiting" class="muted hidden">Syncing word lists…</p>
-          <div class="row">
-            <button id="btn-rematch" class="btn-primary">REMATCH</button>
-            <button id="btn-results-done" class="btn-ghost">LEAVE</button>
-          </div>
+          <button id="btn-results-done" class="btn-primary">LEAVE</button>
         </div>
       </div>
 
@@ -123,6 +125,20 @@
           </div>
           <div id="scoring-list" class="scoring-list"></div>
           <button id="btn-scoring-skip" class="link-btn">SKIP →</button>
+        </div>
+      </div>
+
+      <div id="daily-results-overlay" class="board-overlay hidden">
+        <div class="overlay-card daily-results-card">
+          <div class="overlay-title">DAILY CHALLENGE</div>
+          <div id="daily-date" class="daily-date"></div>
+          <div id="daily-my-score" class="daily-score">0 pts</div>
+          <div id="daily-my-words" class="daily-words"></div>
+          <div class="daily-lb-section">
+            <div class="daily-lb-head">TODAY'S LEADERBOARD</div>
+            <div id="daily-lb-list" class="daily-lb-list"></div>
+          </div>
+          <button id="btn-daily-done" class="btn-primary">DONE</button>
         </div>
       </div>
     </div>

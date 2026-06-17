@@ -151,6 +151,16 @@ export async function finishRoom(code, result, purgeMoves = false) {
   const { error } = await supabase()
     .rpc('finish_room', { p_code: code, p_result: payload, p_purge_moves: purgeMoves });
   if (error) {
+    // If the RPC hasn't been deployed yet, fall back to a direct table update.
+    // (The RPC also optionally purges moves, but Scramblr never sets purgeMoves.)
+    if (error.code === 'PGRST202' || (error.message || '').includes('Could not find the function')) {
+      const { error: e2 } = await supabase()
+        .from('rooms')
+        .update({ status: 'finished', result: payload })
+        .eq('code', code);
+      if (e2) { logError('finishRoom fallback failed:', e2.message || e2); throw e2; }
+      return payload;
+    }
     logError('finishRoom failed:', error.message || error);
     throw error;
   }

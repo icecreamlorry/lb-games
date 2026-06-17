@@ -10,18 +10,15 @@ import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName,
-  proposeRematch, REMATCH_MOVE_INDEX,
 } from './net.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { listFriends } from '../../shared/friends.js';
 import { openHistory } from '../../shared/history.js';
 import { getGuestName } from '../../shared/guest-name.js';
-import { loadTheme, createThemePicker } from '../../shared/themes.js';
 import { registerServiceWorker } from './notify.js';
-
-// Scramblr keeps the neon Synth theme by default (a stored preference wins).
-loadTheme('synth');
+import { supabase } from '../../shared/supabaseClient.js';
+import { playerKey } from '../../shared/leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_PLAYERS = 8;
@@ -32,8 +29,9 @@ const app = {
   user: null, userId: null, name: null,
   code: null, seat: null, room: null, conn: null,
   board: null,
-  phase: 'idle',           // idle | waiting | countdown | playing | results
+  phase: 'idle',           // idle | waiting | countdown | playing | scoring | results | daily-results
   startAt: null,           // epoch ms the countdown began (from the start move)
+  isDaily: false,          // true during solo daily challenge
   online: new Set(),
   found: new Set(),
   foundOrder: [],
@@ -102,6 +100,7 @@ async function joinAndEnter(code, name, errFn) {
 $('btn-join-go').addEventListener('click', () => doJoin($('code-input'), landingError));
 $('code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doJoin($('code-input'), landingError); });
 $('btn-go-lobby').addEventListener('click', () => { showScreen('lobby'); renderLobby(); });
+$('btn-daily').addEventListener('click', () => enterDailyChallenge());
 
 // ---- Auth -----------------------------------------------------------------
 
@@ -140,6 +139,7 @@ $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter'
 $('btn-lobby-refresh').addEventListener('click', renderLobby);
 $('btn-lobby-challenge').addEventListener('click', openChallenge);
 $('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
+$('btn-lobby-daily').addEventListener('click', () => enterDailyChallenge());
 $('btn-logout-lobby').addEventListener('click', async () => { const { signOut } = await import('../../shared/auth.js'); try { await signOut(); } catch {} });
 
 function dismissedKey() { return `scramblr.dismissed.${app.userId}`; }
@@ -174,12 +174,12 @@ function lobbyCard(room) {
   else { label = `${players.length} player${players.length === 1 ? '' : 's'}`; status = finished ? 'Finished' : playing ? 'In progress' : 'Waiting — tap to open'; live = playing; }
 
   const card = document.createElement('button');
-  card.className = 'lobby-game' + (live ? ' live' : '') + (finished ? ' finished' : '');
+  card.className = 'lobby-game' + (live ? ' live' : '');
   card.innerHTML = `<span class="lobby-opp">${esc(label)}</span><span class="lobby-status">${esc(status)}</span>`
     + `<span class="lobby-score">${room.code}</span>`;
-  // Finished games re-open to show their final results (the History button in
-  // the lobby is the way to browse all past games).
-  card.addEventListener('click', () => openFromLobby(room, invitedMe));
+  card.addEventListener('click', () => (
+    finished ? openHistory({ userId: app.userId, gameSlug: GAME_SLUG }) : openFromLobby(room, invitedMe)
+  ));
   if (finished) {
     const x = document.createElement('span');
     x.className = 'lobby-dismiss'; x.textContent = '×'; x.title = 'Remove';
@@ -233,23 +233,57 @@ async function challengeFriend(friend) {
 // ---- Room / game ----------------------------------------------------------
 
 function resetGame() {
-  app.phase = 'idle'; app.startAt = null;
+  app.phase = 'idle'; app.startAt = null; app.isDaily = false;
   app.found = new Set(); app.foundOrder = []; app.myScore = 0;
   app.path = []; app.dragging = false; app.dragMoved = false;
   app.results = {}; app.submittedResult = false;
   app.resultPersisted = false; app.persistedCount = 0;
   app.scoringStarted = false; app.scoringAbort = false;
-  app.rematching = false;
-  if ($('btn-rematch')) $('btn-rematch').disabled = false;
   if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
+}
+
+
+// ---- Daily challenge helpers -----------------------------------------------
+
+function dailySeed() {
+  const d = new Date();
+  return ((d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate()) >>> 0);
+}
+
+function dailySlug() {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `scramblr-daily-${y}${m}${day}`;
+}
+
+function dailyDateLabel() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  });
+}
+
+async function enterDailyChallenge() {
+  resetGame();
+  app.isDaily = true;
+  app.seat = 0;
+  app.name = playerName() || 'Player';
+  app.room = { players: [{ seat: 0, name: app.name }], status: 'waiting' };
+  app.board = makeBoard(dailySeed());
+  $('room-code-chip').classList.add('hidden');
+  $('daily-chip').classList.remove('hidden');
+  showScreen('game');
+  buildBoard();
+  renderPlayers();
+  renderFoundReset();
+  setStatus('');
+  setPhase('waiting');
+  loadDictionary().catch(() => {});
 }
 
 async function enterRoom(code, seat, name, room) {
   resetGame();
-  // Re-opening a finished game is review-only: pretend we've already submitted
-  // so the replayed end-of-game never clobbers our stored words with an empty
-  // set (our real result is loaded from the move log instead).
-  if (room.status === 'finished') app.submittedResult = true;
   app.code = code; app.seat = seat; app.name = name; app.room = room;
   app.board = makeBoard(Number(room.seed));
   $('room-code-text').textContent = code;
@@ -272,7 +306,6 @@ async function enterRoom(code, seat, name, room) {
 }
 
 function handleMove(move) {
-  if (move.type === 'rematch') { goToRematch(move.payload?.code); return; }
   // Note: result moves use sparse, per-seat indices (2 + seat) and can arrive
   // in any order, so we deliberately don't advance the connection's nextIndex
   // — handleMove is idempotent and the move count is tiny, so re-polling all
@@ -323,12 +356,19 @@ $('btn-leave').addEventListener('click', () => {
   if (app.conn) { app.conn.close(); app.conn = null; }
   resetGame();
   app.code = null; app.seat = null; app.room = null;
+  $('room-code-chip').classList.remove('hidden');
+  $('daily-chip').classList.add('hidden');
   if (app.user) { showScreen('lobby'); renderLobby(); } else showScreen('landing');
 });
 
 $('btn-start').addEventListener('click', async () => {
   if (app.startAt != null) return;
   $('btn-start').disabled = true;
+  if (app.isDaily) {
+    app.startAt = Date.now();
+    startTimers();
+    return;
+  }
   const startAt = Date.now();
   try {
     await app.conn.sendMove({ move_index: 0, player: 0, type: 'start', payload: { startAt } });
@@ -344,37 +384,7 @@ $('btn-results-done').addEventListener('click', () => {
 });
 
 $('btn-scoring-skip').addEventListener('click', () => { app.scoringAbort = true; });
-
-// ---- Rematch: one tap spins up a fresh room and pulls everyone into it. ----
-async function doRematch() {
-  if (app.rematching) return;
-  app.rematching = true;
-  $('btn-rematch').disabled = true;
-  try {
-    const oldCode = app.code, oldConn = app.conn;
-    const fresh = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
-    const { code, host } = await proposeRematch(oldCode, fresh.code, app.seat);
-    if (host) {
-      oldConn?.broadcastMove({ room_code: oldCode, move_index: REMATCH_MOVE_INDEX, player: app.seat, type: 'rematch', payload: { code: fresh.code } });
-      await enterRoom(fresh.code, 0, app.name, fresh);
-    } else {
-      const { room, playerIndex } = await joinRoom(code, app.name, app.userId);
-      await enterRoom(code, playerIndex, app.name, room);
-    }
-  } catch (e) {
-    app.rematching = false;
-    $('btn-rematch').disabled = false;
-    $('status-line').textContent = `Could not start a rematch (${e.message}).`;
-  }
-}
-function goToRematch(code) {
-  if (app.rematching || !code) return;
-  app.rematching = true;
-  joinRoom(code, app.name, app.userId)
-    .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
-    .catch(() => { app.rematching = false; });
-}
-$('btn-rematch').addEventListener('click', doRematch);
+$('btn-daily-done').addEventListener('click', () => $('btn-leave').click());
 
 // ---- Phase + timers -------------------------------------------------------
 
@@ -384,6 +394,7 @@ function isOver() {
 
 function startTimers() {
   if (app.timerInt) return;
+  if (app.startAt != null && isOver()) return; // game already ended — don't restart ticking
   app.timerInt = setInterval(tick, 200);
   tick();
 }
@@ -411,7 +422,8 @@ function setPhase(p) {
   $('countdown-overlay').classList.toggle('hidden', p !== 'countdown');
   $('scoring-overlay').classList.toggle('hidden', p !== 'scoring');
   $('results-overlay').classList.toggle('hidden', p !== 'results');
-  const reveal = p === 'playing' || p === 'scoring' || p === 'results';
+  $('daily-results-overlay').classList.toggle('hidden', p !== 'daily-results');
+  const reveal = p === 'playing' || p === 'scoring' || p === 'results' || p === 'daily-results';
   showLetters(reveal);
   if (p === 'waiting') renderPrestart();
 }
@@ -427,11 +439,18 @@ function endPlay() {
     if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
     renderTimer(0);
     clearPath();
+    if (app.isDaily) {
+      // Solo mode: words are already in app.found; skip room networking entirely.
+      app.results[0] = [...app.found];
+      app.scoringAbort = false;
+      app.scoringStarted = true;
+      startScoringAnimation(1).catch(() => { showDailyResults().catch(() => {}); });
+      return;
+    }
     submitMyResult();
     app.scoringStarted = false;
     app.scoringAbort = false;
     if (app.code) updateRoomStatus(app.code, 'finished').catch(() => {});
-    // Show results overlay in "waiting" state (no scoreboard yet)
     $('results-list').innerHTML = '';
     $('results-winner').textContent = '';
     $('results-waiting').classList.remove('hidden');
@@ -491,7 +510,7 @@ $('btn-rotate').addEventListener('click', () => {
 function showLetters(show) {
   for (let i = 0; i < cellEls.length; i++) {
     const t = app.board[i];
-    cellEls[i].textContent = show ? t : '';
+    cellEls[i].textContent = show ? (t === 'QU' ? 'Qu' : t) : '';
   }
   renderPath();
 }
@@ -555,12 +574,11 @@ function renderPath() {
     cellEls[i].classList.toggle('last', i === last);
   }
   const word = app.path.length ? wordFromPath(app.board, app.path) : '';
-  $('current-word').textContent = word;
+  $('current-word').textContent = word === '' ? '' : (word === 'QU' ? 'Qu' : titleWord(word));
   $('btn-accept').disabled = app.path.length === 0;
   $('btn-clear').disabled = app.path.length === 0;
 }
-// Display words as-is (uppercase). The Qu tile reads "QU" everywhere.
-function titleWord(w) { return w; }
+function titleWord(w) { return w.replace('QU', 'Qu'); }
 
 function clearPath() { app.path = []; renderPath(); }
 $('btn-clear').addEventListener('click', clearPath);
@@ -635,11 +653,21 @@ function renderPlayers() {
 
 function renderPrestart() {
   if (app.phase !== 'waiting') return;
+  if (app.isDaily) {
+    $('start-title').textContent = 'DAILY CHALLENGE';
+    $('start-info').textContent = dailyDateLabel();
+    $('btn-start').textContent = 'PLAY';
+    $('btn-start').classList.remove('hidden');
+    $('btn-start').disabled = false;
+    $('start-waiting').classList.add('hidden');
+    return;
+  }
   const players = app.room?.players ?? [];
   const n = players.length;
   $('start-title').textContent = n >= 2 ? 'READY?' : 'WAITING FOR PLAYERS';
   $('start-info').innerHTML = `${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`;
   const host = app.seat === 0;
+  $('btn-start').textContent = 'START GAME';
   $('btn-start').classList.toggle('hidden', !host);
   $('btn-start').disabled = false;
   $('start-waiting').classList.toggle('hidden', host);
@@ -764,8 +792,63 @@ async function startScoringAnimation(seats) {
   if (app.phase !== 'scoring') return;
 
   app.scoringAbort = false;
-  renderFinalResults();
-  setPhase('results');
+  if (app.isDaily) {
+    await showDailyResults();
+  } else {
+    renderFinalResults();
+    setPhase('results');
+  }
+}
+
+// Submit and show the daily leaderboard after a solo game.
+async function showDailyResults() {
+  setPhase('daily-results');
+  const slug = dailySlug();
+  $('daily-date').textContent = dailyDateLabel();
+  const myFinalScore = lastStandings ? (lastStandings[0]?.score ?? 0) : 0;
+  $('daily-my-score').textContent = `${myFinalScore} pts`;
+  $('daily-my-words').textContent = lastStandings
+    ? `${lastStandings[0]?.unique ?? 0} unique word${(lastStandings[0]?.unique ?? 0) === 1 ? '' : 's'}`
+    : '';
+
+  const lbEl = $('daily-lb-list');
+  lbEl.innerHTML = '<div class="daily-lb-empty">Submitting…</div>';
+
+  try {
+    const key = playerKey(app.user);
+    const name = (app.name || 'Player').trim();
+    await supabase().rpc('submit_score', {
+      p_game: slug,
+      p_player_key: key,
+      p_name: name,
+      p_score: Math.max(0, Math.round(myFinalScore)),
+      p_user_id: app.userId ?? null,
+    });
+
+    const { data: rows, error } = await supabase()
+      .from('scores')
+      .select('player_key, name, score')
+      .eq('game', slug)
+      .order('score', { ascending: false })
+      .order('updated_at', { ascending: true })
+      .limit(10);
+
+    if (error) throw error;
+
+    lbEl.innerHTML = '';
+    (rows || []).forEach((row, i) => {
+      const isMe = row.player_key === key;
+      const div = document.createElement('div');
+      div.className = 'daily-lb-row' + (isMe ? ' me' : '');
+      div.innerHTML = `<span class="daily-lb-rank">${i + 1}</span>`
+        + `<span class="daily-lb-name">${esc(row.name || 'Player')}</span>`
+        + `<span class="daily-lb-score">${row.score}</span>`;
+      lbEl.appendChild(div);
+    });
+    if (!rows || !rows.length) lbEl.innerHTML = '<div class="daily-lb-empty">No scores yet today.</div>';
+  } catch {
+    lbEl.innerHTML = '<div class="daily-lb-empty muted">Could not load leaderboard.</div>';
+  }
 }
 
 // Build and show the final scoreboard with expandable unique-word lists.
@@ -892,20 +975,8 @@ async function tryResume() {
   } catch { sessionStorage.removeItem(SESSION_KEY); }
 }
 
-// Drop the theme picker into the shared hamburger menu (injected by
-// account-ui), just above "More Games".
-function addThemePicker() {
-  const menu = document.getElementById('app-menu');
-  if (!menu || menu.querySelector('.theme-picker-section')) return;
-  const picker = createThemePicker();
-  picker.style.padding = '8px 12px';
-  const moreGames = menu.querySelector('a[href="../"]');
-  menu.insertBefore(picker, moreGames || null);
-}
-
 async function boot() {
   registerServiceWorker();
-  addThemePicker();
   if (!configReady()) { landingError('Setup needed: Supabase key missing.'); return; }
   try { app.user = await currentUser(); } catch {}
   app.userId = app.user?.id ?? null;

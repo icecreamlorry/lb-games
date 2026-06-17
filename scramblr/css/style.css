@@ -1,9 +1,6 @@
 /* Scramblr — LB Games neon theme. Reuses shared.css for :root vars, buttons,
    .field, .modal*, .link-btn, .status-line, .friend-list, .menu-item, .hidden. */
 
-/* Tile/letter font — clearer letterforms than Orbitron (D / A / R are distinct). */
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap');
-
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -70,7 +67,7 @@ body {
 /* ---- Top bars ---- */
 .bar { display: flex; align-items: center; gap: 10px; }
 /* Right padding clears the shared menu button (fixed top-right by account-ui). */
-.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
+.game-bar { padding: 8px 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
 #screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);
@@ -96,16 +93,8 @@ body {
 .lobby-status { font-size: 0.66rem; color: rgba(0,245,255,0.5); }
 .lobby-game.live .lobby-status { color: var(--cyan); }
 .lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Orbitron', monospace; font-size: 0.9rem; }
-/* Reserve room on the right for the dismiss control so it never sits over the code. */
-.lobby-game.finished { padding-right: 44px; }
-.lobby-dismiss {
-  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-  display: flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 50%; line-height: 1;
-  color: rgba(0,245,255,0.5); font-size: 18px; cursor: pointer;
-  border: 1px solid transparent;
-}
-.lobby-dismiss:hover { color: var(--magenta); border-color: rgba(255,0,200,0.4); background: rgba(255,0,200,0.08); }
+.lobby-dismiss { position: absolute; top: 2px; right: 6px; color: rgba(0,245,255,0.4); font-size: 16px; cursor: pointer; padding: 2px 6px; }
+.lobby-dismiss:hover { color: var(--magenta); }
 .lobby-empty { text-align: center; color: rgba(0,245,255,0.4); line-height: 1.6; padding: 10px; }
 
 /* ---- Players strip ---- */
@@ -133,7 +122,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.25);
   border-radius: 6px; color: var(--cyan);
-  font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700;
+  font-family: 'Orbitron', monospace; font-weight: 800;
   font-size: clamp(1.2rem, 7vw, 2.4rem); text-transform: uppercase;
   cursor: pointer; user-select: none; transition: background 0.08s, box-shadow 0.08s, transform 0.05s;
 }
@@ -229,7 +218,7 @@ body {
 .timer { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.5rem; color: var(--cyan); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 .timer.warn { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 .timer.danger { color: #ff4040; text-shadow: 0 0 12px #ff4040; }
-.current-word { min-height: 1.4em; font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
+.current-word { min-height: 1.4em; font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.1rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
 .foot-actions { width: min(420px, 90vw); }
 .foot-actions .btn-primary, .foot-actions .btn-ghost { flex: 1; }
 .found-head { font-size: 0.8rem; }
@@ -248,3 +237,48 @@ body {
   .logo { font-size: 1.7rem; }
   .timer { font-size: 1.3rem; }
 }
+
+/* ---- Daily challenge button ---- */
+.btn-daily {
+  background: transparent;
+  color: var(--yellow);
+  border: 1px solid rgba(255,220,0,0.4);
+  border-radius: 2px;
+  padding: 8px 18px;
+  font-family: 'Orbitron', monospace; font-size: 0.66rem;
+  font-weight: 600; letter-spacing: 0.12em; cursor: pointer; touch-action: manipulation;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255,220,0,0.5);
+}
+.btn-daily:hover { color: #fff; border-color: var(--yellow); box-shadow: 0 0 14px rgba(255,220,0,0.3); }
+
+/* ---- Daily results overlay ---- */
+.daily-results-card {
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  gap: 8px;
+  min-width: min(280px, 90vw);
+}
+.daily-date { font-size: 0.62rem; color: rgba(0,245,255,0.5); letter-spacing: 0.06em; }
+.daily-score {
+  font-family: 'Orbitron', monospace; font-weight: 800; font-size: 2.2rem;
+  color: var(--yellow); text-shadow: 0 0 18px rgba(255,220,0,0.6);
+  letter-spacing: 0.06em;
+}
+.daily-words { font-size: 0.68rem; color: rgba(0,245,255,0.5); margin-top: -4px; }
+.daily-lb-section { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.daily-lb-head {
+  font-family: 'Orbitron', monospace; font-size: 0.6rem; letter-spacing: 0.12em;
+  color: rgba(0,245,255,0.45); border-bottom: 1px solid rgba(0,245,255,0.12); padding-bottom: 4px;
+}
+.daily-lb-list { display: flex; flex-direction: column; gap: 3px; }
+.daily-lb-row {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 0.78rem; color: rgba(0,245,255,0.65); padding: 2px 0;
+}
+.daily-lb-row.me { color: var(--cyan); font-weight: 700; }
+.daily-lb-rank { font-family: 'Orbitron', monospace; font-size: 0.6rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
+.daily-lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daily-lb-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
+.daily-lb-row.me .daily-lb-score { color: var(--yellow); text-shadow: 0 0 8px rgba(255,220,0,0.5); }
+.daily-lb-empty { font-size: 0.72rem; color: rgba(0,245,255,0.4); text-align: center; padding: 8px 0; }
