@@ -503,6 +503,105 @@
     :root[data-theme="pastel"] body::after {
       display: none;
     }
+
+    /* ── daily challenge ─────────────────────────────────────────────────── */
+    #btn-daily {
+      font-size: 0.78rem;
+      padding: 8px 22px;
+      color: var(--yellow);
+      border-color: rgba(255,230,0,0.4);
+      text-shadow: 0 0 8px rgba(255,220,0,0.5);
+    }
+    #btn-daily:hover {
+      background: rgba(255,230,0,0.08);
+      border-color: var(--yellow);
+      box-shadow: 0 0 16px rgba(255,220,0,0.3);
+      color: #fff;
+    }
+    #daily-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4,4,15,0.92);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+      padding: 20px;
+      overflow-y: auto;
+      animation: ov-fade 0.3s ease;
+    }
+    #daily-panel {
+      position: relative;
+      max-width: 360px;
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid rgba(255,220,0,0.22);
+      border-radius: 4px;
+      padding: 28px 24px 24px;
+      box-shadow: 0 0 40px rgba(255,220,0,0.06), inset 0 0 60px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #daily-close {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 26px; height: 26px;
+      padding: 0;
+      border-radius: 2px;
+      font-size: 0.7rem;
+      letter-spacing: 0;
+      line-height: 1;
+    }
+    .daily-heading {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      color: var(--yellow);
+      text-shadow: 0 0 10px var(--yellow);
+    }
+    .daily-date-label {
+      font-size: 0.62rem;
+      color: rgba(0,245,255,0.5);
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+    .daily-final-score {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 2.2rem;
+      color: var(--yellow);
+      text-shadow: 0 0 18px rgba(255,220,0,0.6);
+    }
+    .daily-score-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      color: rgba(0,245,255,0.5);
+      margin-top: -6px;
+    }
+    .daily-lb-section { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+    .daily-lb-head {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      color: rgba(0,245,255,0.45);
+      border-bottom: 1px solid rgba(0,245,255,0.12);
+      padding-bottom: 4px;
+    }
+    .daily-lb-list { display: flex; flex-direction: column; gap: 3px; }
+    .daily-lb-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.78rem; color: rgba(0,245,255,0.65); padding: 2px 0; }
+    .daily-lb-row.me { color: var(--cyan); font-weight: 700; }
+    .daily-lb-rank { font-family: 'Orbitron', monospace; font-size: 0.6rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
+    .daily-lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .daily-lb-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
+    .daily-lb-row.me .daily-lb-score { color: var(--yellow); text-shadow: 0 0 8px rgba(255,220,0,0.5); }
+    .daily-lb-empty { font-size: 0.72rem; color: rgba(0,245,255,0.4); text-align: center; padding: 8px 0; }
+    .daily-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    #btn-daily-lb { font-size: 0.88rem; letter-spacing: 0; padding: 0; }
   </style>
 </head>
 <body>
@@ -526,6 +625,7 @@
         <div id="start-overlay">
           <div class="ov-tag">// SYSTEM READY //</div>
           <button id="btn-start">START</button>
+          <button id="btn-daily">☀ DAILY</button>
           <div class="cbm-row" id="start-cbm-row">
             <span class="cbm-label">Colour-blind mode</span>
             <label class="cbm-toggle">
@@ -575,6 +675,7 @@
             <path d="M4.5 12.5h5l-.5-2h-4l-.5 2Z"/>
           </svg>
         </button>
+        <button class="score-action-btn" id="btn-daily-lb" title="Today's daily leaderboard">☀</button>
         <button class="score-action-btn" id="btn-copy" title="Copy link">
           <svg viewBox="0 0 14 14" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
             <rect x="1" y="3" width="8" height="10" rx="1"/>
@@ -591,6 +692,24 @@
       </div>
     </div>
 
+  </div>
+
+  <div id="daily-modal" class="hidden">
+    <div id="daily-panel">
+      <button id="daily-close">✕</button>
+      <div class="daily-heading">☀ DAILY CHALLENGE</div>
+      <div class="daily-date-label" id="daily-date-label"></div>
+      <div class="daily-final-score hidden" id="daily-final-score">0</div>
+      <div class="daily-score-label hidden" id="daily-score-label">SCORE</div>
+      <div class="daily-lb-section">
+        <div class="daily-lb-head">TODAY'S LEADERBOARD</div>
+        <div class="daily-lb-list" id="daily-lb-list"></div>
+      </div>
+      <div class="daily-btn-row">
+        <button id="btn-daily-play-again" class="hidden">☀ PLAY AGAIN</button>
+        <button id="btn-daily-done">DONE</button>
+      </div>
+    </div>
   </div>
 
   <div id="help-modal" class="hidden">
@@ -1209,6 +1328,41 @@
       return null;
     }
 
+    // ── seeded PRNG ────────────────────────────────────────────────────────
+    function mulberry32(a) {
+      return function() {
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        var t = Math.imul(a ^ a >>> 15, 1 | a);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+    let rng = Math.random;
+
+    // ── daily challenge helpers ────────────────────────────────────────────
+    let isDaily = false;
+
+    function dailySeed() {
+      const d = new Date();
+      return ((d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate()) >>> 0);
+    }
+    function dailySlug() {
+      const d = new Date();
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      return `chromagrid-daily-${y}${m}${day}`;
+    }
+    function dailyDateLabel() {
+      return new Date().toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+      });
+    }
+    function enterDailyChallenge() {
+      isDaily = true;
+      startGame(dailySeed());
+    }
+
     // ── state ──────────────────────────────────────────────────────────────
     let state       = [];
     let score       = 0;
@@ -1219,7 +1373,7 @@
 
     function pick(arr, exclude) {
       let v;
-      do { v = arr[Math.floor(Math.random() * arr.length)]; }
+      do { v = arr[Math.floor(rng() * arr.length)]; }
       while (v === exclude);
       return v;
     }
@@ -1227,7 +1381,7 @@
     function newCell() {
       const frontColor = pick(COLORS, null);
       const backColor  = pick(COLORS, frontColor);
-      const shape = Math.floor(Math.random() * SHAPES.length);
+      const shape = Math.floor(rng() * SHAPES.length);
       return { frontColor, backColor, shape, flipped: false, special: null };
     }
 
@@ -1565,6 +1719,8 @@
     const gameoverOverlay = document.getElementById('gameover-overlay');
 
     function goIdle() {
+      isDaily = false;
+      document.getElementById('daily-modal').classList.add('hidden');
       initLayout();
       sizeCanvas();
       stopClock();
@@ -1583,13 +1739,14 @@
       updateStatus();
     }
 
-    async function startGame() {
+    async function startGame(seed = null) {
       if (phase === 'playing') return;
       colourBlindMode = colourBlindModePending;
       initLayout();
       sizeCanvas();
       clearFx();
       phase = 'playing';
+      _bombTypeIdx = 0;
       document.body.classList.add('playing');
       score = 0;
       document.getElementById('score-val').textContent = '0';
@@ -1597,7 +1754,11 @@
       renderTimer(TIME_MS);
       startOverlay.classList.add('hidden');
       gameoverOverlay.classList.add('hidden');
+      document.getElementById('daily-modal').classList.add('hidden');
+      // Seed the RNG for initial board layout only; replacement tiles stay random.
+      rng = seed !== null ? mulberry32(seed) : Math.random;
       state = Array.from({ length: ROWS * COLS }, newCell);
+      rng = Math.random;
       const t = performance.now();
       for (let i = 0; i < state.length; i++) {
         fx.intro.set(i, { start: t, delay: rowOf(i) * 30 + colOf(i) * 12 });
@@ -1625,11 +1786,27 @@
       document.getElementById('timer').classList.add('over');
       btnFlipAll.disabled = true;
       while (isAnimating) await sleep(50);
-      document.getElementById('go-score').textContent = score.toLocaleString();
-      gameoverOverlay.classList.remove('hidden');
       updateStatus();
-      if (isHighScore(score)) autoSaveScore(score);
-      window.dispatchEvent(new CustomEvent('chromagrid:gameover', { detail: { score } }));
+      if (isDaily) {
+        const lbEl = document.getElementById('daily-lb-list');
+        document.getElementById('daily-date-label').textContent = dailyDateLabel();
+        document.getElementById('daily-final-score').textContent = score.toLocaleString();
+        document.getElementById('daily-final-score').classList.remove('hidden');
+        document.getElementById('daily-score-label').classList.remove('hidden');
+        document.getElementById('btn-daily-play-again').classList.remove('hidden');
+        lbEl.innerHTML = '<div class="daily-lb-empty">Submitting…</div>';
+        document.getElementById('daily-modal').classList.remove('hidden');
+        if (window.__dailySubmitAndFetch) {
+          window.__dailySubmitAndFetch(score, dailySlug(), lbEl).catch(() => {
+            lbEl.innerHTML = '<div class="daily-lb-empty">Could not load leaderboard.</div>';
+          });
+        }
+      } else {
+        document.getElementById('go-score').textContent = score.toLocaleString();
+        gameoverOverlay.classList.remove('hidden');
+        if (isHighScore(score)) autoSaveScore(score);
+        window.dispatchEvent(new CustomEvent('chromagrid:gameover', { detail: { score } }));
+      }
     }
 
     // ── local high scores ─────────────────────────────────────────────────
@@ -1681,12 +1858,38 @@
 
     document.getElementById('btn-reset').addEventListener('click', () => {
       if (isAnimating) return;
-      if (phase === 'playing' && isHighScore(score)) autoSaveScore(score);
+      if (phase === 'playing' && !isDaily && isHighScore(score)) autoSaveScore(score);
       goIdle();
     });
 
-    document.getElementById('btn-start').addEventListener('click', startGame);
-    document.getElementById('btn-play-again').addEventListener('click', startGame);
+    document.getElementById('btn-start').addEventListener('click', () => startGame());
+    document.getElementById('btn-play-again').addEventListener('click', () => startGame());
+    document.getElementById('btn-daily').addEventListener('click', enterDailyChallenge);
+    document.getElementById('btn-daily-play-again').addEventListener('click', enterDailyChallenge);
+
+    function closeDailyModal() {
+      document.getElementById('daily-modal').classList.add('hidden');
+      if (phase === 'over') goIdle();
+    }
+    document.getElementById('daily-close').addEventListener('click', closeDailyModal);
+    document.getElementById('btn-daily-done').addEventListener('click', closeDailyModal);
+
+    document.getElementById('btn-daily-lb').addEventListener('click', () => {
+      const modal = document.getElementById('daily-modal');
+      if (!modal.classList.contains('hidden')) return;
+      document.getElementById('daily-date-label').textContent = dailyDateLabel();
+      document.getElementById('daily-final-score').classList.add('hidden');
+      document.getElementById('daily-score-label').classList.add('hidden');
+      document.getElementById('btn-daily-play-again').classList.add('hidden');
+      const lbEl = document.getElementById('daily-lb-list');
+      lbEl.innerHTML = '<div class="daily-lb-empty">Loading…</div>';
+      modal.classList.remove('hidden');
+      if (window.__dailyFetchLB) {
+        window.__dailyFetchLB(dailySlug(), lbEl).catch(() => {
+          lbEl.innerHTML = '<div class="daily-lb-empty">Could not load leaderboard.</div>';
+        });
+      }
+    });
 
     const cbmCheck = document.getElementById('cbm-check');
     const cbmStart = document.getElementById('cbm-start');
@@ -1755,6 +1958,59 @@
     }
 
     goIdle();
+  </script>
+  <script type="module">
+    import { supabase } from '../shared/supabaseClient.js';
+    import { playerKey } from '../shared/leaderboard.js';
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function getPlayerName() {
+      return (localStorage.getItem('chromagrid.name') || '').trim() || 'Player';
+    }
+
+    let currentUser = null;
+    supabase().auth.onAuthStateChange((_, session) => { currentUser = session?.user ?? null; });
+    supabase().auth.getSession().then(({ data }) => { currentUser = data?.session?.user ?? null; });
+
+    async function fetchAndRenderLB(slug, lbEl) {
+      const myKey = playerKey(currentUser);
+      const { data: rows } = await supabase()
+        .from('scores')
+        .select('player_key, name, score')
+        .eq('game', slug)
+        .order('score', { ascending: false })
+        .order('updated_at', { ascending: true })
+        .limit(10);
+      lbEl.innerHTML = '';
+      (rows || []).forEach((row, i) => {
+        const isMe = row.player_key === myKey;
+        const div = document.createElement('div');
+        div.className = 'daily-lb-row' + (isMe ? ' me' : '');
+        div.innerHTML = `<span class="daily-lb-rank">${i + 1}</span>`
+          + `<span class="daily-lb-name">${esc(row.name || 'Player')}</span>`
+          + `<span class="daily-lb-score">${row.score}</span>`;
+        lbEl.appendChild(div);
+      });
+      if (!rows || !rows.length) lbEl.innerHTML = '<div class="daily-lb-empty">No scores yet today.</div>';
+    }
+
+    window.__dailySubmitAndFetch = async (score, slug, lbEl) => {
+      const key = playerKey(currentUser);
+      try {
+        await supabase().rpc('submit_score', {
+          p_game: slug,
+          p_player_key: key,
+          p_name: getPlayerName(),
+          p_score: Math.max(0, Math.round(score)),
+          p_user_id: currentUser?.id ?? null,
+        });
+      } catch {}
+      await fetchAndRenderLB(slug, lbEl);
+    };
+
+    window.__dailyFetchLB = (slug, lbEl) => fetchAndRenderLB(slug, lbEl);
   </script>
   <script type="module" src="../shared/devtools.js"></script>
 </body>
