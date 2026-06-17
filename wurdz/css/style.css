@@ -874,7 +874,7 @@ input, textarea { user-select: text; }
 .friend-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 6px; }
 
 /* ── themes ──────────────────────────────────────────────────────────────── */
-/* Maritime = the :root defaults above. Synth and Pastel are overrides. */
+/* Ocean = the :root defaults above. Synth and Pastel are overrides. */
 
 :root[data-theme="synth"] {
   --bg:          #04040f;

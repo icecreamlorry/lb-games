@@ -31,7 +31,7 @@ import { loadTheme, createThemePicker } from '../../shared/themes.js';
 
 const $ = (id) => document.getElementById(id);
 
-// Apply stored theme immediately; Maritime is Wurdz's natural default.
+// Apply stored theme immediately; Ocean is Wurdz's natural default.
 loadTheme('maritime');
 
 // ---- App state ----------------------------------------------------------

@@ -6,7 +6,7 @@
 const LS_KEY = 'lb.theme';
 
 export const THEMES = [
-  { id: 'maritime', label: 'Maritime' },
+  { id: 'maritime', label: 'Ocean' },
   { id: 'synth',    label: 'Synth'    },
   { id: 'pastel',   label: 'Pastel'   },
 ];

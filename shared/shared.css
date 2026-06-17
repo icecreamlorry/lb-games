@@ -242,7 +242,7 @@ button:disabled:hover {
 #btn-menu {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 9px);
-  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 250px));
   z-index: 901;
   width: 36px; height: 36px;
   display: flex;
@@ -265,7 +265,7 @@ button:disabled:hover {
 #app-menu {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 54px);
-  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 250px));
   z-index: 901;
   display: flex;
   flex-direction: column;
@@ -393,7 +393,7 @@ button:disabled:hover {
 .friend-item.empty { justify-content: center; color: rgba(0,245,255,0.4); background: none; }
 
 /* ── themes ──────────────────────────────────────────────────────────────── */
-/* Synth = the :root defaults above. Maritime and Pastel are overrides. */
+/* Synth = the :root defaults above. Ocean and Pastel are overrides. */
 
 :root[data-theme="maritime"] {
   --cyan:    #f5b942;   /* warm gold  — takes the primary accent role */
