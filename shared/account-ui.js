@@ -526,14 +526,22 @@ function renderFriendList(friends) {
     return;
   }
   const showHistory = !!cfg().history;
+  // Games that are room-based supply LB_CONFIG.onChallengeFriend(friend) to add
+  // a per-friend Challenge button — same dialog, game-specific action fed in.
+  const canChallenge = typeof cfg().onChallengeFriend === 'function';
   for (const f of friends) {
     const li = document.createElement('li');
     li.className = 'friend-item';
     li.innerHTML =
       '<span class="friend-name">' + esc(f.display_name || 'Player') + '</span>' +
       '<span class="friend-actions">' +
+      (canChallenge ? '<button class="link-btn" data-challenge="' + f.id + '">CHALLENGE</button>' : '') +
       (showHistory ? '<button class="link-btn" data-history="' + f.id + '">HISTORY</button>' : '') +
       '<button class="link-btn" data-remove="' + f.id + '">REMOVE</button></span>';
+    li.querySelector('[data-challenge]')?.addEventListener('click', () => {
+      closeProfile();
+      cfg().onChallengeFriend(f);
+    });
     li.querySelector('[data-history]')?.addEventListener('click', () => {
       closeProfile();
       openHistory({ userId: app.user?.id, gameSlug: cfg().gameSlug, friendId: f.id, friendName: f.display_name });
@@ -790,5 +798,12 @@ async function init() {
   onAuthChange(onUser);
   onPasswordRecovery(() => { closeAllModals(); openAuth('newpassword'); });
 }
+
+// Small public API so games can open the shared dialogs programmatically
+// (e.g. a lobby "Challenge a friend" button → the profile/friends list).
+window.LBAccount = {
+  openProfile: () => { app.user ? openProfile() : openAuth('signin'); },
+  openAuth,
+};
 
 init();

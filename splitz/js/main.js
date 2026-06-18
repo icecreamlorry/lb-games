@@ -15,7 +15,6 @@ import {
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
-import { listFriends } from '../../shared/friends.js';
 import { openHistory } from '../../shared/history.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import {
@@ -137,7 +136,7 @@ $('btn-lobby-join').addEventListener('click', () => { $('lobby-join-box').classL
 $('btn-lobby-join-go').addEventListener('click', () => doJoin($('lobby-code-input'), (m) => ($('lobby-error').textContent = m)));
 $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-lobby-join-go').click(); });
 $('btn-lobby-refresh').addEventListener('click', renderLobby);
-$('btn-lobby-challenge').addEventListener('click', openChallenge);
+$('btn-lobby-challenge').addEventListener('click', () => window.LBAccount?.openProfile());
 $('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
 $('btn-logout-lobby').addEventListener('click', async () => { const { signOut } = await import('../../shared/auth.js'); try { await signOut(); } catch {} });
 
@@ -195,27 +194,10 @@ async function openFromLobby(room, invitedMe) {
 }
 
 // ---- Challenge a friend ---------------------------------------------------
-
-async function openChallenge() {
-  $('modal-challenge').classList.remove('hidden');
-  const el = $('challenge-list');
-  el.innerHTML = '<li class="friend-item empty">Loading…</li>';
-  let friends = [];
-  try { friends = await listFriends(); } catch { el.innerHTML = '<li class="friend-item empty">Could not load friends.</li>'; return; }
-  if (!friends.length) { el.innerHTML = '<li class="friend-item empty">No friends yet — add some from your profile.</li>'; return; }
-  el.innerHTML = '';
-  for (const f of friends) {
-    const li = document.createElement('li');
-    li.className = 'friend-item';
-    li.innerHTML = `<span class="friend-name">${esc(f.display_name || 'Player')}</span>`
-      + '<span class="friend-actions"><button class="btn-primary">CHALLENGE</button></span>';
-    li.querySelector('button').addEventListener('click', () => challengeFriend(f));
-    el.appendChild(li);
-  }
-}
+// The friend list lives in the shared profile dialog; we just feed it the
+// game-specific action via LB_CONFIG.onChallengeFriend (set in boot()).
 
 async function challengeFriend(friend) {
-  $('modal-challenge').classList.add('hidden');
   try {
     const room = await createRoom(app.name, app.userId, { userId: friend.id, name: friend.display_name }, MAX_PLAYERS);
     triggerPush({ user_id: friend.id, title: 'Splitz challenge!', body: `${app.name} challenged you to Splitz.`, url: location.href.split('#')[0] }).catch(() => {});
@@ -876,6 +858,8 @@ async function tryResume() {
 
 async function boot() {
   registerServiceWorker();
+  // Feed the game-specific challenge action into the shared friends dialog.
+  window.LB_CONFIG.onChallengeFriend = challengeFriend;
   if (!configReady()) { landingError('Backend not configured.'); }
   try { app.user = await currentUser(); } catch {}
   app.userId = app.user?.id ?? null;
