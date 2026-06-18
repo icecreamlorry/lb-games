@@ -676,8 +676,8 @@ input, textarea { user-select: text; }
 }
 .lobby-account { margin-right: auto; color: var(--muted); font-size: 14px; }
 .lobby-title { margin: 18px 0 10px; }
-.lobby-actions { display: flex; gap: 10px; }
-.lobby-actions .btn { flex: 1; }
+.lobby-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.lobby-actions .btn { flex: 1 1 auto; min-width: 0; }
 .lobby-actions #btn-lobby-refresh { flex: 0 0 auto; }
 #lobby-join-box { margin-top: 12px; }
 
