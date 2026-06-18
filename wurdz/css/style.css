@@ -1,11 +1,11 @@
 :root {
-  --bg: #1c2733;
+  --dark: #1c2733;
   --panel: #263545;
   --panel-light: #31445a;
   --text: #eef3f8;
   --muted: #9fb2c4;
-  --accent: #f5b942;
-  --accent-dark: #d99e1f;
+  --cyan: #f5b942;
+  --cyan-dark: #d99e1f;
   --tile: #f3d9a4;
   --tile-edge: #c9a86a;
   --tile-text: #3a2d13;
@@ -29,7 +29,7 @@ html, body {
 body {
   margin: 0;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  background: var(--bg);
+  background: var(--dark);
   color: var(--text);
 }
 
@@ -69,7 +69,7 @@ input, textarea { user-select: text; }
   font-size: 64px;
   margin: 0;
   letter-spacing: 2px;
-  color: var(--accent);
+  color: var(--cyan);
   text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -94,7 +94,7 @@ input, textarea { user-select: text; }
   margin-top: 18px;
   border-radius: 8px;
   border: 2px solid var(--panel-light);
-  background: var(--bg);
+  background: var(--dark);
   color: var(--text);
   font-size: 18px;
   text-align: center;
@@ -130,9 +130,9 @@ input, textarea { user-select: text; }
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: 0.45; cursor: default; }
 
-.btn-primary { background: var(--accent); color: #25221b; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
-.btn-secondary { background: var(--panel-light); }
+.btn-primary { background: var(--cyan); color: #25221b; }
+.btn-primary:hover:not(:disabled) { background: var(--cyan-dark); }
+.btn-ghost { background: var(--panel-light); }
 .btn-ref { background: #3c5a78; }
 .btn-challenge { background: #8e44ad; }
 .btn-danger { background: #c0392b; color: #fff; }
@@ -173,9 +173,9 @@ input, textarea { user-select: text; }
   font-size: 13px;
 }
 .chip-button, #room-code-chip { cursor: pointer; }
-.chip-on { color: var(--accent); }
+.chip-on { color: var(--cyan); }
 .conn-live { color: var(--good); }
-.conn-db { color: var(--accent); }
+.conn-db { color: var(--cyan); }
 .chip-danger { color: #e8857a; }
 .chip-danger:hover:not(:disabled) { background: #c0392b; color: #fff; }
 
@@ -203,7 +203,7 @@ input, textarea { user-select: text; }
   padding: 10px 16px;
 }
 .player-name { font-weight: 700; font-size: 17px; }
-.score { margin-left: auto; font-size: 22px; font-weight: 800; color: var(--accent); }
+.score { margin-left: auto; font-size: 22px; font-weight: 800; color: var(--cyan); }
 .tile-count { color: var(--muted); font-size: 13px; }
 .turn-marker {
   background: var(--good);
@@ -223,7 +223,7 @@ input, textarea { user-select: text; }
 .online-dot.offline { background: #5b6b7c; }
 /* My connection dot: amber while moves are syncing through the DB (websocket
    down) instead of arriving live — the game still works, just less instant. */
-.online-dot.syncing { background: var(--accent); }
+.online-dot.syncing { background: var(--cyan); }
 
 /* ---- Board ---- */
 
@@ -254,7 +254,7 @@ input, textarea { user-select: text; }
 }
 
 .cell.drop-target {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--cyan);
   outline-offset: -3px;
   z-index: 2;
 }
@@ -271,7 +271,7 @@ input, textarea { user-select: text; }
   color: var(--tile-text);
 }
 .cell.pending {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--cyan);
   outline-offset: -2px;
 }
 /* The most recent play, so the last turn is easy to spot (green ring + glow,
@@ -373,7 +373,7 @@ input, textarea { user-select: text; }
   font-size: 10px;
 }
 .rack-tile.selected {
-  outline: 3px solid var(--accent);
+  outline: 3px solid var(--cyan);
   transform: translateY(-6px);
 }
 .rack-tile.placed { opacity: 0.25; pointer-events: none; }
@@ -466,13 +466,13 @@ input, textarea { user-select: text; }
   font-weight: 600;
   cursor: pointer;
 }
-.tab.active { background: var(--accent); color: #25221b; }
+.tab.active { background: var(--cyan); color: #25221b; }
 
 #words-filter {
   padding: 9px 12px;
   border-radius: 8px;
   border: 2px solid var(--panel-light);
-  background: var(--bg);
+  background: var(--dark);
   color: var(--text);
   margin-bottom: 12px;
 }
@@ -492,7 +492,7 @@ input, textarea { user-select: text; }
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.03);
 }
-.word-entry .word { font-weight: 800; color: var(--accent); min-width: 30px; }
+.word-entry .word { font-weight: 800; color: var(--cyan); min-width: 30px; }
 .word-entry .word sup { color: var(--tl); }
 .word-entry .def { color: var(--muted); font-size: 12.5px; }
 
@@ -541,7 +541,7 @@ input, textarea { user-select: text; }
 
 .help-section h3 {
   margin: 0 0 6px;
-  color: var(--accent);
+  color: var(--cyan);
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -637,13 +637,13 @@ input, textarea { user-select: text; }
 .link-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--cyan);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
 }
-.link-btn:hover { color: var(--accent-dark); }
+.link-btn:hover { color: var(--cyan-dark); }
 .account-info {
   display: flex;
   flex-direction: column;
@@ -720,10 +720,10 @@ input, textarea { user-select: text; }
 }
 .lobby-dismiss:hover { background: rgba(0, 0, 0, 0.25); color: var(--text); }
 .lobby-game:hover { filter: brightness(1.12); }
-.lobby-game.your-turn { border-color: var(--accent); }
+.lobby-game.your-turn { border-color: var(--cyan); }
 .lobby-opp { grid-area: opp; font-weight: 700; font-size: 16px; }
 .lobby-status { grid-area: status; color: var(--muted); font-size: 13px; }
-.lobby-game.your-turn .lobby-status { color: var(--accent); font-weight: 600; }
+.lobby-game.your-turn .lobby-status { color: var(--cyan); font-weight: 600; }
 .lobby-score {
   grid-area: score;
   align-self: center;
@@ -739,7 +739,7 @@ input, textarea { user-select: text; }
 .auth-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
 .auth-tabs .tab {
   flex: 1;
-  background: var(--bg);
+  background: var(--dark);
   border: 2px solid var(--panel-light);
   color: var(--muted);
   border-radius: 8px;
@@ -747,14 +747,14 @@ input, textarea { user-select: text; }
   font-weight: 600;
   cursor: pointer;
 }
-.auth-tabs .tab.active { color: #25221b; background: var(--accent); border-color: var(--accent); }
+.auth-tabs .tab.active { color: #25221b; background: var(--cyan); border-color: var(--cyan); }
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
 .auth-form input {
   width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
   border: 2px solid var(--panel-light);
-  background: var(--bg);
+  background: var(--dark);
   color: var(--text);
   font-size: 16px;
 }
@@ -820,7 +820,7 @@ input, textarea { user-select: text; }
 }
 .menu-item.menu-sep { border-top: 1px solid var(--panel-light); margin-top: 4px; padding-top: 13px; }
 .menu-item:hover { background: var(--panel-light); }
-.menu-item.on { color: var(--accent); }
+.menu-item.on { color: var(--cyan); }
 .menu-item svg { flex-shrink: 0; opacity: 0.9; }
 .profile-badge {
   position: absolute;
@@ -846,7 +846,7 @@ input, textarea { user-select: text; }
 #profile-signedout .muted { line-height: 1.5; margin: 0; }
 #profile-signedin { display: flex; flex-direction: column; gap: 16px; margin-top: 4px; }
 .profile-id { display: flex; flex-direction: column; gap: 8px; }
-.profile-id strong { color: var(--accent); }
+.profile-id strong { color: var(--cyan); }
 .profile-id-actions { display: flex; gap: 14px; }
 .profile-block { display: flex; flex-direction: column; gap: 8px; }
 .profile-label {
@@ -863,8 +863,8 @@ input, textarea { user-select: text; }
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.18em;
-  color: var(--accent);
-  background: var(--bg);
+  color: var(--cyan);
+  background: var(--dark);
   border: 2px solid var(--panel-light);
   border-radius: 8px;
   padding: 8px 12px;
@@ -877,7 +877,7 @@ input, textarea { user-select: text; }
   padding: 10px 12px;
   border-radius: 8px;
   border: 2px solid var(--panel-light);
-  background: var(--bg);
+  background: var(--dark);
   color: var(--text);
   font-size: 15px;
   text-transform: uppercase;
@@ -901,13 +901,13 @@ input, textarea { user-select: text; }
 /* Ocean = the :root defaults above. Synth and Pastel are overrides. */
 
 :root[data-theme="synth"] {
-  --bg:          #04040f;
+  --dark:          #04040f;
   --panel:       #07071a;
   --panel-light: #12122e;
   --text:        #e8f4ff;
   --muted:       #5577aa;
-  --accent:      #00f5ff;
-  --accent-dark: #00ccdd;
+  --cyan:      #00f5ff;
+  --cyan-dark: #00ccdd;
   --tile:        #1a0833;
   --tile-edge:   #6600bb;
   --tile-text:   #e0e8ff;
@@ -922,13 +922,13 @@ input, textarea { user-select: text; }
 }
 
 :root[data-theme="pastel"] {
-  --bg:          #f0ede8;
+  --dark:          #f0ede8;
   --panel:       #fdf9f5;
   --panel-light: #e8e2da;
   --text:        #2c3340;
   --muted:       #8a96a8;
-  --accent:      #7b9ec8;
-  --accent-dark: #5f84b0;
+  --cyan:      #7b9ec8;
+  --cyan-dark: #5f84b0;
   --tile:        #fdf5e4;
   --tile-edge:   #c8a878;
   --tile-text:   #3d2e18;
@@ -970,5 +970,5 @@ input, textarea { user-select: text; }
   cursor: pointer;
   transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
-.theme-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--panel-light); }
-.theme-btn.active { border-color: var(--accent); background: transparent; color: var(--accent); }
+.theme-btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--panel-light); }
+.theme-btn.active { border-color: var(--cyan); background: transparent; color: var(--cyan); }
