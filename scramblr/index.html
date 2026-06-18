@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/style.css">
   <script>
     // Configures the shared account layer (account-ui.js) for this game.
-    window.LB_CONFIG = { gameSlug: 'scramblr', gameName: 'Scramblr', history: true, defaultTheme: 'synth' };
+    window.LB_CONFIG = { gameSlug: 'scramblr', gameName: 'Scramblr', history: true, daily: true, defaultTheme: 'synth' };
   </script>
 </head>
 <body>
@@ -38,45 +38,13 @@
       </div>
       <p id="landing-error" class="status-line"></p>
 
-      <div id="account-bar">
-        <div id="account-line">Playing as a guest</div>
-        <div class="account-actions">
-          <button id="btn-set-name" class="link-btn">SET NAME</button>
-          <button id="btn-login" class="link-btn">LOG IN</button>
-          <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
-          <button id="btn-go-lobby" class="link-btn hidden">MY GAMES</button>
-        </div>
-        <p class="hint">Log in to keep several games going and get notified when one starts.</p>
-      </div>
+      <!-- Account bar markup injected by shared/lobby-ui.js -->
+      <div id="account-bar"></div>
     </div>
   </section>
 
-  <!-- Lobby ("My Games") — signed-in players -->
-  <section id="screen-lobby" class="screen hidden">
-    <div class="card wide">
-      <header class="bar">
-        <span class="logo small">SCRAMBLR</span>
-        <span class="grow muted">Hi, <strong id="lobby-name"></strong></span>
-        <button id="btn-notify-lobby" class="chip hidden" title="Notify me when a game starts">🔔</button>
-        <button id="btn-logout-lobby" class="chip">LOG OUT</button>
-      </header>
-      <h2 class="card-title">Your games</h2>
-      <div class="row">
-        <button id="btn-lobby-new" class="btn-primary">NEW GAME</button>
-        <button id="btn-lobby-daily" class="btn-daily">☀ DAILY</button>
-        <button id="btn-lobby-challenge" class="btn-ghost">CHALLENGE</button>
-        <button id="btn-lobby-join" class="btn-ghost">JOIN BY CODE</button>
-        <button id="btn-lobby-history" class="btn-ghost">HISTORY</button>
-        <button id="btn-lobby-refresh" class="btn-ghost" title="Refresh">↻</button>
-      </div>
-      <div id="lobby-join-box" class="row hidden">
-        <input id="lobby-code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
-        <button id="btn-lobby-join-go" class="btn-primary">JOIN</button>
-      </div>
-      <p id="lobby-error" class="status-line"></p>
-      <div id="lobby-list" class="lobby-list"></div>
-    </div>
-  </section>
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
 
   <!-- Game -->
   <section id="screen-game" class="screen hidden">
@@ -177,6 +145,7 @@
     </div>
   </div>
 
+  <script type="module" src="../shared/lobby-ui.js"></script>
   <script type="module" src="../shared/account-ui.js"></script>
   <script type="module" src="js/main.js"></script>
   <script type="module" src="../shared/devtools.js"></script>
