@@ -135,6 +135,7 @@ function showScreen(which) {
   for (const id of ['screen-landing', 'screen-lobby', 'screen-game']) {
     $(id).classList.toggle('hidden', id !== `screen-${which}`);
   }
+  document.body.dataset.screen = which;
   if (which !== 'lobby') stopLobbyPolling();
   postRoomVisibility();
 }

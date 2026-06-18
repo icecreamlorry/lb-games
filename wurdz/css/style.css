@@ -579,6 +579,30 @@ input, textarea { user-select: text; }
      if content overflows on an unusually short or zoomed viewport. Without
      this, a scrollbar appearing would narrow the column and resize the board. */
   .table { scrollbar-gutter: stable; }
+
+  /* Vertically centre the play area in the space below the header so the game
+     sits in the middle of the screen on a desktop window rather than clinging
+     to the top. The board is sized to always fit (see above), so centring the
+     column never clips its top. */
+  .table { justify-content: center; }
+
+  /* Align the header to the same centred column as the table so the logo and
+     room/leave controls line up with the board instead of spreading across the
+     full width of a wide window. */
+  .game-header {
+    width: min(100%, 760px);
+    margin-inline: auto;
+    border-radius: 0 0 12px 12px;
+  }
+
+  /* Pull the menu button (and its dropdown) in to the right edge of the centred
+     game column so it sits next to the content instead of way out in the
+     viewport corner. Falls back to the corner on narrower windows. Scoped to
+     the game screen — landing/lobby keep the corner button. */
+  body[data-screen="game"] .menu-fab,
+  body[data-screen="game"] .app-menu {
+    right: max(env(safe-area-inset-right, 0px) + 10px, calc(50% - 380px + 6px));
+  }
 }
 
 /* ---- Mobile ---- */
