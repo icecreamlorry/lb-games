@@ -106,16 +106,19 @@ input, textarea { user-select: text; }
   gap: 12px;
   margin-top: 20px;
 }
-.landing-buttons .btn { flex: 1; }
+.landing-buttons button { flex: 1; }
 
 .join-box { display: flex; gap: 10px; align-items: flex-end; }
-.join-box .btn { margin-top: 18px; }
+.join-box button { margin-top: 18px; }
 
 .error-text { color: var(--bad); min-height: 1.2em; margin-bottom: 0; }
 
 /* ---- Buttons ---- */
 
-.btn {
+/* Standalone action-button classes (no base .btn), matching the shared games'
+   vocabulary. The shared list carries the common shape; each class adds its
+   colour. .btn-ghost is the default panel-light look (formerly a bare .btn). */
+.btn-primary, .btn-ghost, .btn-ref, .btn-challenge, .btn-danger, .btn-icon {
   padding: 11px 18px;
   border: none;
   border-radius: 8px;
@@ -126,9 +129,14 @@ input, textarea { user-select: text; }
   cursor: pointer;
   transition: filter 0.15s, transform 0.05s;
 }
-.btn:hover:not(:disabled) { filter: brightness(1.15); }
-.btn:active:not(:disabled) { transform: translateY(1px); }
-.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-primary:hover:not(:disabled), .btn-ghost:hover:not(:disabled),
+.btn-ref:hover:not(:disabled), .btn-challenge:hover:not(:disabled),
+.btn-danger:hover:not(:disabled), .btn-icon:hover:not(:disabled) { filter: brightness(1.15); }
+.btn-primary:active:not(:disabled), .btn-ghost:active:not(:disabled),
+.btn-ref:active:not(:disabled), .btn-challenge:active:not(:disabled),
+.btn-danger:active:not(:disabled), .btn-icon:active:not(:disabled) { transform: translateY(1px); }
+.btn-primary:disabled, .btn-ghost:disabled, .btn-ref:disabled,
+.btn-challenge:disabled, .btn-danger:disabled, .btn-icon:disabled { opacity: 0.45; cursor: default; }
 
 .btn-primary { background: var(--cyan); color: #25221b; }
 .btn-primary:hover:not(:disabled) { background: var(--cyan-dark); }
@@ -437,7 +445,7 @@ input, textarea { user-select: text; }
 #modal-confirm .modal-head { margin-bottom: 6px; }
 #confirm-message { margin: 0 0 18px; line-height: 1.5; }
 .confirm-buttons { display: flex; gap: 10px; justify-content: flex-end; }
-.confirm-buttons .btn { min-width: 96px; }
+.confirm-buttons button { min-width: 96px; }
 
 .modal-head {
   display: flex;
@@ -623,7 +631,7 @@ input, textarea { user-select: text; }
   .status-line { min-height: 1.2em; }
 
   .controls { gap: 8px; }
-  .controls .btn { padding: 9px 11px; font-size: 13px; }
+  .controls button { padding: 9px 11px; font-size: 13px; }
   .btn-icon { width: 42px; min-width: 42px; }
 }
 
@@ -651,7 +659,7 @@ input, textarea { user-select: text; }
   gap: 10px;
   font-size: 14px;
 }
-.account-info .btn { width: 100%; }
+.account-info .btn-ghost { width: 100%; }
 .account-hint { font-size: 12px; margin: 12px 0 0; line-height: 1.5; }
 
 #screen-lobby {
@@ -677,7 +685,7 @@ input, textarea { user-select: text; }
 .lobby-account { margin-right: auto; color: var(--muted); font-size: 14px; }
 .lobby-title { margin: 18px 0 10px; }
 .lobby-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.lobby-actions .btn { flex: 1 1 auto; min-width: 0; }
+.lobby-actions button { flex: 1 1 auto; min-width: 0; }
 .lobby-actions #btn-lobby-refresh { flex: 0 0 auto; }
 #lobby-join-box { margin-top: 12px; }
 
@@ -870,7 +878,7 @@ input, textarea { user-select: text; }
   padding: 8px 12px;
   text-align: center;
 }
-.profile-code-row .btn { padding: 9px 14px; }
+.profile-code-row button { padding: 9px 14px; }
 .profile-add-row { display: flex; gap: 8px; }
 .profile-add-row input {
   flex: 1;
@@ -894,7 +902,7 @@ input, textarea { user-select: text; }
 }
 .friend-row .friend-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friend-row .friend-actions { display: flex; gap: 6px; }
-.friend-row .btn { padding: 6px 10px; font-size: 13px; }
+.friend-row button { padding: 6px 10px; font-size: 13px; }
 .friend-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 6px; }
 
 /* ── themes ──────────────────────────────────────────────────────────────── */

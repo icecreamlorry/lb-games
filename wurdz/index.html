@@ -64,12 +64,12 @@
       <p class="tagline">Two-player word game, anywhere.</p>
       <input id="name-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
       <div class="landing-buttons">
-        <button id="btn-create" class="btn btn-primary">Create a Room</button>
-        <button id="btn-join" class="btn btn-ghost">Join a Room</button>
+        <button id="btn-create" class="btn-primary">Create a Room</button>
+        <button id="btn-join" class="btn-ghost">Join a Room</button>
       </div>
       <div id="join-box" class="join-box hidden">
         <input id="code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
-        <button id="btn-join-go" class="btn btn-primary">Join</button>
+        <button id="btn-join-go" class="btn-primary">Join</button>
       </div>
       <p id="landing-error" class="error-text"></p>
 
@@ -77,7 +77,7 @@
         <button id="btn-show-login" class="link-btn">Log in or sign up</button>
         <div id="account-info" class="account-info hidden">
           <span>Signed in as <strong id="account-name"></strong></span>
-          <button id="btn-go-lobby" class="btn btn-ghost">My Games</button>
+          <button id="btn-go-lobby" class="btn-ghost">My Games</button>
           <button id="btn-logout" class="link-btn">Log out</button>
         </div>
         <p class="account-hint muted">Optional — log in to keep several games going at once and get notified across all of them.</p>
@@ -98,15 +98,15 @@
       </header>
       <h2 class="lobby-title">Your games</h2>
       <div class="lobby-actions">
-        <button id="btn-lobby-new" class="btn btn-primary">New game</button>
-        <button id="btn-lobby-challenge" class="btn btn-ghost">Challenge a friend</button>
-        <button id="btn-lobby-join" class="btn btn-ghost">Join by code</button>
-        <button id="btn-lobby-history" class="btn btn-ghost">History</button>
-        <button id="btn-lobby-refresh" class="btn" title="Refresh">↻</button>
+        <button id="btn-lobby-new" class="btn-primary">New game</button>
+        <button id="btn-lobby-challenge" class="btn-ghost">Challenge a friend</button>
+        <button id="btn-lobby-join" class="btn-ghost">Join by code</button>
+        <button id="btn-lobby-history" class="btn-ghost">History</button>
+        <button id="btn-lobby-refresh" class="btn-ghost" title="Refresh">↻</button>
       </div>
       <div id="lobby-join-box" class="join-box hidden">
         <input id="lobby-code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
-        <button id="btn-lobby-join-go" class="btn btn-primary">Join</button>
+        <button id="btn-lobby-join-go" class="btn-primary">Join</button>
       </div>
       <p id="lobby-error" class="error-text"></p>
       <div id="lobby-list" class="lobby-list"></div>
@@ -139,7 +139,7 @@
             <h2 id="start-title">Ready to play?</h2>
             <p id="start-versus"></p>
             <p id="start-share" class="hidden">Share the room code <strong id="start-code"></strong> with a friend to begin.</p>
-            <button id="btn-start" class="btn btn-primary hidden">Start Game</button>
+            <button id="btn-start" class="btn-primary hidden">Start Game</button>
             <p id="start-waiting" class="muted hidden">Waiting for the host to start the game…</p>
           </div>
         </div>
@@ -147,7 +147,7 @@
           <div class="overlay-card">
             <h2 id="gameover-title"></h2>
             <div id="gameover-detail"></div>
-            <button id="btn-rematch" class="btn btn-primary">Rematch</button>
+            <button id="btn-rematch" class="btn-primary">Rematch</button>
           </div>
         </div>
       </div>
@@ -165,27 +165,27 @@
       <p id="status-line" class="status-line"></p>
 
       <div class="controls">
-        <button id="btn-play" class="btn btn-primary" disabled>Play</button>
-        <button id="btn-challenge" class="btn btn-challenge" disabled>Challenge</button>
-        <button id="btn-exchange" class="btn" disabled>Exchange</button>
-        <button id="btn-pass" class="btn" disabled>Pass</button>
-        <button id="btn-shuffle" class="btn btn-icon" title="Shuffle rack" aria-label="Shuffle rack">
+        <button id="btn-play" class="btn-primary" disabled>Play</button>
+        <button id="btn-challenge" class="btn-challenge" disabled>Challenge</button>
+        <button id="btn-exchange" class="btn-ghost" disabled>Exchange</button>
+        <button id="btn-pass" class="btn-ghost" disabled>Pass</button>
+        <button id="btn-shuffle" class="btn-icon" title="Shuffle rack" aria-label="Shuffle rack">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2 5h3.6l8.8 10H18"/><polyline points="15.4 12.4 18 15 15.4 17.6"/>
             <path d="M2 15h3.6l2.3-2.6"/><path d="M12.1 7.6 14.4 5H18"/><polyline points="15.4 2.4 18 5 15.4 7.6"/>
           </svg>
         </button>
-        <button id="btn-recall" class="btn btn-icon" title="Recall tiles" aria-label="Recall tiles">
+        <button id="btn-recall" class="btn-icon" title="Recall tiles" aria-label="Recall tiles">
           <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="7.5 3.5 3 8 7.5 12.5"/><path d="M3 8h9.5a4.5 4.5 0 0 1 0 9H6"/>
           </svg>
         </button>
-        <button id="btn-words" class="btn btn-ref">2-Letter Words</button>
+        <button id="btn-words" class="btn-ref">2-Letter Words</button>
       </div>
       <div id="exchange-bar" class="exchange-bar hidden">
         <span>Select tiles to swap, then confirm.</span>
-        <button id="btn-exchange-go" class="btn btn-primary">Swap 0 tiles</button>
-        <button id="btn-exchange-cancel" class="btn">Cancel</button>
+        <button id="btn-exchange-go" class="btn-primary">Swap 0 tiles</button>
+        <button id="btn-exchange-cancel" class="btn-ghost">Cancel</button>
       </div>
     </div>
   </section>
@@ -206,9 +206,9 @@
         <input id="auth-name" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
         <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
         <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password">
-        <button id="btn-auth-primary" class="btn btn-primary">Sign in</button>
+        <button id="btn-auth-primary" class="btn-primary">Sign in</button>
         <div class="auth-or"><span>or</span></div>
-        <button id="btn-auth-magic" class="btn btn-ghost">Email me a sign-in link</button>
+        <button id="btn-auth-magic" class="btn-ghost">Email me a sign-in link</button>
         <p id="auth-status" class="status-line"></p>
       </div>
     </div>
@@ -224,7 +224,7 @@
 
       <div id="profile-signedout">
         <p class="muted">Log in to set a display name and add friends. One account works across every game on this project.</p>
-        <button id="profile-login" class="btn btn-primary">Log in or sign up</button>
+        <button id="profile-login" class="btn-primary">Log in or sign up</button>
       </div>
 
       <div id="profile-signedin" class="hidden">
@@ -240,7 +240,7 @@
           <span class="profile-label">Your friend code</span>
           <div class="profile-code-row">
             <code id="profile-code">––––––––</code>
-            <button id="profile-copy-code" class="btn btn-ghost">Copy</button>
+            <button id="profile-copy-code" class="btn-ghost">Copy</button>
           </div>
         </div>
 
@@ -248,7 +248,7 @@
           <span class="profile-label">Add a friend by code</span>
           <div class="profile-add-row">
             <input id="friend-code-input" type="text" maxlength="8" placeholder="Friend code" autocomplete="off" autocapitalize="characters">
-            <button id="btn-add-friend" class="btn btn-primary">Add</button>
+            <button id="btn-add-friend" class="btn-primary">Add</button>
           </div>
           <p id="friend-add-status" class="status-line"></p>
         </div>
@@ -276,7 +276,7 @@
       <p class="muted">This is how you appear to opponents and friends.</p>
       <div class="auth-form">
         <input id="name-edit-input" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
-        <button id="btn-name-save" class="btn btn-primary">Save</button>
+        <button id="btn-name-save" class="btn-primary">Save</button>
         <p id="name-edit-status" class="status-line"></p>
       </div>
     </div>
@@ -306,8 +306,8 @@
       </div>
       <p id="confirm-message"></p>
       <div class="confirm-buttons">
-        <button id="confirm-cancel" class="btn">Cancel</button>
-        <button id="confirm-ok" class="btn btn-primary">Confirm</button>
+        <button id="confirm-cancel" class="btn-ghost">Cancel</button>
+        <button id="confirm-ok" class="btn-primary">Confirm</button>
       </div>
     </div>
   </div>

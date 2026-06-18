@@ -552,9 +552,9 @@ function renderFriendList(friends) {
     row.className = 'friend-row';
     row.innerHTML = `<span class="friend-name">${esc(f.display_name || 'Player')}</span>`
       + '<span class="friend-actions">'
-      + `<button class="btn btn-primary" data-challenge="${f.id}">Challenge</button>`
-      + `<button class="btn" data-history="${f.id}">History</button>`
-      + `<button class="btn" data-remove="${f.id}">Remove</button>`
+      + `<button class="btn-primary" data-challenge="${f.id}">Challenge</button>`
+      + `<button class="btn-ghost" data-history="${f.id}">History</button>`
+      + `<button class="btn-ghost" data-remove="${f.id}">Remove</button>`
       + '</span>';
     row.querySelector('[data-challenge]').addEventListener('click', () => challengeFriend(f));
     row.querySelector('[data-history]').addEventListener('click', () => {
@@ -585,8 +585,8 @@ function renderRequests(requests) {
     row.className = 'friend-row';
     row.innerHTML = `<span class="friend-name">${esc(r.display_name || 'Player')}</span>`
       + '<span class="friend-actions">'
-      + `<button class="btn btn-primary" data-accept="${r.id}">Accept</button>`
-      + `<button class="btn" data-decline="${r.id}">Decline</button>`
+      + `<button class="btn-primary" data-accept="${r.id}">Accept</button>`
+      + `<button class="btn-ghost" data-decline="${r.id}">Decline</button>`
       + '</span>';
     row.querySelector('[data-accept]').addEventListener('click', async () => {
       try { await respondToRequest(r.id, true); await loadFriends(); } catch {}
