@@ -766,11 +766,6 @@
         </div>
       </div>
 
-      <div class="help-section" id="help-theme-section">
-        <div class="help-label">THEME</div>
-        <!-- theme buttons inserted by themes.js module script -->
-      </div>
-
       <button id="help-got-it">GOT IT</button>
     </div>
   </div>
@@ -788,11 +783,15 @@
   <script type="module">
     import { loadTheme, createThemePicker } from '../shared/themes.js';
     loadTheme('synth');
-    const themeSection = document.getElementById('help-theme-section');
-    const picker = createThemePicker();
-    // Replace the placeholder div content — keep the help-label, append the picker row
-    themeSection.appendChild(picker.querySelector('.theme-picker'));
-    picker.remove();
+    // Drop the theme picker into the shared hamburger menu (injected by
+    // account-ui), just above "More Games" — consistent with the other games.
+    const menu = document.getElementById('app-menu');
+    if (menu && !menu.querySelector('.theme-picker-section')) {
+      const picker = createThemePicker();
+      picker.style.padding = '8px 12px';
+      const moreGames = menu.querySelector('a[href="../"]');
+      menu.insertBefore(picker, moreGames || null);
+    }
   </script>
 
   <script>
