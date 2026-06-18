@@ -1,6 +1,9 @@
 /* Scramblr — LB Games neon theme. Reuses shared.css for :root vars, buttons,
    .field, .modal*, .link-btn, .status-line, .friend-list, .menu-item, .hidden. */
 
+/* Tile/letter font — clearer letterforms than Orbitron (D / A / R are distinct). */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap');
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -123,7 +126,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   background: rgba(0,245,255,0.05); border: 1px solid rgba(0,245,255,0.25);
   border-radius: 6px; color: var(--cyan);
-  font-family: 'Orbitron', monospace; font-weight: 800;
+  font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700;
   font-size: clamp(1.2rem, 7vw, 2.4rem); text-transform: uppercase;
   cursor: pointer; user-select: none; transition: background 0.08s, box-shadow 0.08s, transform 0.05s;
 }
@@ -219,7 +222,7 @@ body {
 .timer { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.5rem; color: var(--cyan); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
 .timer.warn { color: var(--yellow); text-shadow: 0 0 10px var(--yellow); }
 .timer.danger { color: #ff4040; text-shadow: 0 0 12px #ff4040; }
-.current-word { min-height: 1.4em; font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.1rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
+.current-word { min-height: 1.4em; font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 1.15rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
 .foot-actions { width: min(420px, 90vw); }
 .foot-actions .btn-primary, .foot-actions .btn-ghost { flex: 1; }
 .found-head { font-size: 0.8rem; }
