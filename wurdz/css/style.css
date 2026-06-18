@@ -6,6 +6,8 @@
   --muted: #9fb2c4;
   --cyan: #f5b942;
   --cyan-dark: #d99e1f;
+  --magenta: #4cd17e;
+  --yellow: #f0e060;
   --tile: #f3d9a4;
   --tile-edge: #c9a86a;
   --tile-text: #3a2d13;
@@ -916,6 +918,8 @@ input, textarea { user-select: text; }
   --muted:       #5577aa;
   --cyan:      #00f5ff;
   --cyan-dark: #00ccdd;
+  --magenta:     #ff00c8;
+  --yellow:      #ffe600;
   --tile:        #1a0833;
   --tile-edge:   #6600bb;
   --tile-text:   #e0e8ff;
@@ -937,6 +941,8 @@ input, textarea { user-select: text; }
   --muted:       #8a96a8;
   --cyan:      #7b9ec8;
   --cyan-dark: #5f84b0;
+  --magenta:     #c87bb0;
+  --yellow:      #d4a042;
   --tile:        #fdf5e4;
   --tile-edge:   #c8a878;
   --tile-text:   #3d2e18;
