@@ -11,21 +11,17 @@ import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName, userSeat,
-  proposeRematch, REMATCH_MOVE_INDEX,
 } from './net.js';
+import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { listFriends } from '../../shared/friends.js';
 import { openHistory } from '../../shared/history.js';
 import { getGuestName } from '../../shared/guest-name.js';
-import { loadTheme, createThemePicker } from '../../shared/themes.js';
 import {
   registerServiceWorker, requestNotifications, isEnabled as notifyEnabled,
   subscribeToPush, showLocalNotification, notificationsSupported, notificationPermission,
 } from './notify.js';
-
-// Splitz wears the soft Pastel theme by default (a stored preference wins).
-loadTheme('pastel');
 
 const $ = (id) => document.getElementById(id);
 const MAX_PLAYERS = 8;
@@ -321,7 +317,7 @@ async function appendMove(type, payload = {}) {
 }
 
 function handleMove(move) {
-  if (move.type === 'rematch') { goToRematch(move.payload?.code); return; }
+  if (move.type === 'rematch') { rematch.follow(move.payload?.code); return; }
   if (app.moves.some((m) => m.move_index === move.move_index)) return; // dedup
   app.moves.push(move);
   app.moves.sort((a, b) => a.move_index - b.move_index);
@@ -805,40 +801,15 @@ function dismissGameover() {
 $('btn-gameover-close').addEventListener('click', dismissGameover);
 $('btn-gameover-look').addEventListener('click', dismissGameover);
 
-// ---- Rematch --------------------------------------------------------------
+// ---- Rematch (shared) -----------------------------------------------------
 // One tap spins up a fresh room and pulls everyone still here into it.
-async function doRematch() {
-  if (app.rematching) return;
-  app.rematching = true;
-  $('btn-rematch').disabled = true;
-  try {
-    const oldCode = app.code, oldConn = app.conn;
-    const fresh = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
-    const { code, host } = await proposeRematch(oldCode, fresh.code, app.seat);
-    if (host) {
-      oldConn?.broadcastMove({ room_code: oldCode, move_index: REMATCH_MOVE_INDEX, player: app.seat, type: 'rematch', payload: { code: fresh.code } });
-      await enterRoom(fresh.code, 0, app.name, fresh);
-    } else {
-      const { room, playerIndex } = await joinRoom(code, app.name, app.userId);
-      await enterRoom(code, playerIndex, app.name, room);
-    }
-  } catch (e) {
-    app.rematching = false;
-    $('btn-rematch').disabled = false;
-    setStatus(`Could not start a rematch (${e.message}).`);
-  }
-}
-
-// A peer hit Rematch — follow them into the new room.
-function goToRematch(code) {
-  if (app.rematching || !code) return;
-  app.rematching = true;
-  joinRoom(code, app.name, app.userId)
-    .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
-    .catch(() => { app.rematching = false; });
-}
-
-$('btn-rematch').addEventListener('click', doRematch);
+const rematch = createRematch({
+  state: app,
+  createRoom: (name, userId) => createRoom(name, userId, null, MAX_PLAYERS),
+  joinRoom, enterRoom,
+  onError: (msg) => setStatus(msg),
+});
+$('btn-rematch').addEventListener('click', rematch.start);
 
 // ---- Status + render-all --------------------------------------------------
 
@@ -903,20 +874,8 @@ async function tryResume() {
   } catch { sessionStorage.removeItem(SESSION_KEY); return false; }
 }
 
-// Drop the theme picker into the shared hamburger menu (injected by
-// account-ui), just above "More Games".
-function addThemePicker() {
-  const menu = document.getElementById('app-menu');
-  if (!menu || menu.querySelector('.theme-picker-section')) return;
-  const picker = createThemePicker();
-  picker.style.padding = '8px 12px';
-  const moreGames = menu.querySelector('a[href="../"]');
-  menu.insertBefore(picker, moreGames || null);
-}
-
 async function boot() {
   registerServiceWorker();
-  addThemePicker();
   if (!configReady()) { landingError('Backend not configured.'); }
   try { app.user = await currentUser(); } catch {}
   app.userId = app.user?.id ?? null;

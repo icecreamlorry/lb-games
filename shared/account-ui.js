@@ -9,6 +9,7 @@
 //     gameName:      'My Game',
 //     gameoverEvent: 'mygame:gameover',   // detail.score expected
 //     guestIdKey:    'mygame.guestId',    // localStorage key for guest id
+//     defaultTheme:  'synth',             // launch theme (a saved pref wins)
 //   };
 //
 // The guest display name is NOT per-game — it lives in one shared key
@@ -34,6 +35,7 @@ import {
 import { configReady } from './supabase-config.js';
 import { getGuestName, setGuestName } from './guest-name.js';
 import { openHistory } from './history.js';
+import { loadTheme, createThemePicker } from './themes.js';
 
 // ---- config helpers -------------------------------------------------------
 
@@ -746,8 +748,23 @@ function wire() {
 
 // ---- init -----------------------------------------------------------------
 
+// Restore the saved theme (falling back to this game's launch default) and
+// drop the shared theme picker into the hamburger menu, just above the
+// "More Games" separator. The picker UI is identical everywhere; only the
+// default theme (LB_CONFIG.defaultTheme) and the per-game theme CSS differ.
+function setupTheme() {
+  loadTheme(cfg().defaultTheme || 'synth');
+  const menu = $('app-menu');
+  if (!menu || menu.querySelector('.theme-picker-section')) return;
+  const picker = createThemePicker();
+  picker.style.padding = '8px 12px';
+  const moreGames = menu.querySelector('a.menu-sep');
+  menu.insertBefore(picker, moreGames || null);
+}
+
 async function init() {
   injectHTML();
+  setupTheme();
 
   // Seed name from the shared guest-name key (before we know if signed in).
   app.name = getGuestName();
