@@ -30,7 +30,9 @@
        as part of the account block rather than a free-floating row. */
     .lb-theme { width: 100%; max-width: 340px; margin-top: -32px; }
 
-    body::after {
+    /* CRT scanlines are part of the neon Synth aesthetic only — they'd look
+       wrong over the Ocean/Pastel surfaces (e.g. dark lines on Pastel cream). */
+    :root[data-theme="synth"] body::after {
       content: '';
       position: fixed;
       inset: 0;
