@@ -39,6 +39,11 @@ export function userSeat(room, userId) {
   return (room.players ?? []).findIndex((p) => p.userId === userId);
 }
 
+// Whether the player at seat has left/forfeited this game (see markPlayerLeft).
+export function seatLeft(room, seat) {
+  return !!room?.players?.[seat]?.left;
+}
+
 // ---- Room creation & joining -----------------------------------------------
 
 // Creates a room for gameSlug. hostUserId is null for anonymous hosts.
@@ -94,11 +99,17 @@ export async function joinRoom(code, name, userId = null) {
   // player records predate guest ids fall back to name matching.
   if (userId) {
     const seat = players.findIndex((p) => p.userId === userId);
-    if (seat !== -1) return { room, playerIndex: seat };
+    if (seat !== -1) {
+      const fresh = players[seat]?.left ? await setSeatLeft(code, players, seat, false) : null;
+      return { room: fresh || room, playerIndex: seat };
+    }
   } else {
     const gid = getGuestId();
     const seat = players.findIndex((p) => !p.userId && (p.guestId === gid || (!p.guestId && p.name === name)));
-    if (seat !== -1) return { room, playerIndex: seat };
+    if (seat !== -1) {
+      const fresh = players[seat]?.left ? await setSeatLeft(code, players, seat, false) : null;
+      return { room: fresh || room, playerIndex: seat };
+    }
   }
 
   if (room.player_count >= room.max_players) {
@@ -140,6 +151,35 @@ export async function fetchRoom(code) {
 export async function updateRoomStatus(code, status) {
   const { error } = await supabase().from('rooms').update({ status }).eq('code', code);
   if (error) throw error;
+}
+
+// ---- Leaving / forfeiting --------------------------------------------------
+//
+// When a player exits a game in progress we flag their seat on the room, so the
+// OTHER player sees it on their name (not just a transient "offline" dot). The
+// flag lives on the players JSON, so it travels with the room everywhere it's
+// already fetched (lobby + in-game) with no extra query. It's cleared when the
+// player rejoins (see joinRoom). Read-modify-write: leaving is rare and there's
+// one writer per seat, so the small race window is acceptable.
+async function setSeatLeft(code, players, seat, left) {
+  const next = (players ?? []).map((p, i) => {
+    if ((p.seat ?? i) !== seat) return p;
+    const { left: _l, leftAt: _t, ...rest } = p; // drop any existing flag first
+    return left ? { ...rest, left: true, leftAt: new Date().toISOString() } : rest;
+  });
+  const { data, error } = await supabase()
+    .from('rooms').update({ players: next }).eq('code', code).select().maybeSingle();
+  if (error) { logError('setSeatLeft failed:', error.message || error); return null; }
+  return data;
+}
+
+// Flag a seat as having left/forfeited. Returns the updated room, or null.
+export async function markPlayerLeft(code, seat) {
+  if (!code || seat == null || seat < 0) return null;
+  const room = await fetchRoom(code).catch(() => null);
+  if (!room) return null;
+  if (room.status === 'finished') return room; // a finished game speaks for itself
+  return setSeatLeft(code, room.players ?? [], seat, true);
 }
 
 // Mark a room finished and store its final result (see schema: rooms.result).

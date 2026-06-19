@@ -9,7 +9,7 @@ import {
 import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
-  finishRoom, RoomConnection, triggerPush, seatName,
+  finishRoom, RoomConnection, triggerPush, seatName, seatLeft, markPlayerLeft,
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
@@ -331,7 +331,12 @@ $('room-code-chip').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText(app.code); setStatus('Room code copied.'); } catch {}
 });
 
-$('btn-leave').addEventListener('click', () => {
+$('btn-leave').addEventListener('click', async () => {
+  // Flag our seat as left if we walk out of a game still in progress, so the
+  // others see it (cleared if we rejoin). Skipped once a race has finished.
+  if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
+    try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch { /* best effort */ }
+  }
   sessionStorage.removeItem(SESSION_KEY);
   if (app.conn) { app.conn.close(); app.conn = null; }
   resetGame();
@@ -875,8 +880,9 @@ function renderFinalResults() {
 
     const row = document.createElement('div');
     row.className = 'results-row';
+    const leftTag = seatLeft(app.room, r.seat) ? ' <span class="left-tag">left</span>' : '';
     row.innerHTML = `<span class="r-rank">${i + 1}</span>`
-      + `<span class="r-name">${esc(r.name)}</span>`
+      + `<span class="r-name">${esc(r.name)}${leftTag}</span>`
       + `<span class="r-score">${r.score}</span>`;
     li.appendChild(row);
 

@@ -10,7 +10,7 @@ import { deriveState, handLetters, handSize, validateGrid } from './engine.js';
 import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
-  finishRoom, RoomConnection, triggerPush, seatName, userSeat,
+  finishRoom, RoomConnection, triggerPush, seatName, userSeat, markPlayerLeft,
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
@@ -256,7 +256,12 @@ async function enterRoom(code, seat, name, room) {
 $('btn-leave').addEventListener('click', leaveRoom);
 $('btn-gameover-done').addEventListener('click', () => { if (app.code) dismissGame(app.userId, app.code); leaveRoom(); });
 
-function leaveRoom() {
+async function leaveRoom() {
+  // Flag our seat as left if we walk out of a game in progress, so the others
+  // see it (cleared if we rejoin). Skipped once the game has finished.
+  if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
+    try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch { /* best effort */ }
+  }
   sessionStorage.removeItem(SESSION_KEY);
   resetGame();
   app.code = null; app.seat = null; app.room = null;

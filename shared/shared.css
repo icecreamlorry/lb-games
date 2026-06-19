@@ -106,6 +106,21 @@ button:disabled:hover {
 
 .hidden { display: none !important; }
 
+/* Badge shown next to a player's name when they've left/forfeited a game. */
+.left-tag {
+  font-family: var(--font-ui);
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e07060;
+  border: 1px solid color-mix(in srgb, #e07060 55%, transparent);
+  border-radius: 999px;
+  padding: 1px 6px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .link-btn {
   background: none;
   border: none;

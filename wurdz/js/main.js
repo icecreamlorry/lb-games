@@ -5,7 +5,7 @@ import {
 } from './engine.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
-  finishRoom, RoomConnection, triggerPush, seatName, userSeat,
+  finishRoom, RoomConnection, triggerPush, seatName, userSeat, seatLeft, markPlayerLeft,
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { openHistory } from '../../shared/history.js';
@@ -316,6 +316,12 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
     status = `${oppName}'s turn`;
   }
 
+  // Opponent walked out of a live game — surface it over the turn status.
+  if (oppName && seatLeft(room, oppIndex) && !(state && state.gameOver)) {
+    status = `${oppName} left the game`;
+    mine = false;
+  }
+
   const score = state && state.started
     ? `<span class="lobby-score">${state.scores[myIndex]} – ${state.scores[oppIndex]}</span>`
     : '';
@@ -536,6 +542,16 @@ document.addEventListener('visibilitychange', () => {
 $('btn-leave').addEventListener('click', async () => {
   sessionStorage.removeItem(SESSION_KEY);
   clearTurnNotification();
+  // Walking out of a live game: flag our seat so the opponent sees we left
+  // (cleared automatically if we come back). Broadcasting the updated room
+  // delivers it instantly to an opponent on the live channel.
+  if (app.code != null && app.playerIndex != null
+      && (app.room?.player_count ?? 0) >= 2 && app.state && !app.state.gameOver) {
+    try {
+      const room = await markPlayerLeft(app.code, app.playerIndex);
+      if (room) app.conn?.broadcastRoom(room);
+    } catch { /* best effort */ }
+  }
   // Signed-in players go back to their games list (keeping cross-game push);
   // guests fully leave and drop their seat's subscription.
   if (app.user) {
@@ -663,7 +679,7 @@ function handleRoomUpdate(room) {
     return;
   }
   if (!hadSecondPlayer && room.player_count >= 2) renderAll();
-  else renderOverlays();
+  else { if (app.state) renderOppPanel(); renderOverlays(); }
 }
 
 function announceLastMove() {
@@ -1211,7 +1227,11 @@ function renderRack() {
 function renderOppPanel() {
   const oppIdx = 1 - app.playerIndex;
   const hasOpp = !!seatName(app.room, oppIdx);
-  $('opp-name').textContent = hasOpp ? playerName(oppIdx) : 'Waiting for opponent…';
+  if (hasOpp && seatLeft(app.room, oppIdx) && !app.state.gameOver) {
+    $('opp-name').innerHTML = `${esc(playerName(oppIdx))} <span class="left-tag">left</span>`;
+  } else {
+    $('opp-name').textContent = hasOpp ? playerName(oppIdx) : 'Waiting for opponent…';
+  }
   $('opp-score').textContent = app.state.scores[oppIdx];
   $('opp-tiles').textContent = app.state.started ? `${app.state.racks[oppIdx].length} tiles` : '';
   $('opp-turn').classList.toggle('hidden', !(app.state.started && !app.state.gameOver && app.state.turn === oppIdx));
