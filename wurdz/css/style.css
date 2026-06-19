@@ -197,6 +197,7 @@ input, textarea { user-select: text; }
   border-radius: 999px;
   padding: 6px 14px;
   font-size: 13px;
+  white-space: nowrap;
 }
 .chip-button, #room-code-chip { cursor: pointer; }
 .chip-on { color: var(--cyan); }
@@ -685,27 +686,33 @@ input, textarea { user-select: text; }
   align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
+  padding: 20px;
 }
-.lobby-card {
+/* Shared "My Games" lobby + card shell. The markup is injected by
+   shared/lobby-ui.js (.card.wide / .bar / .row / .card-title / .logo.small /
+   .grow), so these mirror the other games' lobby while keeping Wurdz's look. */
+.card {
+  width: min(420px, 92vw);
   background: var(--panel);
-  padding: 24px 28px 36px;
   border-radius: 16px;
-  width: min(520px, 94vw);
-  margin: 32px 0;
+  padding: 24px 28px 28px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-}
-.lobby-header {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
 }
-.lobby-account { margin-right: auto; color: var(--muted); font-size: 14px; }
-.lobby-title { margin: 18px 0 10px; }
-.lobby-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-.lobby-actions button { flex: 1 1 auto; min-width: 0; }
-.lobby-actions #btn-lobby-refresh { flex: 0 0 auto; }
-#lobby-join-box { margin-top: 12px; }
+.card.wide { width: min(520px, 94vw); }
+.logo.small { font-size: 26px; letter-spacing: 1px; }
+.card-title { margin: 6px 0 0; font-size: 18px; font-weight: 700; color: var(--text); }
+.hint { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.grow { flex: 1; text-align: left; }
+.bar { display: flex; align-items: center; gap: 10px; }
+#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
+.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.row .btn-primary, .row .btn-ghost, .row button { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
+#btn-lobby-refresh { flex: 0 0 auto; }
+#lobby-join-box { margin-top: 4px; }
 
 .lobby-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 .lobby-empty { text-align: center; line-height: 1.6; }
@@ -796,7 +803,7 @@ input, textarea { user-select: text; }
 
 /* Keep the in-header controls clear of the fixed menu button, and below the
    iPhone safe-area / notch. */
-.game-header, .lobby-header { padding-right: 58px; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
+.game-header { padding-right: 58px; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 
 #profile-signedout { display: flex; flex-direction: column; gap: 14px; }
 #profile-signedout .muted { line-height: 1.5; margin: 0; }
