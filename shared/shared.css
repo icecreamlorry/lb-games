@@ -36,10 +36,10 @@
   --btn-bg:           transparent;
   --btn-fg:           var(--magenta);
   --btn-border:       1px solid var(--magenta);
-  --btn-shadow:       0 0 8px rgba(255,0,200,0.2), inset 0 0 10px rgba(255,0,200,0.05);
+  --btn-shadow:       0 0 8px color-mix(in srgb, var(--magenta) 20%, transparent), inset 0 0 10px color-mix(in srgb, var(--magenta) 5%, transparent);
   --btn-text-shadow:  0 0 8px var(--magenta);
-  --btn-hover-bg:     rgba(255,0,200,0.1);
-  --btn-hover-shadow: 0 0 18px rgba(255,0,200,0.5), inset 0 0 16px rgba(255,0,200,0.08);
+  --btn-hover-bg:     color-mix(in srgb, var(--magenta) 10%, transparent);
+  --btn-hover-shadow: 0 0 18px color-mix(in srgb, var(--magenta) 50%, transparent), inset 0 0 16px color-mix(in srgb, var(--magenta) 8%, transparent);
   --btn-hover-fg:     #fff;
   --btn-hover-filter: none;
 
@@ -47,19 +47,19 @@
   --btn-primary-bg:           transparent;
   --btn-primary-fg:           var(--cyan);
   --btn-primary-border:       1px solid var(--cyan);
-  --btn-primary-shadow:       0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+  --btn-primary-shadow:       0 0 14px color-mix(in srgb, var(--cyan) 25%, transparent), inset 0 0 12px color-mix(in srgb, var(--cyan) 6%, transparent);
   --btn-primary-text-shadow:  0 0 10px var(--cyan);
-  --btn-primary-hover-bg:     rgba(0,245,255,0.12);
+  --btn-primary-hover-bg:     color-mix(in srgb, var(--cyan) 12%, transparent);
   --btn-primary-hover-fg:     #fff;
 
   /* ghost button (a game's secondary action; its own cyan-faint neon identity) */
   --btn-ghost-bg:             transparent;
-  --btn-ghost-fg:             rgba(0,245,255,0.7);
-  --btn-ghost-border:         1px solid rgba(0,245,255,0.3);
+  --btn-ghost-fg:             color-mix(in srgb, var(--cyan) 70%, transparent);
+  --btn-ghost-border:         1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
   --btn-ghost-hover-fg:       var(--cyan);
   --btn-ghost-hover-border:   var(--cyan);
   --btn-ghost-hover-bg:       transparent;
-  --btn-ghost-hover-shadow:   0 0 10px rgba(0,245,255,0.25);
+  --btn-ghost-hover-shadow:   0 0 10px color-mix(in srgb, var(--cyan) 25%, transparent);
 }
 
 /* ── base button ─────────────────────────────────────────────────────────── */
@@ -113,7 +113,7 @@ button:disabled:hover {
   font-family: var(--font-ui);
   font-size: 0.56rem;
   letter-spacing: var(--ui-tracking);
-  color: rgba(0,245,255,0.55);
+  color: color-mix(in srgb, var(--cyan) 55%, transparent);
   text-shadow: none;
   box-shadow: none;
   text-transform: var(--ui-transform);
@@ -149,10 +149,10 @@ button:disabled:hover {
   max-width: 360px;
   width: 100%;
   background: var(--panel);
-  border: 1px solid rgba(0,245,255,0.22);
+  border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
   border-radius: 4px;
   padding: 26px 26px 22px;
-  box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--cyan) 8%, transparent), inset 0 0 60px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -168,7 +168,7 @@ button:disabled:hover {
   line-height: 1;
 }
 .modal-title {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.22em;
@@ -178,7 +178,7 @@ button:disabled:hover {
 }
 .modal-intro {
   font-size: 0.66rem;
-  color: rgba(0,245,255,0.5);
+  color: color-mix(in srgb, var(--cyan) 50%, transparent);
   letter-spacing: 0.04em;
   line-height: 1.5;
   text-align: center;
@@ -191,29 +191,29 @@ button:disabled:hover {
   flex: 1;
   padding: 7px 0;
   font-size: 0.58rem;
-  color: rgba(0,245,255,0.5);
-  border-color: rgba(0,245,255,0.2);
+  color: color-mix(in srgb, var(--cyan) 50%, transparent);
+  border-color: color-mix(in srgb, var(--cyan) 20%, transparent);
   text-shadow: none;
   box-shadow: none;
 }
 .auth-tabs .tab.active {
   color: var(--cyan);
   border-color: var(--cyan);
-  box-shadow: 0 0 10px rgba(0,245,255,0.25);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 25%, transparent);
 }
 .field {
   width: 100%;
-  background: rgba(0,245,255,0.04);
-  border: 1px solid rgba(0,245,255,0.22);
+  background: color-mix(in srgb, var(--cyan) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
   border-radius: 3px;
   padding: 10px 12px;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--cyan);
   letter-spacing: 0.04em;
 }
-.field::placeholder { color: rgba(0,245,255,0.3); }
-.field:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.2); }
+.field::placeholder { color: color-mix(in srgb, var(--cyan) 30%, transparent); }
+.field:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 10px color-mix(in srgb, var(--cyan) 20%, transparent); }
 .btn-primary {
   background: var(--btn-primary-bg);
   color: var(--btn-primary-fg);
@@ -238,7 +238,7 @@ button:disabled:hover {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(0,245,255,0.3);
+  color: color-mix(in srgb, var(--cyan) 30%, transparent);
   font-size: 0.58rem;
   letter-spacing: 0.2em;
 }
@@ -246,7 +246,7 @@ button:disabled:hover {
   content: '';
   flex: 1;
   height: 1px;
-  background: rgba(0,245,255,0.15);
+  background: color-mix(in srgb, var(--cyan) 15%, transparent);
 }
 .status-line {
   min-height: 1em;
@@ -268,19 +268,19 @@ button:disabled:hover {
   align-items: baseline;
   padding: 4px 8px;
   font-size: 0.72rem;
-  color: rgba(0,245,255,0.7);
+  color: color-mix(in srgb, var(--cyan) 70%, transparent);
   border-radius: 2px;
 }
 .lb-item.lb-me {
-  background: rgba(0,245,255,0.1);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
   color: var(--cyan);
-  box-shadow: inset 0 0 0 1px rgba(0,245,255,0.3);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cyan) 30%, transparent);
 }
-.lb-rank  { font-family: 'Orbitron', monospace; font-size: 0.62rem; color: var(--magenta); }
+.lb-rank  { font-family: var(--font-ui); font-size: 0.62rem; color: var(--magenta); }
 .lb-me .lb-rank { color: var(--yellow); }
 .lb-name  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-score { font-variant-numeric: tabular-nums; font-weight: 600; }
-.lb-empty { padding: 8px; text-align: center; font-size: 0.7rem; color: rgba(0,245,255,0.4); }
+.lb-empty { padding: 8px; text-align: center; font-size: 0.7rem; color: color-mix(in srgb, var(--cyan) 40%, transparent); }
 #lb-actions { display: flex; gap: 10px; justify-content: center; }
 .lb-tabs  { margin-bottom: 2px; }
 .lb-tabs .tab { padding: 6px 0; }
@@ -336,7 +336,7 @@ button:disabled:hover {
   border-radius: 6px;
   background: none;
   color: color-mix(in srgb, var(--cyan) 85%, transparent);
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-align: left;
@@ -370,7 +370,7 @@ button:disabled:hover {
   gap: 16px;
   padding: 4px 0;
 }
-.lb-acct-line { font-size: 0.82rem; letter-spacing: 0.04em; color: rgba(0,245,255,0.7); }
+.lb-acct-line { font-size: 0.82rem; letter-spacing: 0.04em; color: color-mix(in srgb, var(--cyan) 70%, transparent); }
 .lb-acct-line strong { color: var(--cyan); }
 .lb-acct-hint {
   margin: 0;
@@ -378,7 +378,7 @@ button:disabled:hover {
   letter-spacing: 0.04em;
   line-height: 1.6;
   text-align: center;
-  color: rgba(0,245,255,0.4);
+  color: color-mix(in srgb, var(--cyan) 40%, transparent);
 }
 #profile-badge {
   position: absolute;
@@ -388,7 +388,7 @@ button:disabled:hover {
   border-radius: 8px;
   background: var(--magenta);
   color: #fff;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.5rem;
   line-height: 15px;
   text-align: center;
@@ -399,26 +399,26 @@ button:disabled:hover {
 
 #profile-signedout { display: flex; flex-direction: column; gap: 14px; }
 #profile-signedin  { display: flex; flex-direction: column; gap: 12px; }
-#profile-line { font-size: 0.7rem; color: rgba(0,245,255,0.6); letter-spacing: 0.05em; text-align: center; }
+#profile-line { font-size: 0.7rem; color: color-mix(in srgb, var(--cyan) 60%, transparent); letter-spacing: 0.05em; text-align: center; }
 #profile-line strong { color: var(--cyan); font-weight: 600; }
 #profile-signedin .account-actions { justify-content: center; }
 .profile-block { display: flex; flex-direction: column; gap: 6px; }
 .profile-label {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.52rem;
   letter-spacing: 0.18em;
-  color: rgba(255,0,200,0.7);
+  color: color-mix(in srgb, var(--magenta) 70%, transparent);
   text-transform: uppercase;
 }
 .profile-code-row { display: flex; align-items: center; gap: 10px; }
 #profile-code {
   flex: 1;
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 1rem;
   letter-spacing: 0.25em;
   color: var(--cyan);
-  background: rgba(0,245,255,0.05);
-  border: 1px solid rgba(0,245,255,0.2);
+  background: color-mix(in srgb, var(--cyan) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
   border-radius: 3px;
   padding: 8px 10px;
 }
@@ -432,13 +432,13 @@ button:disabled:hover {
   gap: 8px;
   padding: 6px 8px;
   font-size: 0.72rem;
-  color: rgba(0,245,255,0.8);
-  background: rgba(0,245,255,0.04);
+  color: color-mix(in srgb, var(--cyan) 80%, transparent);
+  background: color-mix(in srgb, var(--cyan) 4%, transparent);
   border-radius: 2px;
 }
 .friend-item .friend-name    { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friend-item .friend-actions { display: flex; gap: 6px; }
-.friend-item.empty { justify-content: center; color: rgba(0,245,255,0.4); background: none; }
+.friend-item.empty { justify-content: center; color: color-mix(in srgb, var(--cyan) 40%, transparent); background: none; }
 
 /* ── themes ──────────────────────────────────────────────────────────────── */
 /* Synth = the :root defaults above. Ocean and Pastel are overrides. */
@@ -487,6 +487,20 @@ button:disabled:hover {
   --btn-ghost-hover-shadow:   none;
 }
 
+/* Ocean chrome refinements — the shared components inherit neon glows; the
+   palette already adapts to gold/navy, so here we just flatten the glow and
+   swap in plain depth shadows to land the original Wurdz look. */
+:root[data-theme="maritime"] .modal-title,
+:root[data-theme="maritime"] .status-line,
+:root[data-theme="maritime"] .theme-picker-label { text-shadow: none; }
+:root[data-theme="maritime"] .modal-panel { box-shadow: 0 12px 32px rgba(0,0,0,0.38); }
+:root[data-theme="maritime"] .auth-tabs .tab.active,
+:root[data-theme="maritime"] #profile-badge,
+:root[data-theme="maritime"] .theme-btn.active { box-shadow: none; }
+:root[data-theme="maritime"] .field:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 35%, transparent); }
+:root[data-theme="maritime"] .btn-danger { background: #c0392b; color: #fff; border: none; text-shadow: none; box-shadow: none; }
+:root[data-theme="maritime"] .btn-danger:hover { background: #d84632; color: #fff; filter: brightness(1.05); }
+
 :root[data-theme="pastel"] {
   --cyan:    #7b9ec8;   /* steel blue — primary accent */
   --magenta: #c87bb0;   /* soft mauve — secondary      */
@@ -503,7 +517,7 @@ button:disabled:hover {
   gap: 6px;
 }
 .theme-picker-label {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.6rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
