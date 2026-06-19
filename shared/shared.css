@@ -19,32 +19,74 @@
   --yellow:  #ffe600;
   --dark:    #04040f;
   --panel:   #07071a;
+
+  /* ── aesthetic tokens ──────────────────────────────────────────────────
+     Themes can override the *look*, not just the palette. The defaults here
+     reproduce the original neon (Synth) aesthetic; the Ocean theme overrides
+     them to the solid, rounded, sans Wurdz aesthetic. Keep every default
+     equal to the value it replaced so Synth/Pastel stay pixel-identical. */
+  --font-ui:        'Orbitron', monospace;   /* buttons, labels, headings */
+  --font-mono:      'Share Tech Mono', monospace;
+  --ui-transform:   uppercase;
+  --ui-tracking:    0.12em;
+  --ui-radius:      2px;
+  --panel-light:    color-mix(in srgb, var(--cyan) 12%, var(--panel));
+
+  /* base (secondary) button */
+  --btn-bg:           transparent;
+  --btn-fg:           var(--magenta);
+  --btn-border:       1px solid var(--magenta);
+  --btn-shadow:       0 0 8px rgba(255,0,200,0.2), inset 0 0 10px rgba(255,0,200,0.05);
+  --btn-text-shadow:  0 0 8px var(--magenta);
+  --btn-hover-bg:     rgba(255,0,200,0.1);
+  --btn-hover-shadow: 0 0 18px rgba(255,0,200,0.5), inset 0 0 16px rgba(255,0,200,0.08);
+  --btn-hover-fg:     #fff;
+  --btn-hover-filter: none;
+
+  /* primary button */
+  --btn-primary-bg:           transparent;
+  --btn-primary-fg:           var(--cyan);
+  --btn-primary-border:       1px solid var(--cyan);
+  --btn-primary-shadow:       0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+  --btn-primary-text-shadow:  0 0 10px var(--cyan);
+  --btn-primary-hover-bg:     rgba(0,245,255,0.12);
+  --btn-primary-hover-fg:     #fff;
+
+  /* ghost button (a game's secondary action; its own cyan-faint neon identity) */
+  --btn-ghost-bg:             transparent;
+  --btn-ghost-fg:             rgba(0,245,255,0.7);
+  --btn-ghost-border:         1px solid rgba(0,245,255,0.3);
+  --btn-ghost-hover-fg:       var(--cyan);
+  --btn-ghost-hover-border:   var(--cyan);
+  --btn-ghost-hover-bg:       transparent;
+  --btn-ghost-hover-shadow:   0 0 10px rgba(0,245,255,0.25);
 }
 
 /* ── base button ─────────────────────────────────────────────────────────── */
 
 button {
-  background: transparent;
-  color: var(--magenta);
-  border: 1px solid var(--magenta);
-  border-radius: 2px;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: var(--btn-border);
+  border-radius: var(--ui-radius);
   padding: 8px 20px;
   touch-action: manipulation;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ui-tracking);
   cursor: pointer;
-  text-transform: uppercase;
-  text-shadow: 0 0 8px var(--magenta);
-  box-shadow: 0 0 8px rgba(255,0,200,0.2), inset 0 0 10px rgba(255,0,200,0.05);
+  text-transform: var(--ui-transform);
+  text-shadow: var(--btn-text-shadow);
+  box-shadow: var(--btn-shadow);
   transition: all 0.2s;
 }
 
 button:hover {
-  background: rgba(255,0,200,0.1);
-  box-shadow: 0 0 18px rgba(255,0,200,0.5), inset 0 0 16px rgba(255,0,200,0.08);
-  color: #fff;
+  background: var(--btn-hover-bg);
+  box-shadow: var(--btn-hover-shadow);
+  color: var(--btn-hover-fg);
+  filter: var(--btn-hover-filter);
 }
 
 button:active { transform: scale(0.96); }
@@ -52,9 +94,10 @@ button:active { transform: scale(0.96); }
 button:disabled,
 button:disabled:hover {
   opacity: 0.3;
-  color: var(--magenta);
-  background: transparent;
+  color: var(--btn-fg);
+  background: var(--btn-bg);
   box-shadow: none;
+  filter: none;
   cursor: not-allowed;
   transform: none;
 }
@@ -67,13 +110,13 @@ button:disabled:hover {
   background: none;
   border: none;
   padding: 2px 4px;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--font-ui);
   font-size: 0.56rem;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--ui-tracking);
   color: rgba(0,245,255,0.55);
   text-shadow: none;
   box-shadow: none;
-  text-transform: uppercase;
+  text-transform: var(--ui-transform);
   cursor: pointer;
   transition: color 0.15s;
 }
@@ -172,12 +215,17 @@ button:disabled:hover {
 .field::placeholder { color: rgba(0,245,255,0.3); }
 .field:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.2); }
 .btn-primary {
-  color: var(--cyan);
-  border-color: var(--cyan);
-  text-shadow: 0 0 10px var(--cyan);
-  box-shadow: 0 0 14px rgba(0,245,255,0.25), inset 0 0 12px rgba(0,245,255,0.06);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-fg);
+  border: var(--btn-primary-border);
+  text-shadow: var(--btn-primary-text-shadow);
+  box-shadow: var(--btn-primary-shadow);
 }
-.btn-primary:hover { background: rgba(0,245,255,0.12); color: #fff; }
+.btn-primary:hover {
+  background: var(--btn-primary-hover-bg);
+  color: var(--btn-primary-hover-fg);
+  filter: var(--btn-hover-filter);
+}
 .btn-danger {
   color: #ff5a5a;
   border-color: #ff5a5a;
@@ -401,6 +449,42 @@ button:disabled:hover {
   --yellow:  #f0e060;   /* amber      — status / key highlights       */
   --dark:    #15202b;   /* deep navy background                       */
   --panel:   #1c2e3d;   /* mid-navy panel                             */
+
+  /* Ocean is the original Wurdz look: solid rounded buttons, sans type,
+     normal case, no neon glow. This is what makes one theme carry a whole
+     aesthetic that every game inherits. */
+  --font-ui:        "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono:      "Consolas", "SF Mono", ui-monospace, monospace;
+  --ui-transform:   none;
+  --ui-tracking:    normal;
+  --ui-radius:      8px;
+  --panel-light:    #31445a;
+
+  --btn-bg:           var(--panel-light);
+  --btn-fg:           #eef3f8;
+  --btn-border:       none;
+  --btn-shadow:       none;
+  --btn-text-shadow:  none;
+  --btn-hover-bg:     var(--panel-light);
+  --btn-hover-shadow: none;
+  --btn-hover-fg:     #eef3f8;
+  --btn-hover-filter: brightness(1.15);
+
+  --btn-primary-bg:           var(--cyan);
+  --btn-primary-fg:           #25221b;
+  --btn-primary-border:       none;
+  --btn-primary-shadow:       none;
+  --btn-primary-text-shadow:  none;
+  --btn-primary-hover-bg:     #d99e1f;
+  --btn-primary-hover-fg:     #25221b;
+
+  --btn-ghost-bg:             var(--panel-light);
+  --btn-ghost-fg:             #eef3f8;
+  --btn-ghost-border:         none;
+  --btn-ghost-hover-fg:       #eef3f8;
+  --btn-ghost-hover-border:   transparent;
+  --btn-ghost-hover-bg:       var(--panel-light);
+  --btn-ghost-hover-shadow:   none;
 }
 
 :root[data-theme="pastel"] {

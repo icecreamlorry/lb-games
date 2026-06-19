@@ -54,12 +54,13 @@ body {
 #btn-lobby-refresh { flex: 0 0 auto; }
 
 .btn-ghost {
-  background: transparent; color: rgba(0,245,255,0.7);
-  border: 1px solid rgba(0,245,255,0.3); border-radius: 2px;
-  padding: 8px 16px; font-family: 'Orbitron', monospace; font-size: 0.66rem;
-  font-weight: 600; letter-spacing: 0.12em; cursor: pointer; touch-action: manipulation;
+  background: var(--btn-ghost-bg); color: var(--btn-ghost-fg);
+  border: var(--btn-ghost-border); border-radius: var(--ui-radius);
+  padding: 8px 16px; font-family: var(--font-ui); font-size: 0.66rem;
+  font-weight: 600; letter-spacing: var(--ui-tracking); text-transform: var(--ui-transform);
+  cursor: pointer; touch-action: manipulation;
 }
-.btn-ghost:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.25); }
+.btn-ghost:hover:not(:disabled) { color: var(--btn-ghost-hover-fg); border-color: var(--btn-ghost-hover-border); background: var(--btn-ghost-hover-bg); box-shadow: var(--btn-ghost-hover-shadow); filter: var(--btn-hover-filter); }
 .btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: default; }
 
 #account-bar { border-top: 1px solid rgba(0,245,255,0.12); padding-top: 12px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
@@ -247,14 +248,18 @@ body {
   background: transparent;
   color: var(--yellow);
   border: 1px solid rgba(255,220,0,0.4);
-  border-radius: 2px;
+  border-radius: var(--ui-radius);
   padding: 8px 18px;
-  font-family: 'Orbitron', monospace; font-size: 0.66rem;
-  font-weight: 600; letter-spacing: 0.12em; cursor: pointer; touch-action: manipulation;
+  font-family: var(--font-ui); font-size: 0.66rem;
+  font-weight: 600; letter-spacing: var(--ui-tracking); text-transform: var(--ui-transform);
+  cursor: pointer; touch-action: manipulation;
   white-space: nowrap;
   text-shadow: 0 0 8px rgba(255,220,0,0.5);
 }
 .btn-daily:hover { color: #fff; border-color: var(--yellow); box-shadow: 0 0 14px rgba(255,220,0,0.3); }
+/* Ocean carries the solid Wurdz look for this game-specific accent button too. */
+:root[data-theme="maritime"] .btn-daily { background: var(--yellow); color: #25221b; border: none; text-shadow: none; }
+:root[data-theme="maritime"] .btn-daily:hover { color: #25221b; box-shadow: none; filter: brightness(1.15); }
 
 /* ---- Daily results overlay ---- */
 .daily-results-card {
