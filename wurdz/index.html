@@ -11,58 +11,21 @@
   <meta name="apple-mobile-web-app-title" content="Wurdz">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="../shared/shared.css">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js / lobby-ui.js) for Wurdz.
+    window.LB_CONFIG = { gameSlug: 'wurdz', gameName: 'Wurdz', history: true, daily: false, defaultTheme: 'maritime' };
+  </script>
 </head>
 <body>
-
-  <button id="btn-menu" class="menu-fab" title="Menu" aria-haspopup="true" aria-expanded="false">
-    <svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-      <line x1="2.5" y1="4" x2="13.5" y2="4"/>
-      <line x1="2.5" y1="8" x2="13.5" y2="8"/>
-      <line x1="2.5" y1="12" x2="13.5" y2="12"/>
-    </svg>
-    <span id="profile-badge" class="profile-badge hidden"></span>
-  </button>
-  <div id="app-menu" class="app-menu hidden">
-    <button class="menu-item" id="btn-profile" title="Profile">
-      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8" cy="5" r="3"/>
-        <path d="M2.5 14a5.5 5.5 0 0 1 11 0"/>
-      </svg>
-      <span>Profile</span>
-    </button>
-    <button class="menu-item" id="btn-help" title="How to play">
-      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="8" cy="8" r="6.5"/>
-        <path d="M6.1 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.3"/>
-        <line x1="8" y1="11.4" x2="8" y2="11.5"/>
-      </svg>
-      <span>How to play</span>
-    </button>
-    <button class="menu-item" id="menu-notify" title="Turn notifications">
-      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M4.2 6.8a3.8 3.8 0 0 1 7.6 0c0 3 1.3 3.8 1.6 4.4H2.6c.3-.6 1.6-1.4 1.6-4.4Z"/>
-        <path d="M6.6 13.4a1.6 1.6 0 0 0 2.8 0"/>
-      </svg>
-      <span id="menu-notify-label">Turn alerts</span>
-    </button>
-    <a class="menu-item menu-sep" href="../" title="Back to all games">
-      <svg viewBox="0 0 16 16" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="2" y="2" width="5" height="5" rx="1"/>
-        <rect x="9" y="2" width="5" height="5" rx="1"/>
-        <rect x="2" y="9" width="5" height="5" rx="1"/>
-        <rect x="9" y="9" width="5" height="5" rx="1"/>
-      </svg>
-      <span>More Games</span>
-    </a>
-  </div>
 
   <!-- Landing screen -->
   <section id="screen-landing" class="screen">
     <div class="landing-card">
       <h1 class="logo">Wurdz<span class="ver">v22</span></h1>
       <p class="tagline">Two-player word game, anywhere.</p>
-      <input id="name-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
+      <input id="landing-name-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
       <div class="landing-buttons">
         <button id="btn-create" class="btn-primary">Create a Room</button>
         <button id="btn-join" class="btn-ghost">Join a Room</button>
@@ -73,45 +36,13 @@
       </div>
       <p id="landing-error" class="error-text"></p>
 
-      <div id="landing-account" class="landing-account">
-        <button id="btn-show-login" class="link-btn">Log in or sign up</button>
-        <div id="account-info" class="account-info hidden">
-          <span>Signed in as <strong id="account-name"></strong></span>
-          <button id="btn-go-lobby" class="btn-ghost">My Games</button>
-          <button id="btn-logout" class="link-btn">Log out</button>
-        </div>
-        <p class="account-hint muted">Optional — log in to keep several games going at once and get notified across all of them.</p>
-      </div>
-
-      <button id="btn-help-landing" class="help-link">How to play ?</button>
+      <!-- Account bar markup injected by shared/lobby-ui.js -->
+      <div id="account-bar"></div>
     </div>
   </section>
 
-  <!-- Lobby ("My Games") — shown to signed-in players -->
-  <section id="screen-lobby" class="screen hidden">
-    <div class="lobby-card">
-      <header class="lobby-header">
-        <span class="logo logo-small">Wurdz</span>
-        <span class="lobby-account">Hi, <strong id="lobby-name"></strong></span>
-        <button id="btn-help-lobby" class="chip chip-button" title="How to play">?</button>
-        <button id="btn-logout-lobby" class="chip chip-button">Log out</button>
-      </header>
-      <h2 class="lobby-title">Your games</h2>
-      <div class="lobby-actions">
-        <button id="btn-lobby-new" class="btn-primary">New game</button>
-        <button id="btn-lobby-challenge" class="btn-ghost">Challenge a friend</button>
-        <button id="btn-lobby-join" class="btn-ghost">Join by code</button>
-        <button id="btn-lobby-history" class="btn-ghost">History</button>
-        <button id="btn-lobby-refresh" class="btn-ghost" title="Refresh">↻</button>
-      </div>
-      <div id="lobby-join-box" class="join-box hidden">
-        <input id="lobby-code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
-        <button id="btn-lobby-join-go" class="btn-primary">Join</button>
-      </div>
-      <p id="lobby-error" class="error-text"></p>
-      <div id="lobby-list" class="lobby-list"></div>
-    </div>
-  </section>
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
 
   <!-- Game screen -->
   <section id="screen-game" class="screen hidden">
@@ -190,98 +121,6 @@
     </div>
   </section>
 
-  <!-- Log in / sign up -->
-  <div id="modal-auth" class="modal hidden">
-    <div class="modal-card modal-narrow">
-      <div class="modal-head">
-        <h2 id="auth-title">Log in</h2>
-        <button class="modal-close" data-close="modal-auth">&times;</button>
-      </div>
-      <p class="muted auth-intro">Your login works across all of these games — one account, no separate sign-ups.</p>
-      <div class="auth-tabs">
-        <button id="auth-tab-signin" class="tab active">Sign in</button>
-        <button id="auth-tab-signup" class="tab">Create account</button>
-      </div>
-      <div class="auth-form">
-        <input id="auth-name" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
-        <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
-        <input id="auth-password" type="password" placeholder="Password" autocomplete="current-password">
-        <button id="btn-auth-primary" class="btn-primary">Sign in</button>
-        <div class="auth-or"><span>or</span></div>
-        <button id="btn-auth-magic" class="btn-ghost">Email me a sign-in link</button>
-        <p id="auth-status" class="status-line"></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Profile / friends -->
-  <div id="modal-profile" class="modal hidden">
-    <div class="modal-card modal-narrow">
-      <div class="modal-head">
-        <h2>Profile</h2>
-        <button class="modal-close" data-close="modal-profile">&times;</button>
-      </div>
-
-      <div id="profile-signedout">
-        <p class="muted">Log in to set a display name and add friends. One account works across every game on this project.</p>
-        <button id="profile-login" class="btn-primary">Log in or sign up</button>
-      </div>
-
-      <div id="profile-signedin" class="hidden">
-        <div class="profile-id">
-          <span>Signed in as <strong id="profile-name"></strong></span>
-          <div class="profile-id-actions">
-            <button id="profile-change-name" class="link-btn">Change name</button>
-            <button id="profile-signout" class="link-btn">Sign out</button>
-          </div>
-        </div>
-
-        <div class="profile-block">
-          <span class="profile-label">Your friend code</span>
-          <div class="profile-code-row">
-            <code id="profile-code">––––––––</code>
-            <button id="profile-copy-code" class="btn-ghost">Copy</button>
-          </div>
-        </div>
-
-        <div class="profile-block">
-          <span class="profile-label">Add a friend by code</span>
-          <div class="profile-add-row">
-            <input id="friend-code-input" type="text" maxlength="8" placeholder="Friend code" autocomplete="off" autocapitalize="characters">
-            <button id="btn-add-friend" class="btn-primary">Add</button>
-          </div>
-          <p id="friend-add-status" class="status-line"></p>
-        </div>
-
-        <div id="friend-requests-block" class="profile-block hidden">
-          <span class="profile-label">Friend requests</span>
-          <div id="friend-requests" class="friend-list"></div>
-        </div>
-
-        <div class="profile-block">
-          <span class="profile-label">Friends</span>
-          <div id="friend-list" class="friend-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Name change -->
-  <div id="modal-name" class="modal hidden">
-    <div class="modal-card modal-narrow">
-      <div class="modal-head">
-        <h2>Display name</h2>
-        <button class="modal-close" data-close="modal-name">&times;</button>
-      </div>
-      <p class="muted">This is how you appear to opponents and friends.</p>
-      <div class="auth-form">
-        <input id="name-edit-input" type="text" maxlength="20" placeholder="Display name" autocomplete="name">
-        <button id="btn-name-save" class="btn-primary">Save</button>
-        <p id="name-edit-status" class="status-line"></p>
-      </div>
-    </div>
-  </div>
-
   <!-- Two-letter word reference -->
   <div id="modal-words" class="modal hidden">
     <div class="modal-card">
@@ -298,16 +137,18 @@
     </div>
   </div>
 
-  <!-- Generic confirmation dialog -->
+  <!-- Generic confirmation dialog (Wurdz-owned: gameplay calls confirmDialog).
+       Unique ids (wz-confirm-*) so they never collide with the shared
+       account-ui confirm dialog (#confirm-modal). -->
   <div id="modal-confirm" class="modal hidden">
     <div class="modal-card modal-narrow">
       <div class="modal-head">
-        <h2 id="confirm-title">Are you sure?</h2>
+        <h2 id="wz-confirm-title">Are you sure?</h2>
       </div>
-      <p id="confirm-message"></p>
+      <p id="wz-confirm-message"></p>
       <div class="confirm-buttons">
-        <button id="confirm-cancel" class="btn-ghost">Cancel</button>
-        <button id="confirm-ok" class="btn-primary">Confirm</button>
+        <button id="wz-confirm-cancel" class="btn-ghost">Cancel</button>
+        <button id="wz-confirm-ok" class="btn-primary">Confirm</button>
       </div>
     </div>
   </div>
@@ -323,12 +164,12 @@
     </div>
   </div>
 
-  <!-- How to play -->
-  <div id="modal-help" class="modal hidden">
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
     <div class="modal-card modal-help-card">
       <div class="modal-head">
         <h2>How to play</h2>
-        <button class="modal-close" data-close="modal-help">&times;</button>
+        <button id="help-close" class="modal-close">&times;</button>
       </div>
       <div class="help-body">
         <section class="help-section">
@@ -379,6 +220,8 @@
     </div>
   </div>
 
+  <script type="module" src="../shared/lobby-ui.js"></script>
+  <script type="module" src="../shared/account-ui.js"></script>
   <script type="module" src="js/main.js"></script>
   <script type="module" src="../shared/devtools.js"></script>
 </body>

@@ -1,13 +1,29 @@
+/* Palette vars (--cyan --magenta --yellow --dark --panel --panel-light) are
+   owned by shared.css per theme (synth=:root default, maritime=Ocean, pastel).
+   Here we keep only the Wurdz BOARD/EXTRA vars. The plain :root holds the Ocean
+   values as a pre-JS default; :root[data-theme="maritime"] re-applies them when
+   Ocean is active, while synth/pastel override them in their own blocks below. */
 :root {
-  --dark: #1c2733;
-  --panel: #263545;
-  --panel-light: #31445a;
   --text: #eef3f8;
   --muted: #9fb2c4;
-  --cyan: #f5b942;
   --cyan-dark: #d99e1f;
-  --magenta: #4cd17e;
-  --yellow: #f0e060;
+  --tile: #f3d9a4;
+  --tile-edge: #c9a86a;
+  --tile-text: #3a2d13;
+  --board-line: #15202b;
+  --cell: #2f4156;
+  --tw: #c0392b;
+  --dw: #e58f8a;
+  --tl: #2471a3;
+  --dl: #85b8d8;
+  --good: #4cd17e;
+  --bad: #e07060;
+}
+
+:root[data-theme="maritime"] {
+  --text: #eef3f8;
+  --muted: #9fb2c4;
+  --cyan-dark: #d99e1f;
   --tile: #f3d9a4;
   --tile-edge: #c9a86a;
   --tile-text: #3a2d13;
@@ -90,7 +106,7 @@ input, textarea { user-select: text; }
   margin-left: 3px;
 }
 
-#name-input, #code-input {
+#landing-name-input, #code-input {
   width: 100%;
   padding: 12px 14px;
   margin-top: 18px;
@@ -770,85 +786,15 @@ input, textarea { user-select: text; }
 }
 .auth-or { text-align: center; color: var(--muted); font-size: 13px; position: relative; }
 
-/* ---- Profile button & friends ---- */
+/* ---- Profile / friends ---- */
 
-/* Fixed top-right menu button (profile + how-to-play), on every screen.
-   z-index sits below the modal backdrop (50) so an open modal covers it. */
-.menu-fab {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 9px);
-  right: calc(env(safe-area-inset-right, 0px) + 10px);
-  z-index: 40;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--panel-light);
-  border-radius: 50%;
-  background: var(--panel-light);
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
-  transition: filter 0.15s, transform 0.05s;
-}
-.menu-fab:hover,
-.menu-fab[aria-expanded="true"] { filter: brightness(1.15); }
-.menu-fab:active { transform: translateY(1px); }
-
-/* Dropdown anchored under the menu button. */
-.app-menu {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 52px);
-  right: calc(env(safe-area-inset-right, 0px) + 10px);
-  z-index: 41;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px;
-  min-width: 188px;
-  background: var(--panel);
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-}
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 14px;
-  border: none;
-  border-radius: 8px;
-  background: none;
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 600;
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.menu-item.menu-sep { border-top: 1px solid var(--panel-light); margin-top: 4px; padding-top: 13px; }
-.menu-item:hover { background: var(--panel-light); }
+/* The hamburger button (#btn-menu), dropdown (#app-menu), menu items and the
+   request badge (#profile-badge) are all injected and styled by shared.css.
+   Only the notify item's "on" highlight is Wurdz-specific (shared has no
+   .menu-item.on), so we keep just that one rule. */
 .menu-item.on { color: var(--cyan); }
-.menu-item svg { flex-shrink: 0; opacity: 0.9; }
-.profile-badge {
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
-  background: var(--bad);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-}
 
-/* Keep the in-header controls clear of the fixed profile button, and below the
+/* Keep the in-header controls clear of the fixed menu button, and below the
    iPhone safe-area / notch. */
 .game-header, .lobby-header { padding-right: 58px; padding-top: calc(env(safe-area-inset-top, 0px) + 10px); }
 
@@ -910,16 +856,12 @@ input, textarea { user-select: text; }
 /* ── themes ──────────────────────────────────────────────────────────────── */
 /* Ocean = the :root defaults above. Synth and Pastel are overrides. */
 
+/* Only the Wurdz BOARD/EXTRA vars here — the palette (dark/panel/panel-light/
+   cyan/magenta/yellow) for each theme is owned by shared.css. */
 :root[data-theme="synth"] {
-  --dark:          #04040f;
-  --panel:       #07071a;
-  --panel-light: #12122e;
   --text:        #e8f4ff;
   --muted:       #5577aa;
-  --cyan:      #00f5ff;
   --cyan-dark: #00ccdd;
-  --magenta:     #ff00c8;
-  --yellow:      #ffe600;
   --tile:        #1a0833;
   --tile-edge:   #6600bb;
   --tile-text:   #e0e8ff;
@@ -934,15 +876,9 @@ input, textarea { user-select: text; }
 }
 
 :root[data-theme="pastel"] {
-  --dark:          #f0ede8;
-  --panel:       #fdf9f5;
-  --panel-light: #e8e2da;
   --text:        #2c3340;
   --muted:       #8a96a8;
-  --cyan:      #7b9ec8;
   --cyan-dark: #5f84b0;
-  --magenta:     #c87bb0;
-  --yellow:      #d4a042;
   --tile:        #fdf5e4;
   --tile-edge:   #c8a878;
   --tile-text:   #3d2e18;
@@ -955,34 +891,3 @@ input, textarea { user-select: text; }
   --good:        #6db890;
   --bad:         #d97070;
 }
-
-/* ── theme picker (wurdz app-menu style) ─────────────────────────────────── */
-
-.theme-picker-section {
-  padding: 8px 14px 10px;
-  border-top: 1px solid var(--panel-light);
-  margin-top: 4px;
-}
-.theme-picker-label {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.theme-picker { display: flex; gap: 6px; }
-.theme-btn {
-  flex: 1;
-  padding: 7px 0;
-  border: 2px solid var(--panel-light);
-  border-radius: 8px;
-  background: var(--panel-light);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-}
-.theme-btn:hover { border-color: var(--cyan); color: var(--cyan); background: var(--panel-light); }
-.theme-btn.active { border-color: var(--cyan); background: transparent; color: var(--cyan); }

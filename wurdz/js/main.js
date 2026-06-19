@@ -10,13 +10,8 @@ import {
 import { createRematch } from '../../shared/rematch.js';
 import { openHistory } from '../../shared/history.js';
 import {
-  currentUser, onAuthChange, displayName,
-  signUp, signInWithPassword, signInWithMagicLink, signOut, setDisplayName,
+  currentUser, onAuthChange, displayName, signOut,
 } from '../../shared/auth.js';
-import {
-  ensureProfile, addFriendByCode, addFriendMessage,
-  listFriends, listFriendRequests, respondToRequest, removeFriend,
-} from '../../shared/friends.js';
 import { TWO_LETTER_WORDS } from './words2.js';
 import { loadDictionary, checkWords } from './dictionary.js';
 import {
@@ -27,12 +22,8 @@ import {
 } from './notify.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { getGuestName, setGuestName } from '../../shared/guest-name.js';
-import { loadTheme, createThemePicker } from '../../shared/themes.js';
 
 const $ = (id) => document.getElementById(id);
-
-// Apply stored theme immediately; Ocean is Wurdz's natural default.
-loadTheme('maritime');
 
 // ---- App state ----------------------------------------------------------
 
@@ -52,8 +43,6 @@ const app = {
   oppOnline: false,
   connMode: 'db',          // 'live' (websocket) or 'db' (polling fallback)
   pendingMoves: new Map(), // out-of-order moves waiting for their turn
-  profile: null,           // { id, display_name, friend_code } once signed in
-  requestCount: 0,         // pending incoming friend requests
 };
 
 function esc(s) {
@@ -71,7 +60,7 @@ function landingError(msg) {
 }
 
 function getName() {
-  const name = $('name-input').value.trim();
+  const name = $('landing-name-input').value.trim();
   if (!name) {
     landingError('Please enter your name first.');
     return null;
@@ -168,15 +157,13 @@ function refreshPushSub() {
   if (route && notifyEnabled()) subscribeToPush(route).catch(() => {});
 }
 
-// Reflect the signed-in (or guest) state across the landing and lobby chrome.
+// Reflect the signed-in (or guest) state across the lobby chrome. The shared
+// account-ui owns the landing account bar (name line, set-name/login/logout);
+// here we only touch the Wurdz-owned bits and the shared "MY GAMES" button.
 function applyAuthToUI() {
   const user = app.user;
-  $('account-info').classList.toggle('hidden', !user);
-  $('btn-show-login').classList.toggle('hidden', !!user);
-  if (user) {
-    $('account-name').textContent = app.name;
-    $('lobby-name').textContent = app.name;
-  }
+  $('btn-go-lobby')?.classList.toggle('hidden', !user);
+  if (user) $('lobby-name').textContent = app.name;
   $('btn-leave').textContent = user ? '← Games' : 'Leave';
   renderNotifyBtns();
 }
@@ -185,10 +172,8 @@ function handleAuthChange(user) {
   app.user = user;
   app.userId = user?.id ?? null;
   if (user) app.name = displayName(user);
-  else { app.profile = null; setRequestCount(0); }
   applyAuthToUI();
   if (user && notifyEnabled()) refreshPushSub();
-  if (user) bootstrapProfile();
 
   // Only re-route when we're not mid-game, so an in-progress board is safe.
   if ($('screen-game').classList.contains('hidden')) {
@@ -197,17 +182,8 @@ function handleAuthChange(user) {
   }
 }
 
-// Ensure a profile (and friend code) exists, then refresh the requests badge.
-async function bootstrapProfile() {
-  try { app.profile = await ensureProfile(app.name); } catch { /* offline */ }
-  refreshRequestBadge();
-}
-
-$('btn-show-login').addEventListener('click', () => openAuthModal('signin'));
-$('btn-go-lobby').addEventListener('click', () => { showScreen('lobby'); renderLobby(); });
-$('btn-logout').addEventListener('click', doLogout);
+$('btn-go-lobby')?.addEventListener('click', () => { showScreen('lobby'); renderLobby(); });
 $('btn-logout-lobby').addEventListener('click', doLogout);
-$('btn-help-lobby').addEventListener('click', openHelp);
 
 async function doLogout() {
   try { await signOut(); } catch { /* clear local state regardless */ }
@@ -234,7 +210,7 @@ function doLobbyJoin() {
 $('btn-lobby-join-go').addEventListener('click', doLobbyJoin);
 $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLobbyJoin(); });
 $('btn-lobby-refresh').addEventListener('click', () => renderLobby());
-$('btn-lobby-challenge').addEventListener('click', () => openProfile());
+$('btn-lobby-challenge').addEventListener('click', () => window.LBAccount?.openProfile());
 $('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
 
 function lobbyError(msg) {
@@ -270,7 +246,6 @@ function dismissGame(code) {
 async function renderLobby() {
   if (!app.userId) return;
   startLobbyPolling();
-  refreshRequestBadge();
   const list = $('lobby-list');
   let rooms;
   try {
@@ -407,241 +382,13 @@ async function openRoomFromLobby(room, myIndex) {
   }
 }
 
-// ---- Auth modal ---------------------------------------------------------
-
-let authMode = 'signin';
-
-function openAuthModal(mode) {
-  setAuthMode(mode);
-  $('auth-status').textContent = '';
-  $('modal-auth').classList.remove('hidden');
-  $('auth-email').focus();
-}
-
-function setAuthMode(mode) {
-  authMode = mode;
-  const signup = mode === 'signup';
-  $('auth-title').textContent = signup ? 'Create account' : 'Log in';
-  $('btn-auth-primary').textContent = signup ? 'Create account' : 'Sign in';
-  $('auth-name').classList.toggle('hidden', !signup);
-  $('auth-password').setAttribute('autocomplete', signup ? 'new-password' : 'current-password');
-  $('auth-tab-signin').classList.toggle('active', !signup);
-  $('auth-tab-signup').classList.toggle('active', signup);
-}
-
-$('auth-tab-signin').addEventListener('click', () => setAuthMode('signin'));
-$('auth-tab-signup').addEventListener('click', () => setAuthMode('signup'));
-
-function authStatus(msg) { $('auth-status').textContent = msg || ''; }
-
-$('btn-auth-primary').addEventListener('click', async () => {
-  const email = $('auth-email').value.trim();
-  const password = $('auth-password').value;
-  const name = $('auth-name').value.trim();
-  if (!email || !password) { authStatus('Enter your email and password.'); return; }
-  if (authMode === 'signup' && !name) { authStatus('Choose a display name.'); return; }
-  $('btn-auth-primary').disabled = true;
-  authStatus('Working…');
-  try {
-    if (authMode === 'signup') {
-      const { needsConfirmation } = await signUp(email, password, name);
-      if (needsConfirmation) {
-        authStatus('Account created — check your email to confirm, then sign in.');
-        setAuthMode('signin');
-        return;
-      }
-    } else {
-      await signInWithPassword(email, password);
-    }
-    $('modal-auth').classList.add('hidden'); // handleAuthChange routes to lobby
-  } catch (e) {
-    authStatus(e.message || 'Something went wrong.');
-  } finally {
-    $('btn-auth-primary').disabled = false;
-  }
-});
-
-$('btn-auth-magic').addEventListener('click', async () => {
-  const email = $('auth-email').value.trim();
-  const name = $('auth-name').value.trim();
-  if (!email) { authStatus('Enter your email first.'); return; }
-  $('btn-auth-magic').disabled = true;
-  authStatus('Sending…');
-  try {
-    await signInWithMagicLink(email, name);
-    authStatus('Check your email for a sign-in link.');
-  } catch (e) {
-    authStatus(e.message || 'Could not send the link.');
-  } finally {
-    $('btn-auth-magic').disabled = false;
-  }
-});
-
-// ---- Profile & friends --------------------------------------------------
-
-$('btn-profile').addEventListener('click', () => (app.user ? openProfile() : openAuthModal('signin')));
-$('profile-login').addEventListener('click', () => { $('modal-profile').classList.add('hidden'); openAuthModal('signin'); });
-$('profile-signout').addEventListener('click', async () => { $('modal-profile').classList.add('hidden'); await doLogout(); });
-$('profile-change-name').addEventListener('click', openNameEdit);
-$('profile-copy-code').addEventListener('click', copyFriendCode);
-$('btn-add-friend').addEventListener('click', doAddFriend);
-$('friend-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddFriend(); });
-$('btn-name-save').addEventListener('click', saveNameEdit);
-$('name-edit-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') saveNameEdit(); });
-
-// Top-right menu toggle. The Profile and How-to-play entries keep their own
-// handlers (above and in the help section); this just shows/hides the dropdown
-// and closes it on item click, outside click, or Escape.
-const appMenuEl = $('app-menu');
-const btnMenuEl = $('btn-menu');
-function closeAppMenu() { appMenuEl.classList.add('hidden'); btnMenuEl.setAttribute('aria-expanded', 'false'); }
-btnMenuEl.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const open = appMenuEl.classList.toggle('hidden');
-  btnMenuEl.setAttribute('aria-expanded', String(!open));
-});
-appMenuEl.addEventListener('click', closeAppMenu);
-document.addEventListener('click', (e) => {
-  if (!appMenuEl.classList.contains('hidden') && !appMenuEl.contains(e.target) && !btnMenuEl.contains(e.target)) closeAppMenu();
-});
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAppMenu(); });
-
-// Insert theme picker before the "More Games" link in the menu.
-const moreGamesEl = appMenuEl.querySelector('a.menu-sep');
-appMenuEl.insertBefore(createThemePicker(), moreGamesEl);
-
-function openProfile() {
-  $('modal-profile').classList.remove('hidden');
-  renderProfile();
-}
-
-function renderProfile() {
-  const signedIn = !!app.user;
-  $('profile-signedout').classList.toggle('hidden', signedIn);
-  $('profile-signedin').classList.toggle('hidden', !signedIn);
-  if (!signedIn) return;
-  $('profile-name').textContent = app.name;
-  $('profile-code').textContent = app.profile?.friend_code || '––––––––';
-  $('friend-add-status').textContent = '';
-  loadFriends();
-}
-
-async function loadFriends() {
-  if (!app.profile) {
-    try { app.profile = await ensureProfile(app.name); $('profile-code').textContent = app.profile.friend_code; } catch {}
-  }
-  try {
-    const [friends, requests] = await Promise.all([listFriends(), listFriendRequests()]);
-    renderRequests(requests);
-    renderFriendList(friends);
-    setRequestCount(requests.length);
-  } catch {
-    $('friend-list').innerHTML = '<p class="friend-empty">Could not load friends.</p>';
-  }
-}
-
-function renderFriendList(friends) {
-  const el = $('friend-list');
-  el.innerHTML = '';
-  if (!friends.length) {
-    el.innerHTML = '<p class="friend-empty">No friends yet — add one with their code.</p>';
-    return;
-  }
-  for (const f of friends) {
-    const row = document.createElement('div');
-    row.className = 'friend-row';
-    row.innerHTML = `<span class="friend-name">${esc(f.display_name || 'Player')}</span>`
-      + '<span class="friend-actions">'
-      + `<button class="btn-primary" data-challenge="${f.id}">Challenge</button>`
-      + `<button class="btn-ghost" data-history="${f.id}">History</button>`
-      + `<button class="btn-ghost" data-remove="${f.id}">Remove</button>`
-      + '</span>';
-    row.querySelector('[data-challenge]').addEventListener('click', () => challengeFriend(f));
-    row.querySelector('[data-history]').addEventListener('click', () => {
-      $('modal-profile').classList.add('hidden');
-      openHistory({ userId: app.userId, gameSlug: GAME_SLUG, friendId: f.id, friendName: f.display_name });
-    });
-    row.querySelector('[data-remove]').addEventListener('click', async () => {
-      const ok = await confirmDialog({
-        title: 'Remove friend?',
-        message: `Remove ${f.display_name || 'this player'} from your friends? `
-          + 'You can add them again later with their friend code.',
-        confirmText: 'Remove',
-        danger: true,
-      });
-      if (!ok) return;
-      try { await removeFriend(f.id); await loadFriends(); } catch {}
-    });
-    el.appendChild(row);
-  }
-}
-
-function renderRequests(requests) {
-  $('friend-requests-block').classList.toggle('hidden', !requests.length);
-  const el = $('friend-requests');
-  el.innerHTML = '';
-  for (const r of requests) {
-    const row = document.createElement('div');
-    row.className = 'friend-row';
-    row.innerHTML = `<span class="friend-name">${esc(r.display_name || 'Player')}</span>`
-      + '<span class="friend-actions">'
-      + `<button class="btn-primary" data-accept="${r.id}">Accept</button>`
-      + `<button class="btn-ghost" data-decline="${r.id}">Decline</button>`
-      + '</span>';
-    row.querySelector('[data-accept]').addEventListener('click', async () => {
-      try { await respondToRequest(r.id, true); await loadFriends(); } catch {}
-    });
-    row.querySelector('[data-decline]').addEventListener('click', async () => {
-      try { await respondToRequest(r.id, false); await loadFriends(); } catch {}
-    });
-    el.appendChild(row);
-  }
-}
-
-async function doAddFriend() {
-  const input = $('friend-code-input');
-  const code = input.value.trim();
-  if (!code) return;
-  $('btn-add-friend').disabled = true;
-  $('friend-add-status').textContent = 'Working…';
-  try {
-    const result = await addFriendByCode(code);
-    $('friend-add-status').textContent = addFriendMessage(result);
-    if (result === 'requested' || result === 'accepted') input.value = '';
-    await loadFriends();
-  } catch (e) {
-    $('friend-add-status').textContent = e.message || 'Could not add friend.';
-  } finally {
-    $('btn-add-friend').disabled = false;
-  }
-}
-
-async function copyFriendCode() {
-  const code = app.profile?.friend_code;
-  if (!code) return;
-  try {
-    await navigator.clipboard.writeText(code);
-    const btn = $('profile-copy-code');
-    btn.textContent = 'Copied';
-    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-  } catch { /* clipboard unavailable */ }
-}
-
-function setRequestCount(n) {
-  app.requestCount = n;
-  const badge = $('profile-badge');
-  badge.textContent = n > 0 ? String(n) : '';
-  badge.classList.toggle('hidden', !n);
-}
-
-async function refreshRequestBadge() {
-  if (!app.user) { setRequestCount(0); return; }
-  try { setRequestCount((await listFriendRequests()).length); } catch {}
-}
+// ---- Challenge a friend -------------------------------------------------
+// Auth, profile, friends and the hamburger menu are all owned by the shared
+// account-ui.js now. Wurdz only supplies the game-specific challenge action,
+// fed into the shared profile dialog via LB_CONFIG.onChallengeFriend (boot()).
 
 // Create a room already addressed to this friend, notify them, and enter it.
 async function challengeFriend(friend) {
-  $('modal-profile').classList.add('hidden');
   try {
     const room = await createRoom(app.name, app.userId, {
       userId: friend.id,
@@ -657,34 +404,6 @@ async function challengeFriend(friend) {
   } catch (e) {
     showScreen('lobby');
     lobbyError(`Could not start the game (${e.message}).`);
-  }
-}
-
-// ---- Name change --------------------------------------------------------
-
-function openNameEdit() {
-  $('name-edit-input').value = app.name || '';
-  $('name-edit-status').textContent = '';
-  $('modal-name').classList.remove('hidden');
-  $('name-edit-input').focus();
-}
-
-async function saveNameEdit() {
-  const v = $('name-edit-input').value.trim().slice(0, 20);
-  if (!v) { $('name-edit-status').textContent = 'Enter a name.'; return; }
-  $('btn-name-save').disabled = true;
-  $('name-edit-status').textContent = 'Saving…';
-  try {
-    await setDisplayName(v);
-    app.name = v;
-    try { app.profile = await ensureProfile(v); } catch {}
-    applyAuthToUI();
-    if (!$('modal-profile').classList.contains('hidden')) renderProfile();
-    $('modal-name').classList.add('hidden');
-  } catch (e) {
-    $('name-edit-status').textContent = e.message || 'Could not save.';
-  } finally {
-    $('btn-name-save').disabled = false;
   }
 }
 
@@ -770,9 +489,28 @@ async function onToggleNotify() {
   else if (!app.userId) unsubscribeFromPush().catch(() => {}); // guests drop their seat sub
 }
 
-// Toggle from the menu; stopPropagation keeps the menu open so the label
-// updates in place rather than the dropdown closing on you.
-$('menu-notify').addEventListener('click', (e) => { e.stopPropagation(); onToggleNotify(); });
+// Inject Wurdz's turn-notification toggle into the shared hamburger menu (the
+// menu markup is owned by account-ui.js; this is the one game-specific entry).
+// stopPropagation keeps the menu open so the label updates in place rather than
+// the dropdown closing on you.
+(function injectNotifyMenuItem() {
+  const menu = $('app-menu');
+  if (!menu || $('menu-notify')) return;
+  const item = document.createElement('button');
+  item.className = 'menu-item';
+  item.id = 'menu-notify';
+  item.title = 'Turn notifications';
+  item.innerHTML = `
+    <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4.2 6.8a3.8 3.8 0 0 1 7.6 0c0 3 1.3 3.8 1.6 4.4H2.6c.3-.6 1.6-1.4 1.6-4.4Z"/>
+      <path d="M6.6 13.4a1.6 1.6 0 0 0 2.8 0"/>
+    </svg>
+    <span id="menu-notify-label">Turn alerts</span>`;
+  // Sit just above the theme picker / "More Games" separator.
+  const anchor = menu.querySelector('.theme-picker-section') || menu.querySelector('a.menu-sep');
+  menu.insertBefore(item, anchor || null);
+  item.addEventListener('click', (e) => { e.stopPropagation(); onToggleNotify(); });
+})();
 
 // Push the opponent if our move handed them the turn (covers all move types,
 // since app.state.turn already reflects the applied move). Fire-and-forget.
@@ -1646,9 +1384,9 @@ let confirmResolver = null;
 // Game-rendered replacement for window.confirm. Returns a promise that
 // resolves to true (confirmed) or false (cancelled / dismissed).
 function confirmDialog({ title, message, confirmText = 'Confirm', danger = false }) {
-  $('confirm-title').textContent = title;
-  $('confirm-message').textContent = message;
-  const okBtn = $('confirm-ok');
+  $('wz-confirm-title').textContent = title;
+  $('wz-confirm-message').textContent = message;
+  const okBtn = $('wz-confirm-ok');
   okBtn.textContent = confirmText;
   okBtn.classList.toggle('btn-danger', danger);
   okBtn.classList.toggle('btn-primary', !danger);
@@ -1664,8 +1402,8 @@ function settleConfirm(value) {
   resolve(value);
 }
 
-$('confirm-ok').addEventListener('click', () => settleConfirm(true));
-$('confirm-cancel').addEventListener('click', () => settleConfirm(false));
+$('wz-confirm-ok').addEventListener('click', () => settleConfirm(true));
+$('wz-confirm-cancel').addEventListener('click', () => settleConfirm(false));
 $('modal-confirm').addEventListener('click', (e) => {
   if (e.target.id === 'modal-confirm') settleConfirm(false);
 });
@@ -1706,35 +1444,38 @@ $('tab-collins').addEventListener('click', () => {
   renderWords();
 });
 
-function openHelp() { $('modal-help').classList.remove('hidden'); }
-$('btn-help').addEventListener('click', openHelp);
-$('btn-help-landing').addEventListener('click', openHelp);
+// The "How to play" entry and the #help-modal open/close are wired by the
+// shared account-ui.js (it opens #help-modal and closes via #help-close).
+// Wire only Wurdz's own modals here so we never double-bind the shared ones
+// (auth/profile/name/confirm/help) that account-ui already owns.
 
-document.querySelectorAll('.modal-close').forEach((btn) => {
+document.querySelectorAll('.modal-close[data-close]').forEach((btn) => {
   btn.addEventListener('click', () => $(btn.dataset.close).classList.add('hidden'));
 });
-document.querySelectorAll('.modal').forEach((m) => {
-  m.addEventListener('click', (e) => {
-    if (e.target === m && m.id !== 'modal-blank' && m.id !== 'modal-confirm') m.classList.add('hidden');
-  });
+// Backdrop-click closes Wurdz's own modals (words). Blank/confirm are modal
+// (no backdrop dismiss); help is wired by account-ui.
+['modal-words'].forEach((id) => {
+  const m = $(id);
+  m?.addEventListener('click', (e) => { if (e.target === m) m.classList.add('hidden'); });
 });
 
 // ---- Boot ------------------------------------------------------------------------
 
 async function boot() {
   registerServiceWorker();
+  // Feed the game-specific challenge action into the shared friends dialog.
+  window.LB_CONFIG.onChallengeFriend = challengeFriend;
   renderNotifyBtns(); // set the menu's notification label/visibility up-front
 
   // Seed the guest name field from the shared key (set on the landing page or
   // any other game) and keep it in sync as it's edited here.
-  $('name-input').value = getGuestName();
-  $('name-input').addEventListener('input', () => setGuestName($('name-input').value));
+  $('landing-name-input').value = getGuestName();
+  $('landing-name-input').addEventListener('input', () => setGuestName($('landing-name-input').value));
 
   if (!configReady()) {
     landingError('Setup needed: paste your Supabase anon key into js/config.js (see README).');
     $('btn-create').disabled = true;
     $('btn-join').disabled = true;
-    $('btn-show-login').disabled = true;
     return;
   }
 
@@ -1744,7 +1485,6 @@ async function boot() {
   if (app.user) app.name = displayName(app.user);
   applyAuthToUI();
   if (app.user && notifyEnabled()) refreshPushSub();
-  if (app.user) bootstrapProfile();
 
   const resumed = await tryResume();
   if (!resumed && app.user) { showScreen('lobby'); renderLobby(); }
