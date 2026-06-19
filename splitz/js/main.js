@@ -16,6 +16,7 @@ import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { openHistory } from '../../shared/history.js';
+import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import {
   registerServiceWorker, requestNotifications, isEnabled as notifyEnabled,
@@ -140,10 +141,6 @@ $('btn-lobby-challenge').addEventListener('click', () => window.LBAccount?.openP
 $('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
 $('btn-logout-lobby').addEventListener('click', async () => { const { signOut } = await import('../../shared/auth.js'); try { await signOut(); } catch {} });
 
-function dismissedKey() { return `splitz.dismissed.${app.userId}`; }
-function getDismissed() { try { return new Set(JSON.parse(localStorage.getItem(dismissedKey()) || '[]')); } catch { return new Set(); } }
-function dismissGame(code) { const s = getDismissed(); s.add(code); localStorage.setItem(dismissedKey(), JSON.stringify([...s])); }
-
 async function renderLobby() {
   if (!app.userId) return;
   startLobbyPolling();
@@ -152,8 +149,7 @@ async function renderLobby() {
   let rooms;
   try { rooms = await fetchMyRooms(app.userId); }
   catch (e) { $('lobby-error').textContent = `Could not load games (${e.message}).`; return; }
-  const dismissed = getDismissed();
-  rooms = rooms.filter((r) => !dismissed.has(r.code));
+  rooms = filterDismissed(app.userId, rooms);
   const list = $('lobby-list');
   if (!rooms.length) {
     list.innerHTML = '<p class="lobby-empty">No games yet. <strong>NEW GAME</strong> to start one, or challenge a friend.</p>';
@@ -177,12 +173,10 @@ function lobbyCard(room) {
   card.innerHTML = `<span class="lobby-opp">${esc(label)}</span><span class="lobby-status">${esc(status)}</span>`
     + `<span class="lobby-score">${room.code}</span>`;
   card.addEventListener('click', () => openFromLobby(room, invitedMe));
-  if (finished) {
-    const x = document.createElement('span');
-    x.className = 'lobby-dismiss'; x.textContent = '×'; x.title = 'Remove';
-    x.addEventListener('click', (e) => { e.stopPropagation(); dismissGame(room.code); card.remove(); if (!$('lobby-list').children.length) renderLobby(); });
-    card.appendChild(x);
-  }
+  card.appendChild(makeDismissControl({
+    userId: app.userId, code: room.code, card,
+    onRemoved: () => { if (!$('lobby-list').children.length) renderLobby(); },
+  }));
   return card;
 }
 
@@ -260,7 +254,7 @@ async function enterRoom(code, seat, name, room) {
 }
 
 $('btn-leave').addEventListener('click', leaveRoom);
-$('btn-gameover-done').addEventListener('click', () => { if (app.code) dismissGame(app.code); leaveRoom(); });
+$('btn-gameover-done').addEventListener('click', () => { if (app.code) dismissGame(app.userId, app.code); leaveRoom(); });
 
 function leaveRoom() {
   sessionStorage.removeItem(SESSION_KEY);

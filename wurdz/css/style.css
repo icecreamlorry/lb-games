@@ -725,9 +725,11 @@ input, textarea { user-select: text; }
   cursor: pointer;
   transition: filter 0.15s, border-color 0.15s;
 }
+/* Reserve room for the × so labels never run under it. */
+.lobby-game:has(.lobby-dismiss) { padding-right: 40px; }
 
-/* Dismiss (×) on a finished game — removes it from this player's list only.
-   A <span> (not a nested <button>) with its own click handler. */
+/* Dismiss (×) removes a game from this player's list only (a <span>, not a
+   nested <button>, with its own click handler). */
 .lobby-dismiss {
   position: absolute;
   top: 4px;

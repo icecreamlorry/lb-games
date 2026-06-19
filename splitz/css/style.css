@@ -103,7 +103,7 @@ button, button:hover, button:focus { box-shadow: none; }
 .lobby-status { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 55%, transparent); }
 .lobby-game.live .lobby-status { color: var(--cyan); }
 .lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; }
-.lobby-game.finished { padding-right: 44px; }
+.lobby-game:has(.lobby-dismiss) { padding-right: 44px; }
 .lobby-dismiss {
   position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
   display: flex; align-items: center; justify-content: center;

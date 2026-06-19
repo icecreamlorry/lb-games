@@ -15,6 +15,7 @@ import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { openHistory } from '../../shared/history.js';
+import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import { registerServiceWorker } from './notify.js';
 import { supabase } from '../../shared/supabaseClient.js';
@@ -142,10 +143,6 @@ $('btn-lobby-history').addEventListener('click', () => openHistory({ userId: app
 $('btn-lobby-daily').addEventListener('click', () => enterDailyChallenge());
 $('btn-logout-lobby').addEventListener('click', async () => { const { signOut } = await import('../../shared/auth.js'); try { await signOut(); } catch {} });
 
-function dismissedKey() { return `scramblr.dismissed.${app.userId}`; }
-function getDismissed() { try { return new Set(JSON.parse(localStorage.getItem(dismissedKey()) || '[]')); } catch { return new Set(); } }
-function dismissGame(code) { const s = getDismissed(); s.add(code); localStorage.setItem(dismissedKey(), JSON.stringify([...s])); }
-
 async function renderLobby() {
   if (!app.userId) return;
   startLobbyPolling();
@@ -153,8 +150,7 @@ async function renderLobby() {
   let rooms;
   try { rooms = await fetchMyRooms(app.userId); }
   catch (e) { $('lobby-error').textContent = `Could not load games (${e.message}).`; return; }
-  const dismissed = getDismissed();
-  rooms = rooms.filter((r) => !dismissed.has(r.code));
+  rooms = filterDismissed(app.userId, rooms);
   const list = $('lobby-list');
   if (!rooms.length) {
     list.innerHTML = '<p class="lobby-empty">No games yet. <strong>NEW GAME</strong> to start one, or challenge a friend.</p>';
@@ -180,12 +176,10 @@ function lobbyCard(room) {
   card.addEventListener('click', () => (
     finished ? openHistory({ userId: app.userId, gameSlug: GAME_SLUG }) : openFromLobby(room, invitedMe)
   ));
-  if (finished) {
-    const x = document.createElement('span');
-    x.className = 'lobby-dismiss'; x.textContent = '×'; x.title = 'Remove';
-    x.addEventListener('click', (e) => { e.stopPropagation(); dismissGame(room.code); card.remove(); if (!$('lobby-list').children.length) renderLobby(); });
-    card.appendChild(x);
-  }
+  card.appendChild(makeDismissControl({
+    userId: app.userId, code: room.code, card,
+    onRemoved: () => { if (!$('lobby-list').children.length) renderLobby(); },
+  }));
   return card;
 }
 
@@ -365,7 +359,7 @@ $('btn-start').addEventListener('click', async () => {
 });
 
 $('btn-results-done').addEventListener('click', () => {
-  if (app.code) dismissGame(app.code);
+  if (app.code) dismissGame(app.userId, app.code);
   $('btn-leave').click();
 });
 

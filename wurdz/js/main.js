@@ -22,6 +22,7 @@ import {
 } from './notify.js';
 import { configReady, GAME_SLUG } from './config.js';
 import { getGuestName, setGuestName } from '../../shared/guest-name.js';
+import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -229,20 +230,6 @@ function stopLobbyPolling() {
   if (lobbyPollTimer) { clearInterval(lobbyPollTimer); lobbyPollTimer = null; }
 }
 
-// Finished games a player has chosen to hide from their own lobby (e.g. after
-// resigning). Per-account and stored locally on this device; only finished
-// games are ever dismissed, so a hidden game can never come back to life.
-function dismissedKey() { return `wurdz.dismissed.${app.userId}`; }
-function getDismissedGames() {
-  try { return new Set(JSON.parse(localStorage.getItem(dismissedKey()) || '[]')); }
-  catch { return new Set(); }
-}
-function dismissGame(code) {
-  const set = getDismissedGames();
-  set.add(code);
-  localStorage.setItem(dismissedKey(), JSON.stringify([...set]));
-}
-
 async function renderLobby() {
   if (!app.userId) return;
   startLobbyPolling();
@@ -254,8 +241,7 @@ async function renderLobby() {
     lobbyError(`Could not load your games (${e.message}).`);
     return;
   }
-  const dismissed = getDismissedGames();
-  rooms = rooms.filter((r) => !dismissed.has(r.code));
+  rooms = filterDismissed(app.userId, rooms);
   if (!rooms.length) {
     list.innerHTML = '<p class="lobby-empty muted">No games yet. Start one with <strong>New game</strong>, or join a friend\'s with their code.</p>';
     return;
@@ -345,22 +331,12 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
     challengedMe ? acceptInvite(room) : openRoomFromLobby(room, myIndex)
   ));
 
-  // Finished games can be cleared from this player's list (the other player
-  // keeps their own copy until they dismiss it too).
-  if (state && state.gameOver) {
-    const x = document.createElement('span');
-    x.className = 'lobby-dismiss';
-    x.textContent = '×';
-    x.title = 'Remove from your games';
-    x.setAttribute('role', 'button');
-    x.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dismissGame(room.code);
-      card.remove();
-      if (!$('lobby-list').children.length) renderLobby();
-    });
-    card.appendChild(x);
-  }
+  // Any game can be cleared from this player's list (the other player keeps
+  // their own copy until they remove it too).
+  card.appendChild(makeDismissControl({
+    userId: app.userId, code: room.code, card,
+    onRemoved: () => { if (!$('lobby-list').children.length) renderLobby(); },
+  }));
   return card;
 }
 
@@ -603,7 +579,7 @@ $('btn-resign').addEventListener('click', async () => {
     body: `${app.name} resigned — you win!`,
     url: location.href.split('#')[0],
   }).catch(() => {});
-  if (app.userId) dismissGame(app.code);
+  if (app.userId) dismissGame(app.userId, app.code);
 });
 
 async function tryResume() {
