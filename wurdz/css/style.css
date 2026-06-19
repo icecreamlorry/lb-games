@@ -702,19 +702,11 @@ input, textarea { user-select: text; }
   gap: 14px;
   text-align: center;
 }
-.card.wide { width: min(520px, 94vw); }
 .logo.small { font-size: 26px; letter-spacing: 1px; }
 .card-title { margin: 6px 0 0; font-size: 18px; font-weight: 700; color: var(--text); }
 .hint { margin: 4px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
-.grow { flex: 1; text-align: left; }
-.bar { display: flex; align-items: center; gap: 10px; }
-#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
-.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.row .btn-primary, .row .btn-ghost, .row button { flex: 1 1 auto; min-width: 0; white-space: nowrap; }
-#btn-lobby-refresh { flex: 0 0 auto; }
 #lobby-join-box { margin-top: 4px; }
 
-.lobby-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 .lobby-empty { text-align: center; line-height: 1.6; }
 
 .lobby-game {

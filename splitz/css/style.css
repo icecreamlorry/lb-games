@@ -20,7 +20,6 @@ body {
   overflow: hidden;
 }
 .muted { color: color-mix(in srgb, var(--cyan) 55%, transparent); }
-.grow  { flex: 1; }
 .hidden { display: none !important; }
 
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
@@ -37,7 +36,6 @@ body {
   display: flex; flex-direction: column; gap: 14px;
   text-align: center;
 }
-.card.wide { width: min(520px, 94vw); }
 .logo {
   font-family: 'Fredoka', sans-serif; font-weight: 700; letter-spacing: 0.04em;
   font-size: 2.4rem; margin: 0; color: var(--cyan);
@@ -47,9 +45,7 @@ body {
 .card-title { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1rem; letter-spacing: 0.02em; margin: 6px 0 0; }
 .hint { font-size: 0.66rem; color: color-mix(in srgb, var(--cyan) 50%, transparent); line-height: 1.5; margin: 4px 0 0; }
 
-.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-.row .btn-primary, .row .btn-ghost { flex: 1 1 auto; white-space: nowrap; }
-#btn-lobby-refresh, #btn-recenter { flex: 0 0 auto; }
+#btn-recenter { flex: 0 0 auto; }
 
 /* ---- Buttons (soft, rounded, no glow) ---- */
 /* shared.css gives every <button> a hard-coded neon-magenta glow (incl. on
@@ -82,9 +78,7 @@ button, button:hover, button:focus { box-shadow: none; }
 .account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* ---- Top bars ---- */
-.bar { display: flex; align-items: center; gap: 10px; }
 .game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 52px 8px 12px; }
-#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
   border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
@@ -96,7 +90,6 @@ button, button:hover, button:focus { box-shadow: none; }
 .pool-chip { cursor: default; }
 
 /* ---- Lobby list ---- */
-.lobby-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .lobby-game {
   position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
   text-align: left; width: 100%; background: color-mix(in srgb, var(--cyan) 7%, var(--panel));

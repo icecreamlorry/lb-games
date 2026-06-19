@@ -19,7 +19,6 @@ body {
   overflow: hidden;
 }
 .muted { color: rgba(0,245,255,0.5); }
-.grow  { flex: 1; }
 .hidden { display: none !important; }
 
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
@@ -36,7 +35,6 @@ body {
   display: flex; flex-direction: column; gap: 14px;
   text-align: center;
 }
-.card.wide { width: min(520px, 94vw); }
 .logo {
   font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.18em;
   font-size: 2.2rem; margin: 0; color: var(--cyan);
@@ -46,12 +44,6 @@ body {
 .tagline { margin: 0; font-size: 0.66rem; letter-spacing: 0.3em; color: var(--magenta); text-shadow: 0 0 8px var(--magenta); }
 .card-title { font-family: 'Orbitron', monospace; font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
 .hint { font-size: 0.6rem; color: rgba(0,245,255,0.4); line-height: 1.5; margin: 4px 0 0; }
-
-.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
-/* Grow to share space but never shrink below the label (min-width:0 let the
-   text spill out of the boxes); wrap to the next line instead when too tight. */
-.row .btn-primary, .row .btn-ghost { flex: 1 1 auto; white-space: nowrap; }
-#btn-lobby-refresh { flex: 0 0 auto; }
 
 .btn-ghost {
   background: var(--btn-ghost-bg); color: var(--btn-ghost-fg);
@@ -69,10 +61,8 @@ body {
 .account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* ---- Top bars ---- */
-.bar { display: flex; align-items: center; gap: 10px; }
 /* Right padding clears the shared menu button (fixed top-right by account-ui). */
 .game-bar { padding: 8px 52px 8px 12px; border-bottom: 1px solid rgba(0,245,255,0.12); }
-#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
 .chip {
   background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);
   color: rgba(0,245,255,0.8); border-radius: 999px; padding: 5px 12px;
@@ -84,7 +74,6 @@ body {
 .conn.live { color: #2bd576; border-color: rgba(43,213,118,0.4); }
 
 /* ---- Lobby list ---- */
-.lobby-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .lobby-game {
   position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
   text-align: left; width: 100%; background: rgba(0,245,255,0.04);

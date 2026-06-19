@@ -440,6 +440,25 @@ button:disabled:hover {
 .friend-item .friend-actions { display: flex; gap: 6px; }
 .friend-item.empty { justify-content: center; color: color-mix(in srgb, var(--cyan) 40%, transparent); background: none; }
 
+/* ── landing / "My Games" lobby layout ───────────────────────────────────── */
+/* Structure shared by the landing account bar and the lobby (markup injected
+   by lobby-ui.js). These are layout-only and identical across every game; each
+   game keeps its own cosmetic rules (.card surface, .logo, .chip, .lobby-game
+   colours/fonts) for the bits that differ. */
+
+.grow { flex: 1; }
+.card.wide { width: min(520px, 94vw); }
+
+.bar { display: flex; align-items: center; gap: 10px; }
+#screen-lobby .bar { width: 100%; margin-bottom: 4px; padding-right: 52px; }
+
+.row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+/* Grow to share the row but never shrink below the label; wrap when too tight. */
+.row .btn-primary, .row .btn-ghost { flex: 1 1 auto; white-space: nowrap; }
+#btn-lobby-refresh { flex: 0 0 auto; }
+
+.lobby-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+
 /* ── themes ──────────────────────────────────────────────────────────────── */
 /* Synth = the :root defaults above. Ocean and Pastel are overrides. */
 
