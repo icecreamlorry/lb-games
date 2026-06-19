@@ -447,8 +447,8 @@ button:disabled:hover {
   --cyan:    #f5b942;   /* warm gold  — takes the primary accent role */
   --magenta: #4cd17e;   /* mint green — secondary action colour       */
   --yellow:  #f0e060;   /* amber      — status / key highlights       */
-  --dark:    #15202b;   /* deep navy background                       */
-  --panel:   #1c2e3d;   /* mid-navy panel                             */
+  --dark:    #1c2733;   /* deep navy background  (canonical Wurdz Ocean) */
+  --panel:   #263545;   /* mid-navy panel        (canonical Wurdz Ocean) */
 
   /* Ocean is the original Wurdz look: solid rounded buttons, sans type,
      normal case, no neon glow. This is what makes one theme carry a whole
