@@ -7,6 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="shared/shared.css">
+  <script src="shared/theme-boot.js"></script>
   <style>
     body {
       background-color: var(--dark);
@@ -24,6 +25,10 @@
       color: var(--cyan);
       gap: 48px;
     }
+
+    /* Theme selector sits just under the login prompt; pull it up so it reads
+       as part of the account block rather than a free-floating row. */
+    .lb-theme { width: 100%; max-width: 340px; margin-top: -32px; }
 
     body::after {
       content: '';
@@ -185,6 +190,8 @@
     </p>
   </div>
 
+  <div id="lb-theme" class="lb-theme"></div>
+
   <main class="games">
 
     <a class="game-card" href="chromagrid/">
@@ -248,6 +255,12 @@
   </div>
 
   <script type="module" src="shared/landing-account.js"></script>
+  <script type="module">
+    // theme-boot.js already applied the cached theme before paint; just mount
+    // the shared picker (it reads the active theme and persists changes).
+    import { createThemePicker } from './shared/themes.js';
+    document.getElementById('lb-theme')?.appendChild(createThemePicker());
+  </script>
 
 </body>
 </html>
