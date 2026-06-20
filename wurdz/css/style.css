@@ -866,9 +866,9 @@ input, textarea { user-select: text; }
   --text:        #e8f4ff;
   --muted:       #5577aa;
   --cyan-dark: #00ccdd;
-  --tile:        #1a0833;
-  --tile-edge:   #6600bb;
-  --tile-text:   #e0e8ff;
+  --tile:        #2a1a4d;
+  --tile-edge:   #7b2ff7;
+  --tile-text:   #f3f8ff;
   --board-line:  #04040f;
   --cell:        #0a0a20;
   --tw:          #ff00c8;
@@ -878,6 +878,36 @@ input, textarea { user-select: text; }
   --good:        #00f5ff;
   --bad:         #ff00c8;
 }
+
+/* ── Synth: legible neon "chip" tiles ──────────────────────────────────────
+   The default tiles read fine on the light Ocean/Pastel boards but get muddy
+   on the dark neon board. For Synth only, give tiles a brighter violet face
+   with a thin cyan circuit-edge, a crisp cyberpunk glyph, and a cyan point
+   pip — cyberpunk, but high-contrast and easy to read. */
+:root[data-theme="synth"] .cell.has-tile {
+  background: linear-gradient(180deg, #3a2470 0%, #271650 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,245,255,0.30), inset 0 -2px 0 var(--tile-edge);
+}
+:root[data-theme="synth"] .rack-tile,
+:root[data-theme="synth"] .drag-ghost {
+  background: linear-gradient(180deg, #3f2878 0%, #271650 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,245,255,0.35), inset 0 -3px 0 var(--tile-edge),
+              0 0 10px rgba(123,47,247,0.45), 0 2px 4px rgba(0,0,0,0.4);
+}
+:root[data-theme="synth"] .t-letter {
+  /* Monospace techy glyph: cyberpunk, and narrow so even W/M/X fit the cell. */
+  font-family: 'Share Tech Mono', ui-monospace, 'Cascadia Mono', monospace;
+  font-weight: 700;
+  color: #f3f8ff;
+  text-shadow: 0 0 1px rgba(0,0,0,0.7);
+}
+:root[data-theme="synth"] .t-pts {
+  color: #5ff4ff;
+  font-weight: 700;
+  text-shadow: 0 0 3px rgba(0,245,255,0.55);
+}
+:root[data-theme="synth"] .rack-tile .t-letter { font-size: 23px; }
+:root[data-theme="synth"] .cell.blank-tile .t-letter { color: #ffd86b; }
 
 :root[data-theme="pastel"] {
   --text:        #2c3340;
