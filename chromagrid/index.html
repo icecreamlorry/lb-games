@@ -2450,6 +2450,9 @@
           + `<span class="pscore">${showScore ? r.score : '·'}</span>`;
         strip.appendChild(div);
       });
+      // RESET abandons the game back to idle — fine in solo play, but it must
+      // not be available once a second player has joined the room.
+      $('btn-reset').disabled = players.length >= 2;
     }
 
     function renderPrestart() {
@@ -2554,6 +2557,7 @@
       $('room-overlay').classList.add('hidden');
       $('countdown-overlay').classList.add('hidden');
       $('results-overlay').classList.add('hidden');
+      $('btn-reset').disabled = false; // back to solo/lobby — RESET allowed again
       window.CG.leaveRoom();
       return wasCode;
     }
