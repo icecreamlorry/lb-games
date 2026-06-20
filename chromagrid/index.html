@@ -57,7 +57,7 @@
       z-index: 1000;
     }
 
-    header {
+    header:not(.bar) {
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -492,6 +492,71 @@
       line-height: 1.5;
       margin: 0;
     }
+
+    /* ── lobby panel + cards (copied from Scramblr so "My Games" matches) ─── */
+    .card {
+      width: min(420px, 94vw);
+      background: var(--panel);
+      border: 1px solid rgba(0,245,255,0.22);
+      border-radius: 4px;
+      padding: 26px 24px 22px;
+      box-shadow: 0 0 40px rgba(0,245,255,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column; gap: 14px;
+      text-align: center;
+    }
+    .logo {
+      font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.18em;
+      font-size: 2.2rem; margin: 0; color: var(--cyan);
+      text-shadow: 0 0 8px var(--cyan), 0 0 26px rgba(0,245,255,0.5);
+    }
+    .logo.small { font-size: 1rem; letter-spacing: 0.15em; }
+    .card-title { font-family: 'Orbitron', monospace; font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
+
+    .btn-ghost {
+      background: var(--btn-ghost-bg); color: var(--btn-ghost-fg);
+      border: var(--btn-ghost-border); border-radius: var(--ui-radius);
+      padding: 8px 16px; font-family: var(--font-ui); font-size: 0.66rem;
+      font-weight: 600; letter-spacing: var(--ui-tracking); text-transform: var(--ui-transform);
+      cursor: pointer; touch-action: manipulation;
+    }
+    .btn-ghost:hover:not(:disabled) { color: var(--btn-ghost-hover-fg); border-color: var(--btn-ghost-hover-border); background: var(--btn-ghost-hover-bg); box-shadow: var(--btn-ghost-hover-shadow); filter: var(--btn-hover-filter); }
+    .btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: default; }
+    .btn-daily {
+      background: transparent; color: var(--yellow);
+      border: 1px solid rgba(255,220,0,0.4); border-radius: var(--ui-radius);
+      padding: 8px 18px; font-family: var(--font-ui); font-size: 0.66rem;
+      font-weight: 600; letter-spacing: var(--ui-tracking); text-transform: var(--ui-transform);
+      cursor: pointer; touch-action: manipulation; white-space: nowrap;
+      text-shadow: 0 0 8px rgba(255,220,0,0.5);
+    }
+    .btn-daily:hover { color: #fff; border-color: var(--yellow); box-shadow: 0 0 14px rgba(255,220,0,0.3); }
+    :root[data-theme="maritime"] .btn-daily { background: var(--yellow); color: #25221b; border: none; text-shadow: none; }
+    :root[data-theme="maritime"] .btn-daily:hover { color: #25221b; box-shadow: none; filter: brightness(1.15); }
+
+    .chip {
+      background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.25);
+      color: rgba(0,245,255,0.8); border-radius: 999px; padding: 5px 12px;
+      font-family: 'Share Tech Mono', monospace; font-size: 0.64rem; letter-spacing: 0.08em;
+      cursor: pointer; touch-action: manipulation; white-space: nowrap;
+    }
+    .chip strong { color: var(--cyan); letter-spacing: 0.12em; }
+
+    .lobby-game {
+      position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
+      text-align: left; width: 100%; background: rgba(0,245,255,0.04);
+      border: 1px solid transparent; border-radius: 3px; padding: 12px 14px;
+      color: var(--cyan); cursor: pointer; font-family: 'Share Tech Mono', monospace;
+    }
+    .lobby-game:hover { border-color: rgba(0,245,255,0.35); }
+    .lobby-game.live { border-color: var(--cyan); }
+    .lobby-opp { font-weight: 600; }
+    .lobby-status { font-size: 0.66rem; color: rgba(0,245,255,0.5); }
+    .lobby-game.live .lobby-status { color: var(--cyan); }
+    .lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Orbitron', monospace; font-size: 0.9rem; }
+    .lobby-dismiss { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); color: rgba(0,245,255,0.4); font-size: 16px; cursor: pointer; padding: 2px 6px; }
+    .lobby-dismiss:hover { color: var(--magenta); }
+    .lobby-game:has(.lobby-dismiss) { padding-right: 40px; }
+    .lobby-empty { text-align: center; color: rgba(0,245,255,0.4); line-height: 1.6; padding: 10px; }
 
     /* ── multiplayer room overlays (over the board) ─────────────────────── */
     #room-overlay,
