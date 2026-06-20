@@ -468,6 +468,131 @@
     }
     #account-line { color: rgba(0,245,255,0.6); }
     #account-line strong { color: var(--cyan); font-weight: 600; }
+    #account-bar .account-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    /* ── lobby ("My Games") screen ──────────────────────────────────────── */
+    .screen {
+      position: fixed;
+      inset: 0;
+      z-index: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+      background: rgba(4,4,15,0.92);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+    }
+    #account-bar .hint {
+      font-size: 0.6rem;
+      color: rgba(0,245,255,0.35);
+      letter-spacing: 0.03em;
+      text-align: center;
+      max-width: 220px;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    /* ── multiplayer room overlays (over the board) ─────────────────────── */
+    #room-overlay,
+    #countdown-overlay,
+    #results-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border-radius: 4px;
+      padding: 18px;
+      text-align: center;
+    }
+    #room-overlay { background: rgba(4,4,15,0.78); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+    #countdown-overlay { background: rgba(4,4,15,0.55); }
+    #results-overlay {
+      background: rgba(4,4,15,0.86);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+      animation: ov-fade 0.4s ease;
+      overflow-y: auto;
+    }
+    .room-title {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: 0.14em;
+      color: var(--cyan);
+      text-shadow: 0 0 12px var(--cyan);
+    }
+    .room-code-line { font-size: 0.72rem; letter-spacing: 0.05em; color: rgba(0,245,255,0.6); }
+    .room-code-line strong { color: var(--yellow); font-weight: 700; letter-spacing: 0.18em; }
+    #room-players {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      width: 100%;
+      max-width: 240px;
+    }
+    .room-player {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: rgba(0,245,255,0.7);
+      padding: 4px 8px;
+      border: 1px solid rgba(0,245,255,0.12);
+      border-radius: 3px;
+    }
+    .room-player.me { color: var(--cyan); border-color: rgba(0,245,255,0.35); }
+    .room-player .pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--matrix, #22CC55); box-shadow: 0 0 6px currentColor; flex-shrink: 0; }
+    .room-player .pdot.off { background: rgba(255,255,255,0.18); box-shadow: none; }
+    .room-player .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+    .room-player .pscore { font-family: 'Orbitron', monospace; font-weight: 700; color: var(--yellow); }
+    .room-btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    #countdown-num {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 5rem;
+      color: var(--cyan);
+      text-shadow: 0 0 20px var(--cyan), 0 0 50px rgba(0,245,255,0.4);
+      animation: cd-pop 1s ease infinite;
+    }
+    @keyframes cd-pop { 0% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } }
+    .results-winner {
+      font-family: 'Orbitron', monospace;
+      font-weight: 800;
+      font-size: 1.3rem;
+      letter-spacing: 0.1em;
+      color: var(--yellow);
+      text-shadow: 0 0 12px rgba(255,220,0,0.5);
+    }
+    .results-winner.loss { color: var(--magenta); text-shadow: 0 0 12px var(--magenta); }
+    #results-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-width: 260px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #results-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: rgba(0,245,255,0.65);
+      padding: 3px 6px;
+    }
+    #results-list li.me { color: var(--cyan); font-weight: 700; }
+    #results-list .r-rank { font-family: 'Orbitron', monospace; font-size: 0.62rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
+    #results-list .r-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+    #results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
+    #results-list li.me .r-score { color: var(--yellow); }
+    .left-tag { font-size: 0.6rem; color: var(--magenta); margin-left: 4px; }
 
     /* ── mobile layout ──────────────────────────────────────────────────── */
     @media (max-width: 760px) {
@@ -606,6 +731,9 @@
 </head>
 <body>
 
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
+
   <div id="stage">
     <div id="board-col">
       <header>
@@ -633,14 +761,8 @@
               <span class="cbm-slider"></span>
             </label>
           </div>
-          <div id="account-bar">
-            <div id="account-line">Playing as a guest</div>
-            <div class="account-actions">
-              <button id="btn-set-name" class="link-btn">SET NAME</button>
-              <button id="btn-login" class="link-btn">LOG IN</button>
-              <button id="btn-logout" class="link-btn hidden">LOG OUT</button>
-            </div>
-          </div>
+          <!-- Account bar markup injected by shared/lobby-ui.js (adds btn-go-lobby) -->
+          <div id="account-bar"></div>
         </div>
 
         <div id="gameover-overlay" class="hidden">
@@ -656,6 +778,35 @@
             </div>
           </div>
           <button id="btn-play-again">PLAY AGAIN</button>
+        </div>
+
+        <!-- ── multiplayer room overlays ───────────────────────────────── -->
+        <div id="room-overlay" class="hidden">
+          <div id="room-title" class="room-title">WAITING FOR PLAYERS</div>
+          <p id="room-info" class="room-code-line"></p>
+          <div id="room-players"></div>
+          <button id="btn-start-room" class="hidden">START GAME</button>
+          <p id="room-waiting" class="room-code-line hidden">Waiting for the host to start…</p>
+          <div class="room-btn-row">
+            <button id="btn-room-share" class="link-btn">SHARE CODE</button>
+            <button id="btn-room-leave" class="link-btn">LEAVE</button>
+          </div>
+          <p id="room-status" class="status-line"></p>
+        </div>
+
+        <div id="countdown-overlay" class="hidden">
+          <div id="countdown-num">3</div>
+        </div>
+
+        <div id="results-overlay" class="hidden">
+          <div class="room-title">TIME!</div>
+          <div id="results-winner" class="results-winner"></div>
+          <ol id="results-list"></ol>
+          <p id="results-waiting" class="room-code-line hidden">Waiting for other players…</p>
+          <div class="room-btn-row">
+            <button id="btn-rematch" class="btn-primary">REMATCH</button>
+            <button id="btn-results-done" class="link-btn">DONE</button>
+          </div>
         </div>
       </div>
 
@@ -777,9 +928,12 @@
       gameoverEvent: 'chromagrid:gameover',
       nameKey:       'chromagrid.name',
       guestIdKey:    'chromagrid.guestId',
+      history:       true,
+      daily:         true,
       defaultTheme:  'synth',
     };
   </script>
+  <script type="module" src="../shared/lobby-ui.js"></script>
   <script type="module" src="../shared/account-ui.js"></script>
 
   <script>
@@ -1329,6 +1483,12 @@
     // ── daily challenge helpers ────────────────────────────────────────────
     let isDaily = false;
 
+    // Multiplayer: when roomMode is on, the synced clock is driven by the room
+    // module (js/room.js) and endGame defers to roomEndHook instead of the solo
+    // gameover screen.
+    let roomMode = false;
+    let roomEndHook = null;
+
     function dailySeed() {
       const d = new Date();
       return ((d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate()) >>> 0);
@@ -1726,8 +1886,9 @@
       updateStatus();
     }
 
-    async function startGame(seed = null) {
+    async function startGame(seed = null, opts = {}) {
       if (phase === 'playing') return;
+      roomMode = !!opts.room;   // room mode: the synced clock is driven externally
       colourBlindMode = colourBlindModePending;
       initLayout();
       sizeCanvas();
@@ -1759,6 +1920,7 @@
       fx.intro.clear();
       invalidate();
       btnFlipAll.disabled = false;
+      if (roomMode) return; // the room module starts the synced clock via beginRoomClock()
       timerDeadline = Date.now() + TIME_MS;
       tickTimer();
       timerInterval = setInterval(tickTimer, 200);
@@ -1774,6 +1936,12 @@
       btnFlipAll.disabled = true;
       while (isAnimating) await sleep(50);
       updateStatus();
+      if (roomMode) {
+        // Multiplayer: hand the final score to the room module, which renders
+        // the per-room results overlay instead of the solo gameover screen.
+        if (typeof roomEndHook === 'function') roomEndHook(score);
+        return;
+      }
       if (isDaily) {
         const lbEl = document.getElementById('daily-lb-list');
         document.getElementById('daily-date-label').textContent = dailyDateLabel();
@@ -1944,8 +2112,525 @@
       });
     }
 
+    // ── multiplayer bridge ─────────────────────────────────────────────────
+    // The room module (js/room.js) lives in a separate <script type="module">
+    // and can't see this script's closure, so we expose a tiny façade. The
+    // synced clock is owned by the room module; here we just seed the board,
+    // start/stop ChromaGrid's own clock against an externally-supplied deadline,
+    // and surface the final score.
+    const COUNTDOWN_MS = 3000;
+
+    // Pure, side-effect-free board build from a seed — same code path newCell()
+    // uses in startGame(). Returns a JSON-serialisable snapshot for the
+    // determinism check; identical seeds yield identical snapshots.
+    function buildBoardForSeed(seed) {
+      const prevRng = rng;
+      rng = mulberry32(seed);
+      const cells = Array.from({ length: ROWS * COLS }, () => {
+        const c = newCell();
+        return { f: c.frontColor.hex, b: c.backColor.hex, s: c.shape };
+      });
+      rng = prevRng;
+      return cells;
+    }
+
+    window.CG = {
+      TIME_MS,
+      COUNTDOWN_MS,
+      buildBoardForSeed,
+      getScore: () => score,
+      getPhase: () => phase,
+
+      // Seed + reveal the board for a room game and run the intro cascade. No
+      // clock starts; the room module calls beginRoomClock() when play begins.
+      // onEnd(score) fires when the synced clock runs out.
+      async prepareRoom(seed, onEnd) {
+        roomEndHook = onEnd || null;
+        if (phase === 'playing') { roomMode = false; goIdle(); }
+        isDaily = false;
+        await startGame(seed, { room: true });
+      },
+
+      // Begin (or resume) the synced play clock, ticking to `deadline` (epoch ms).
+      // Safe to call repeatedly; only the first start matters.
+      beginRoomClock(deadline) {
+        if (phase !== 'playing') return;
+        timerDeadline = deadline;
+        if (!timerInterval) {
+          tickTimer();
+          timerInterval = setInterval(tickTimer, 200);
+        }
+      },
+
+      // Tear the room game down and return to the solo idle screen.
+      leaveRoom() {
+        roomMode = false;
+        roomEndHook = null;
+        goIdle();
+      },
+    };
+
     goIdle();
   </script>
+
+  <!-- ── multiplayer room lifecycle (mirrors scramblr/js/main.js) ────────── -->
+  <script type="module">
+    import {
+      createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
+      RoomConnection, triggerPush, seatName, seatLeft, markPlayerLeft,
+    } from './js/net.js';
+    import { GAME_SLUG, configReady } from './js/config.js';
+    import { createRematch } from '../shared/rematch.js';
+    import { currentUser, onAuthChange, displayName } from '../shared/auth.js';
+    import { openHistory } from '../shared/history.js';
+    import { filterDismissed, dismissGame, makeDismissControl } from '../shared/dismissed-games.js';
+    import { getGuestName } from '../shared/guest-name.js';
+
+    const $ = (id) => document.getElementById(id);
+    const MAX_PLAYERS = 8;
+    const SESSION_KEY = 'chromagrid_session';
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    const COUNTDOWN_MS = (window.CG && window.CG.COUNTDOWN_MS) || 3000;
+    const GAME_MS = (window.CG && window.CG.TIME_MS) || 120000;
+
+    const app = {
+      user: null, userId: null, name: null,
+      code: null, seat: null, room: null, conn: null,
+      phase: 'idle',         // idle | waiting | countdown | playing | results
+      startAt: null,         // epoch ms the countdown began (from the start move)
+      online: new Set(),
+      results: {},           // seat -> { score }
+      submittedResult: false,
+      timerInt: null,
+      rematching: false,
+      started: false,        // have we kicked off the board build for this room?
+    };
+
+    function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
+
+    // ---- Screens ----------------------------------------------------------
+
+    function showLobby() { $('screen-lobby').classList.remove('hidden'); renderLobby(); }
+    function hideLobby() { $('screen-lobby').classList.add('hidden'); stopLobbyPolling(); }
+
+    // ---- Auth -------------------------------------------------------------
+
+    function onAuth(user) {
+      app.user = user;
+      app.userId = user?.id ?? null;
+      app.name = playerName();
+      $('btn-go-lobby')?.classList.toggle('hidden', !user);
+      if (!app.code && window.CG.getPhase() !== 'playing') {
+        if (user) showLobby(); else hideLobby();
+      }
+    }
+
+    // ---- Lobby ------------------------------------------------------------
+
+    let lobbyPoll = null;
+    function startLobbyPolling() {
+      stopLobbyPolling();
+      lobbyPoll = setInterval(() => {
+        if (!$('screen-lobby').classList.contains('hidden') && !document.hidden) renderLobby();
+      }, 6000);
+    }
+    function stopLobbyPolling() { if (lobbyPoll) { clearInterval(lobbyPoll); lobbyPoll = null; } }
+
+    function lobbyError(m) { const e = $('lobby-error'); if (e) e.textContent = m || ''; }
+
+    async function renderLobby() {
+      if (!app.userId) return;
+      startLobbyPolling();
+      const nm = $('lobby-name'); if (nm) nm.textContent = app.name || 'player';
+      let rooms;
+      try { rooms = await fetchMyRooms(app.userId); }
+      catch (e) { lobbyError(`Could not load games (${e.message}).`); return; }
+      rooms = filterDismissed(app.userId, rooms);
+      const list = $('lobby-list');
+      if (!list) return;
+      if (!rooms.length) {
+        list.innerHTML = '<p class="lobby-empty">No games yet. <strong>NEW GAME</strong> to start one, or challenge a friend.</p>';
+        return;
+      }
+      list.innerHTML = '';
+      for (const room of rooms) list.appendChild(lobbyCard(room));
+    }
+
+    function lobbyCard(room) {
+      const players = room.players ?? [];
+      const invitedMe = room.invited_user_id === app.userId && players.every((p) => p.userId !== app.userId);
+      const finished = room.status === 'finished';
+      const playing = room.status === 'playing';
+      let label, status, live = false;
+      if (invitedMe) { label = `${players[0]?.name || 'Someone'} invited you`; status = 'Tap to join'; live = true; }
+      else { label = `${players.length} player${players.length === 1 ? '' : 's'}`; status = finished ? 'Finished' : playing ? 'In progress' : 'Waiting — tap to open'; live = playing; }
+
+      const card = document.createElement('button');
+      card.className = 'lobby-game' + (live ? ' live' : '');
+      card.innerHTML = `<span class="lobby-opp">${esc(label)}</span><span class="lobby-status">${esc(status)}</span>`
+        + `<span class="lobby-score">${room.code}</span>`;
+      card.addEventListener('click', () => (
+        finished ? openHistory({ userId: app.userId, gameSlug: GAME_SLUG }) : openFromLobby(room)
+      ));
+      card.appendChild(makeDismissControl({
+        userId: app.userId, code: room.code, card,
+        onRemoved: () => { if (!$('lobby-list').children.length) renderLobby(); },
+      }));
+      return card;
+    }
+
+    async function openFromLobby(room) {
+      try {
+        const { room: updated, playerIndex } = await joinRoom(room.code, app.name, app.userId);
+        await enterRoom(room.code, playerIndex, app.name, updated);
+      } catch (e) { lobbyError(e.message); }
+    }
+
+    // ---- Challenge a friend ----------------------------------------------
+
+    async function challengeFriend(friend) {
+      try {
+        if (!app.name) { lobbyError('Set your name first.'); return; }
+        const room = await createRoom(app.name, app.userId, { userId: friend.id, name: friend.display_name }, MAX_PLAYERS);
+        triggerPush({ user_id: friend.id, title: 'Chromagrid challenge!', body: `${app.name} challenged you to Chromagrid.`, url: location.href.split('#')[0] }).catch(() => {});
+        await enterRoom(room.code, 0, app.name, room);
+      } catch (e) { lobbyError(e.message); }
+    }
+
+    // ---- Room / game ------------------------------------------------------
+
+    function resetRoomState() {
+      app.phase = 'idle'; app.startAt = null;
+      app.results = {}; app.submittedResult = false;
+      app.rematching = false; app.started = false;
+      if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
+      if ($('btn-rematch')) $('btn-rematch').disabled = false;
+    }
+
+    async function enterRoom(code, seat, name, room) {
+      resetRoomState();
+      app.code = code; app.seat = seat; app.name = name; app.room = room;
+      hideLobby();
+
+      // Seed the board deterministically from the room seed so every player
+      // builds the identical starting grid (respawns stay random, like daily).
+      await window.CG.prepareRoom(Number(room.seed), onRoomEnd);
+
+      setPhase('waiting');
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, name }));
+
+      app.conn = new RoomConnection(code, seat, name, {
+        onMove: handleMove,
+        onPresence: handlePresence,
+        onRoomUpdate: handleRoomUpdate,
+      });
+      app.conn.connect();
+    }
+
+    function handleMove(move) {
+      if (move.type === 'rematch') { rematch.follow(move.payload?.code); return; }
+      if (move.type === 'start') {
+        if (app.startAt == null) {
+          app.startAt = Number(move.payload?.startAt) || Date.parse(move.created_at) || Date.now();
+        }
+        startTimers();
+      } else if (move.type === 'result') {
+        const sc = Number(move.payload?.score) || 0;
+        app.results[move.player] = { score: sc };
+        if (app.phase === 'results' || isOver()) onResultsUpdate();
+      }
+    }
+
+    function handlePresence(set) {
+      app.online = set;
+      const known = (app.room?.players ?? []).length;
+      let maxSeat = -1;
+      set.forEach((k) => { const n = Number(k); if (Number.isFinite(n)) maxSeat = Math.max(maxSeat, n); });
+      if (maxSeat + 1 > known) {
+        fetchRoom(app.code).then((r) => { app.room = r; renderRoomPlayers(); renderPrestart(); }).catch(() => {});
+      }
+      renderRoomPlayers();
+    }
+
+    function handleRoomUpdate(room) {
+      if (!room) return;
+      app.room = room;
+      renderRoomPlayers();
+      renderPrestart();
+    }
+
+    // ---- Phase machine + synced timer ------------------------------------
+
+    function setPhase(p) {
+      app.phase = p;
+      $('room-overlay').classList.toggle('hidden', p !== 'waiting');
+      $('countdown-overlay').classList.toggle('hidden', p !== 'countdown');
+      $('results-overlay').classList.toggle('hidden', p !== 'results');
+      if (p === 'waiting') renderPrestart();
+    }
+
+    function isOver() {
+      return app.startAt != null && Date.now() >= app.startAt + COUNTDOWN_MS + GAME_MS;
+    }
+
+    function startTimers() {
+      if (app.timerInt) return;
+      if (app.startAt != null && isOver()) { tick(); return; }
+      app.timerInt = setInterval(tick, 200);
+      tick();
+    }
+
+    function tick() {
+      if (app.startAt == null) return;
+      const now = Date.now();
+      const reveal = app.startAt + COUNTDOWN_MS;
+      const end = reveal + GAME_MS;
+      if (now < reveal) {
+        if (app.phase !== 'countdown') setPhase('countdown');
+        $('countdown-num').textContent = String(Math.max(1, Math.ceil((reveal - now) / 1000)));
+      } else if (now < end) {
+        if (app.phase !== 'playing') startPlay(end);
+      } else {
+        endPlay();
+      }
+    }
+
+    function startPlay(end) {
+      setPhase('playing');
+      // Drive ChromaGrid's existing clock off the shared deadline.
+      window.CG.beginRoomClock(end);
+    }
+
+    function endPlay() {
+      if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
+      // ChromaGrid's own clock fires endGame() at the same deadline, which calls
+      // onRoomEnd(); guard against double entry.
+      if (app.phase !== 'results' && app.phase !== 'playing') {
+        // We reached here before play ever started (e.g. joined late after end):
+        onRoomEnd(window.CG.getScore());
+      }
+    }
+
+    // Called by the gameplay engine when the synced clock runs out.
+    function onRoomEnd(finalScore) {
+      if (app.timerInt) { clearInterval(app.timerInt); app.timerInt = null; }
+      submitMyResult(finalScore);
+      if (app.code) updateRoomStatus(app.code, 'finished').catch(() => {});
+      $('results-list').innerHTML = '';
+      $('results-winner').textContent = '';
+      $('results-waiting').classList.remove('hidden');
+      setPhase('results');
+      onResultsUpdate();
+    }
+
+    function submitMyResult(finalScore) {
+      if (app.submittedResult || app.seat == null) return;
+      app.submittedResult = true;
+      const sc = Math.max(0, Math.round(finalScore));
+      app.results[app.seat] = { score: sc };
+      app.conn?.sendMove({ move_index: 2 + app.seat, player: app.seat, type: 'result', payload: { score: sc } }).catch(() => {});
+    }
+
+    // ---- Players + prestart + results ------------------------------------
+
+    function renderRoomPlayers() {
+      const strip = $('room-players');
+      if (!strip) return;
+      const players = app.room?.players ?? [];
+      strip.innerHTML = '';
+      players.forEach((p) => {
+        const div = document.createElement('div');
+        div.className = 'room-player' + (p.seat === app.seat ? ' me' : '');
+        const online = app.online.has(String(p.seat));
+        const r = app.results[p.seat];
+        const showScore = app.phase === 'results' && r;
+        div.innerHTML = `<span class="pdot ${online ? '' : 'off'}"></span>`
+          + `<span class="pname">${esc(p.name || `P${p.seat + 1}`)}${seatLeft(app.room, p.seat) ? ' <span class="left-tag">left</span>' : ''}</span>`
+          + `<span class="pscore">${showScore ? r.score : '·'}</span>`;
+        strip.appendChild(div);
+      });
+    }
+
+    function renderPrestart() {
+      if (app.phase !== 'waiting') return;
+      renderRoomPlayers();
+      const players = app.room?.players ?? [];
+      const n = players.length;
+      $('room-title').textContent = n >= 2 ? 'READY?' : 'WAITING FOR PLAYERS';
+      $('room-info').innerHTML = `${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`;
+      const host = app.seat === 0;
+      const startBtn = $('btn-start-room');
+      startBtn.textContent = 'START GAME';
+      startBtn.classList.toggle('hidden', !host);
+      startBtn.disabled = app.startAt != null;
+      $('room-waiting').classList.toggle('hidden', host);
+    }
+
+    function onResultsUpdate() {
+      if (app.phase !== 'results') return;
+      const seats = (app.room?.players ?? []).length || 1;
+      const submitted = Object.keys(app.results).length;
+      renderRoomPlayers();
+      const allReady = submitted >= seats;
+      $('results-waiting').classList.toggle('hidden', allReady);
+      if (allReady) renderFinalResults();
+    }
+
+    function renderFinalResults() {
+      const seats = (app.room?.players ?? []).length || 1;
+      const ranked = [];
+      for (let s = 0; s < seats; s++) {
+        ranked.push({
+          seat: s,
+          score: app.results[s]?.score ?? (s === app.seat ? Math.max(0, Math.round(window.CG.getScore())) : 0),
+          name: seatName(app.room, s) || `P${s + 1}`,
+        });
+      }
+      ranked.sort((a, b) => b.score - a.score);
+
+      const ol = $('results-list');
+      ol.innerHTML = '';
+      ranked.forEach((r, i) => {
+        const li = document.createElement('li');
+        if (r.seat === app.seat) li.className = 'me';
+        const leftTag = seatLeft(app.room, r.seat) ? ' <span class="left-tag">left</span>' : '';
+        li.innerHTML = `<span class="r-rank">${i + 1}</span>`
+          + `<span class="r-name">${esc(r.name)}${leftTag}</span>`
+          + `<span class="r-score">${r.score}</span>`;
+        ol.appendChild(li);
+      });
+
+      const winnerEl = $('results-winner');
+      if (ranked.length <= 1) {
+        winnerEl.textContent = ''; winnerEl.className = 'results-winner';
+      } else {
+        const top = ranked[0].score;
+        const tied = ranked.filter((r) => r.score === top);
+        const iWon = tied.some((r) => r.seat === app.seat);
+        const isTie = tied.length > 1;
+        if (isTie && iWon) { winnerEl.textContent = "It's a tie!"; winnerEl.className = 'results-winner'; }
+        else if (iWon) { winnerEl.textContent = 'You won!'; winnerEl.className = 'results-winner'; }
+        else if (isTie) { winnerEl.textContent = `${tied.map((r) => r.name).join(' & ')} tied`; winnerEl.className = 'results-winner loss'; }
+        else { winnerEl.textContent = `${ranked[0].name} won`; winnerEl.className = 'results-winner loss'; }
+      }
+      $('results-waiting').classList.add('hidden');
+      renderRoomPlayers();
+    }
+
+    // ---- Controls ---------------------------------------------------------
+
+    $('btn-start-room').addEventListener('click', async () => {
+      if (app.startAt != null) return;
+      $('btn-start-room').disabled = true;
+      const startAt = Date.now();
+      try {
+        await app.conn.sendMove({ move_index: 0, player: 0, type: 'start', payload: { startAt } });
+        updateRoomStatus(app.code, 'playing').catch(() => {});
+        app.startAt = startAt;
+        startTimers();
+      } catch (e) {
+        $('btn-start-room').disabled = false;
+        $('room-status').textContent = e.message || 'Could not start.';
+      }
+    });
+
+    $('btn-room-share').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(app.code);
+        $('room-status').textContent = 'Room code copied.';
+      } catch {}
+    });
+
+    async function leaveRoom() {
+      if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
+        try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch {}
+      }
+      sessionStorage.removeItem(SESSION_KEY);
+      if (app.conn) { app.conn.close(); app.conn = null; }
+      resetRoomState();
+      const wasCode = app.code;
+      app.code = null; app.seat = null; app.room = null;
+      $('room-overlay').classList.add('hidden');
+      $('countdown-overlay').classList.add('hidden');
+      $('results-overlay').classList.add('hidden');
+      window.CG.leaveRoom();
+      return wasCode;
+    }
+
+    $('btn-room-leave').addEventListener('click', leaveRoom);
+    $('btn-results-done').addEventListener('click', async () => {
+      const code = app.code;
+      await leaveRoom();
+      if (code && app.userId) dismissGame(app.userId, code);
+      if (app.user) showLobby();
+    });
+
+    // Rematch — spins up a fresh room and pulls everyone in (shared).
+    const rematch = createRematch({
+      state: app,
+      createRoom: (name, userId) => createRoom(name, userId, null, MAX_PLAYERS),
+      joinRoom, enterRoom,
+      onError: (msg) => { $('room-status').textContent = msg; },
+    });
+    $('btn-rematch').addEventListener('click', rematch.start);
+
+    // ---- Lobby buttons (injected by lobby-ui.js) -------------------------
+
+    $('btn-go-lobby')?.addEventListener('click', () => { if (app.user) showLobby(); });
+    $('btn-lobby-new')?.addEventListener('click', async () => {
+      try {
+        if (!app.name) { lobbyError('Set your name first.'); return; }
+        const room = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
+        await enterRoom(room.code, 0, app.name, room);
+      } catch (e) { lobbyError(e.message); }
+    });
+    $('btn-lobby-join')?.addEventListener('click', () => { $('lobby-join-box').classList.toggle('hidden'); $('lobby-code-input').focus(); });
+    function doLobbyJoin() {
+      if (!app.name) { lobbyError('Set your name first.'); return; }
+      const code = $('lobby-code-input').value.trim().toUpperCase();
+      if (code.length < 4) { lobbyError('Enter the room code.'); return; }
+      lobbyError('');
+      joinRoom(code, app.name, app.userId)
+        .then(({ room, playerIndex }) => enterRoom(code, playerIndex, app.name, room))
+        .catch((e) => lobbyError(e.message || 'Could not join that room.'));
+    }
+    $('btn-lobby-join-go')?.addEventListener('click', doLobbyJoin);
+    $('lobby-code-input')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') doLobbyJoin(); });
+    $('btn-lobby-refresh')?.addEventListener('click', renderLobby);
+    $('btn-lobby-challenge')?.addEventListener('click', () => window.LBAccount?.openProfile());
+    $('btn-lobby-history')?.addEventListener('click', () => openHistory({ userId: app.userId, gameSlug: GAME_SLUG }));
+
+    // ---- Resume / boot ----------------------------------------------------
+
+    async function tryResume() {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      try {
+        const { code, name } = JSON.parse(raw);
+        const { room, playerIndex } = await joinRoom(code, name, app.userId);
+        await enterRoom(code, playerIndex, name, room);
+      } catch { sessionStorage.removeItem(SESSION_KEY); }
+    }
+
+    async function boot() {
+      window.LB_CONFIG.onChallengeFriend = challengeFriend;
+      if (!configReady()) return; // Supabase key missing — solo play still works.
+      try { app.user = await currentUser(); } catch {}
+      app.userId = app.user?.id ?? null;
+      app.name = playerName();
+      $('btn-go-lobby')?.classList.toggle('hidden', !app.user);
+      if (app.user) showLobby();
+      onAuthChange(onAuth);
+      tryResume();
+    }
+
+    // Expose a couple of helpers for headless verification.
+    window.__cgRoom = { app, setPhase, enterRoom };
+
+    boot();
+  </script>
+
   <script type="module">
     import { supabase } from '../shared/supabaseClient.js';
     import { playerKey } from '../shared/leaderboard.js';
