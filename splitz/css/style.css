@@ -45,7 +45,7 @@ body {
 .card-title { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1rem; letter-spacing: 0.02em; margin: 6px 0 0; }
 .hint { font-size: 0.66rem; color: color-mix(in srgb, var(--cyan) 50%, transparent); line-height: 1.5; margin: 4px 0 0; }
 
-#btn-recenter { flex: 0 0 auto; }
+#btn-recenter, #btn-return-invalid { flex: 0 0 auto; }
 
 /* ---- Buttons (soft, rounded, no glow) ---- */
 /* shared.css gives every <button> a hard-coded neon-magenta glow (incl. on

@@ -184,6 +184,31 @@ export function isConnected(placed) {
   return seen.size === placed.size;
 }
 
+// Keys of all tiles NOT in the largest 4-connected group — the disconnected
+// islands and stray letters that keep a grid from being one crossword. Empty
+// when every tile is already in one group (or there's a single tile).
+export function disconnectedKeys(placed) {
+  const out = new Set();
+  if (!placed || placed.size <= 1) return out;
+  const seen = new Set();
+  let best = null;
+  for (const start of placed.keys()) {
+    if (seen.has(start)) continue;
+    const comp = [start]; seen.add(start);
+    for (let i = 0; i < comp.length; i++) {
+      const [r, c] = comp[i].split(',').map(Number);
+      for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const k = key(r + dr, c + dc);
+        if (placed.has(k) && !seen.has(k)) { seen.add(k); comp.push(k); }
+      }
+    }
+    if (!best || comp.length > best.length) best = comp;
+  }
+  const keep = new Set(best);
+  for (const k of placed.keys()) if (!keep.has(k)) out.add(k);
+  return out;
+}
+
 // Validate a finished grid. Returns { valid, reason, words }.
 //   isWord — dictionary predicate
 export function validateGrid(placed, isWord) {

@@ -6,7 +6,7 @@
 // win). Each player's crossword grid is PRIVATE and local (persisted to
 // localStorage); it's only validated when they DRAW (used all tiles) or SPLITZ.
 
-import { deriveState, handLetters, handSize, validateGrid } from './engine.js';
+import { deriveState, handLetters, handSize, validateGrid, disconnectedKeys } from './engine.js';
 import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
@@ -544,23 +544,39 @@ function recenter() {
 }
 $('btn-recenter').addEventListener('click', recenter);
 
-// Tiles that belong to an invalid (non-dictionary) run, for red highlighting.
-function badTileKeys(placed) {
+// Lift every invalid tile (disconnected from the main group, or in a non-word)
+// back into the hand in one tap.
+function returnInvalidTiles() {
+  if (isSpectating() || !app.state?.started || app.state.gameOver) return;
+  const bad = invalidTileKeys(app.placed);
+  if (!bad.size) return;
+  for (const k of bad) app.placed.delete(k);
+  afterGridChange();
+}
+$('btn-return-invalid').addEventListener('click', returnInvalidTiles);
+
+// Tiles to flag red as invalid: anything not joined to the biggest contiguous
+// group (disconnected islands + strays), plus tiles in a non-dictionary run.
+function invalidTileKeys(placed) {
   const bad = new Set();
-  if (!dictionaryLoaded() || placed.size < 2) return bad;
-  const has = (r, c) => placed.has(cellKey(r, c));
-  for (const k of placed.keys()) {
-    const [r, c] = k.split(',').map(Number);
-    // horizontal run start
-    if (!has(r, c - 1) && has(r, c + 1)) {
-      let w = '', cc = c; const keys = [];
-      while (has(r, cc)) { w += placed.get(cellKey(r, cc)); keys.push(cellKey(r, cc)); cc++; }
-      if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
-    }
-    if (!has(r - 1, c) && has(r + 1, c)) {
-      let w = '', rr = r; const keys = [];
-      while (has(rr, c)) { w += placed.get(cellKey(rr, c)); keys.push(cellKey(rr, c)); rr++; }
-      if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
+  if (!placed || placed.size < 2) return bad;
+  // Not connected to the main crossword — always flagged (no dictionary needed).
+  for (const k of disconnectedKeys(placed)) bad.add(k);
+  // Tiles in a run that isn't a real word (only once the dictionary is ready).
+  if (dictionaryLoaded()) {
+    const has = (r, c) => placed.has(cellKey(r, c));
+    for (const k of placed.keys()) {
+      const [r, c] = k.split(',').map(Number);
+      if (!has(r, c - 1) && has(r, c + 1)) {
+        let w = '', cc = c; const keys = [];
+        while (has(r, cc)) { w += placed.get(cellKey(r, cc)); keys.push(cellKey(r, cc)); cc++; }
+        if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
+      }
+      if (!has(r - 1, c) && has(r + 1, c)) {
+        let w = '', rr = r; const keys = [];
+        while (has(rr, c)) { w += placed.get(cellKey(rr, c)); keys.push(cellKey(rr, c)); rr++; }
+        if (!isWord(w)) keys.forEach((kk) => bad.add(kk));
+      }
     }
   }
   return bad;
@@ -571,7 +587,9 @@ function renderGrid() {
   gridLayer.style.backgroundSize = `${CELL}px ${CELL}px`;
   gridLayer.style.backgroundPosition = `${app.pan.x}px ${app.pan.y}px`;
   gridLayer.querySelectorAll('.gtile').forEach((el) => el.remove());
-  const bad = badTileKeys(placed);
+  const bad = invalidTileKeys(placed);
+  const btnRet = $('btn-return-invalid');
+  if (btnRet) btnRet.disabled = isSpectating() || !app.state?.started || app.state?.gameOver || bad.size === 0;
   for (const [k, letter] of placed) {
     const [r, c] = k.split(',').map(Number);
     const el = document.createElement('div');
