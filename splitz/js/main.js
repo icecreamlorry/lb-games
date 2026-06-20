@@ -347,8 +347,33 @@ function recompute() {
   // yet, and wiping it here would lose the player's crossword.
   if (!app.state.started) { app.hand = []; return; }
   const entitled = app.state.entitled[app.seat] || [];
-  reconcilePlaced(entitled);
+  // handLetters tolerates placed tiles that aren't (yet) in `entitled`, so the
+  // hand is correct even mid-replay. Pruning stale placements is deferred (see
+  // scheduleReconcile) so a resume — where DRAW moves arrive one at a time —
+  // never deletes valid tiles from a draw that simply hasn't replayed yet.
   app.hand = handLetters(entitled, placedLetters());
+  scheduleReconcile();
+}
+
+// Drop placed tiles not backed by our entitlement (stale storage), but only
+// after the move log settles. Debounced: a burst of catch-up moves on resume
+// reconciles once, against the COMPLETE entitlement — never against a partial
+// one mid-replay (which would wrongly delete valid placements).
+let reconcileTimer = null;
+function scheduleReconcile() {
+  clearTimeout(reconcileTimer);
+  reconcileTimer = setTimeout(() => {
+    reconcileTimer = null;
+    if (!app.state?.started) return;
+    const entitled = app.state.entitled[app.seat] || [];
+    const before = app.placed.size;
+    reconcilePlaced(entitled);
+    if (app.placed.size !== before) {
+      app.hand = handLetters(entitled, placedLetters());
+      savePlaced();
+      renderAll();
+    }
+  }, 0);
 }
 
 // Drop any placed tiles not backed by our entitlement (e.g. stale storage).
