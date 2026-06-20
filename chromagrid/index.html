@@ -2234,6 +2234,14 @@
         roomEndHook = null;
         goIdle();
       },
+
+      // Start the solo daily challenge. Wired from the lobby's DAILY button,
+      // which lives outside this script. Daily is solo, so show RESET not LEAVE.
+      startDaily() {
+        document.getElementById('btn-leave-game').classList.add('hidden');
+        document.getElementById('btn-reset').classList.remove('hidden');
+        enterDailyChallenge();
+      },
     };
 
     goIdle();
@@ -2660,6 +2668,9 @@
     // ---- Lobby buttons (injected by lobby-ui.js) -------------------------
 
     $('btn-go-lobby')?.addEventListener('click', () => { if (app.user) showLobby(); });
+    // The lobby's ☀ DAILY button (injected by lobby-ui.js) starts the solo
+    // daily challenge — close the lobby first so the game board is visible.
+    $('btn-lobby-daily')?.addEventListener('click', () => { hideLobby(); window.CG.startDaily(); });
     $('btn-lobby-new')?.addEventListener('click', async () => {
       try {
         if (!app.name) { lobbyError('Set your name first.'); return; }
