@@ -802,7 +802,7 @@
   <div id="stage">
     <div id="board-col">
       <header>
-        <h1>CHROMAGRID <span style="font-size:0.38em;font-weight:600;letter-spacing:0.12em;opacity:0.55;vertical-align:middle">v63</span></h1>
+        <h1>CHROMAGRID</h1>
         <div class="subtitle">// NEURAL PATTERN INTERFACE v2.0 //</div>
       </header>
       <div id="score-bar">
@@ -878,6 +878,7 @@
       <div id="controls">
         <button id="btn-flip-all">[ FLIP ALL ]</button>
         <button id="btn-reset">[ RESET ]</button>
+        <button id="btn-leave-game" class="hidden">[ LEAVE ]</button>
       </div>
 
       <div class="status-bar" id="status"></div>
@@ -2382,6 +2383,12 @@
       // builds the identical starting grid (respawns stay random, like daily).
       await window.CG.prepareRoom(Number(room.seed), onRoomEnd);
 
+      // In a room, RESET (which bails to the solo idle screen) is replaced by
+      // LEAVE, which returns to the games list — so you can always leave a game
+      // in progress, and RESET stays solo-only.
+      $('btn-reset').classList.add('hidden');
+      $('btn-leave-game').classList.remove('hidden');
+
       setPhase('waiting');
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, name }));
 
@@ -2515,9 +2522,6 @@
           + `<span class="pscore">${showScore ? r.score : '·'}</span>`;
         strip.appendChild(div);
       });
-      // RESET abandons the game back to idle — fine in solo play, but it must
-      // not be available once a second player has joined the room.
-      $('btn-reset').disabled = players.length >= 2;
     }
 
     function renderPrestart() {
@@ -2622,12 +2626,21 @@
       $('room-overlay').classList.add('hidden');
       $('countdown-overlay').classList.add('hidden');
       $('results-overlay').classList.add('hidden');
-      $('btn-reset').disabled = false; // back to solo/lobby — RESET allowed again
+      $('btn-leave-game').classList.add('hidden'); // back to solo: RESET returns
+      $('btn-reset').classList.remove('hidden');
       window.CG.leaveRoom();
       return wasCode;
     }
 
-    $('btn-room-leave').addEventListener('click', leaveRoom);
+    // Leave the current room and go back to the games list (or the solo start
+    // screen for guests, who have no lobby).
+    async function leaveToLobby() {
+      await leaveRoom();
+      if (app.user) showLobby();
+    }
+
+    $('btn-room-leave').addEventListener('click', leaveToLobby);
+    $('btn-leave-game').addEventListener('click', leaveToLobby);
     $('btn-results-done').addEventListener('click', async () => {
       const code = app.code;
       await leaveRoom();

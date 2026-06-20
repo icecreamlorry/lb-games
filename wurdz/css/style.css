@@ -184,10 +184,13 @@ input, textarea { user-select: text; }
 .game-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   padding: 10px 18px;
   background: var(--panel);
 }
+/* Logo pushes the room code + actions to the right; they wrap to a second row
+   on narrow screens instead of sliding under the fixed menu button. */
 .game-header .logo { margin-right: auto; }
 
 .chip {

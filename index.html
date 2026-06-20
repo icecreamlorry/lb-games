@@ -79,6 +79,15 @@
       text-shadow: 0 0 8px var(--magenta);
       text-transform: uppercase;
     }
+    .site-version {
+      margin-top: 6px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.56rem;
+      letter-spacing: 0.18em;
+      color: rgba(0,245,255,0.4);
+      text-transform: uppercase;
+      min-height: 0.7em;
+    }
 
     /* ── game grid ──────────────────────────────────────────────────────── */
 
@@ -176,6 +185,7 @@
   <header class="site-header">
     <div class="site-title">LB GAMES</div>
     <div class="site-sub">// SELECT GAME //</div>
+    <div class="site-version" id="site-version"></div>
   </header>
 
   <div id="lb-account" class="lb-account">
@@ -262,6 +272,19 @@
     // the shared picker (it reads the active theme and persists changes).
     import { createThemePicker } from './shared/themes.js';
     document.getElementById('lb-theme')?.appendChild(createThemePicker());
+  </script>
+
+  <script>
+    // Show the deployed build under the title, using the latest commit hash on
+    // the repo (which is what GitHub Pages deploys). Fails silently offline.
+    (function () {
+      var el = document.getElementById('site-version');
+      if (!el) return;
+      fetch('https://api.github.com/repos/icecreamlorry/lb-games/commits?per_page=1', { headers: { Accept: 'application/vnd.github+json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { var sha = d && d[0] && d[0].sha; if (sha) el.textContent = 'build ' + sha.slice(0, 7); })
+        .catch(function () {});
+    })();
   </script>
 
 </body>
