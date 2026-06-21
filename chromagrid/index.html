@@ -2375,6 +2375,11 @@
     // ---- Room / game ------------------------------------------------------
 
     function resetRoomState() {
+      // Close any previous room connection FIRST — otherwise it keeps polling
+      // the old room and re-firing its moves (e.g. a stale `rematch` move),
+      // which re-enters rooms in a loop and races to double-insert start/result
+      // moves (the "moves_room_code_move_index_key" duplicate-key error).
+      if (app.conn) { app.conn.close(); app.conn = null; }
       app.phase = 'idle'; app.startAt = null;
       app.results = {}; app.submittedResult = false;
       app.rematching = false; app.started = false;
@@ -2610,8 +2615,15 @@
         app.startAt = startAt;
         startTimers();
       } catch (e) {
-        $('btn-start-room').disabled = false;
-        $('room-status').textContent = e.message || 'Could not start.';
+        // The game already has a start move (e.g. started on another device) —
+        // sync to it rather than showing an error. pollOnce pulls the existing
+        // start move, which handleMove() turns into the shared startAt.
+        if (e?.code === '23505' || /duplicate key/i.test(e?.message || '')) {
+          app.conn?.pollOnce().catch(() => {});
+        } else {
+          $('btn-start-room').disabled = false;
+          $('room-status').textContent = e.message || 'Could not start.';
+        }
       }
     });
 
