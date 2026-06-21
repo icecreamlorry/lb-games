@@ -693,6 +693,21 @@
     :root[data-theme="pastel"] body::after {
       display: none;
     }
+    /* Pastel: drop the dark inset "vignette" on the board and use light scrims
+       on the overlays so they don't read as a muddy dark blob on the light page. */
+    :root[data-theme="pastel"] #grid {
+      box-shadow: 0 6px 20px rgba(90,78,66,0.12);
+      border-color: color-mix(in srgb, var(--cyan) 28%, transparent);
+    }
+    :root[data-theme="pastel"] #start-overlay { background: rgba(253,249,245,0.84); }
+    :root[data-theme="pastel"] #gameover-overlay,
+    :root[data-theme="pastel"] #room-overlay,
+    :root[data-theme="pastel"] #countdown-overlay,
+    :root[data-theme="pastel"] #results-overlay {
+      background: rgba(253,249,245,0.9);
+      -webkit-backdrop-filter: blur(2px);
+      backdrop-filter: blur(2px);
+    }
 
     /* ── daily challenge ─────────────────────────────────────────────────── */
     #btn-daily {

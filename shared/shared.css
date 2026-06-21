@@ -541,7 +541,75 @@ button:disabled:hover {
   --yellow:  #d4a042;   /* warm ochre — highlights     */
   --dark:    #f0ede8;   /* cream background             */
   --panel:   #fdf9f5;   /* near-white panel             */
+
+  /* Pastel shares Ocean's clean design language — solid rounded buttons, sans
+     type, normal case, no neon glow — just on a light palette, so it looks the
+     same across every game instead of inheriting Synth's neon aesthetic. */
+  --font-ui:        "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono:      "Consolas", "SF Mono", ui-monospace, monospace;
+  --ui-transform:   none;
+  --ui-tracking:    normal;
+  --ui-radius:      8px;
+  --panel-light:    #e8e2da;
+
+  --btn-bg:           #e8e2da;
+  --btn-fg:           #4a463e;
+  --btn-border:       none;
+  --btn-shadow:       none;
+  --btn-text-shadow:  none;
+  --btn-hover-bg:     #e8e2da;
+  --btn-hover-shadow: none;
+  --btn-hover-fg:     #4a463e;
+  --btn-hover-filter: brightness(0.96);
+
+  --btn-primary-bg:           var(--cyan);
+  --btn-primary-fg:           #ffffff;
+  --btn-primary-border:       none;
+  --btn-primary-shadow:       none;
+  --btn-primary-text-shadow:  none;
+  --btn-primary-hover-bg:     #6d90bd;
+  --btn-primary-hover-fg:     #ffffff;
+
+  --btn-ghost-bg:             #e8e2da;
+  --btn-ghost-fg:             #4a463e;
+  --btn-ghost-border:         none;
+  --btn-ghost-hover-fg:       #4a463e;
+  --btn-ghost-hover-border:   transparent;
+  --btn-ghost-hover-bg:       #e8e2da;
+  --btn-ghost-hover-shadow:   none;
 }
+
+/* Pastel chrome refinements — flatten the inherited neon glows and, crucially,
+   the dark inset "vignette" the games bake into their cards/panels (fine on a
+   dark board, muddy on a light one). Soft depth shadows instead. */
+:root[data-theme="pastel"] .modal-title,
+:root[data-theme="pastel"] .status-line,
+:root[data-theme="pastel"] .theme-picker-label { text-shadow: none; }
+:root[data-theme="pastel"] .modal-panel { box-shadow: 0 12px 30px rgba(90,78,66,0.16); }
+:root[data-theme="pastel"] .auth-tabs .tab.active,
+:root[data-theme="pastel"] #profile-badge,
+:root[data-theme="pastel"] .theme-btn.active { box-shadow: none; }
+:root[data-theme="pastel"] .field:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 35%, transparent); }
+:root[data-theme="pastel"] .btn-danger { background: #c0392b; color: #fff; border: none; text-shadow: none; box-shadow: none; }
+:root[data-theme="pastel"] .btn-danger:hover { background: #d84632; color: #fff; filter: brightness(1.05); }
+:root[data-theme="pastel"] .card { box-shadow: 0 10px 28px rgba(90,78,66,0.14); }
+:root[data-theme="pastel"] .game-card {
+  border-color: color-mix(in srgb, var(--cyan) 28%, transparent);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(90,78,66,0.12);
+}
+:root[data-theme="pastel"] .game-card:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 10px 28px rgba(90,78,66,0.2);
+}
+/* No neon text glow anywhere on the light theme — the games scatter text-shadow
+   glows across logos, taglines, titles and scores; flatten them all here. */
+:root[data-theme="pastel"] * { text-shadow: none !important; }
+/* Daily button: solid like the rest, not a glowing outline. */
+:root[data-theme="pastel"] .btn-daily {
+  background: var(--yellow); color: #3d3424; border: none; box-shadow: none;
+}
+:root[data-theme="pastel"] .btn-daily:hover { color: #3d3424; box-shadow: none; filter: brightness(0.96); }
 
 /* ── theme picker (used inside chromagrid help modal & any shared container) */
 
