@@ -2754,12 +2754,18 @@
   <script type="module">
     import { supabase } from '../shared/supabaseClient.js';
     import { playerKey } from '../shared/leaderboard.js';
+    import { displayName } from '../shared/auth.js';
+    import { getGuestName } from '../shared/guest-name.js';
 
     function esc(s) {
       return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
     function getPlayerName() {
-      return (localStorage.getItem('chromagrid.name') || '').trim() || 'Player';
+      // Logged-in → the account's display name; guest → the shared cross-game
+      // guest name. (The old chromagrid.name key was never set when signed in,
+      // so scores saved as "Player".)
+      const n = currentUser ? displayName(currentUser) : getGuestName();
+      return (n || '').trim() || 'Player';
     }
 
     let currentUser = null;
