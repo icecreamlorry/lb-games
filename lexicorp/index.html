@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LEXICORP // LB GAMES</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#04040f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lexicorp">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js) for this game.
+    window.LB_CONFIG = { gameSlug: 'lexicorp', gameName: 'Lexicorp', history: true, daily: false, defaultTheme: 'synth' };
+  </script>
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+
+  <!-- Landing (guests): set a name, create or join a room -->
+  <section id="screen-landing" class="screen">
+    <div class="card">
+      <h1 class="logo">LEXICORP</h1>
+      <p class="tagline">// WORDS · PATENTS · STOCK //</p>
+
+      <div class="row">
+        <button id="btn-create" class="btn-primary">CREATE ROOM</button>
+        <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
+      </div>
+      <div id="join-box" class="row hidden">
+        <input id="code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="landing-error" class="status-line"></p>
+
+      <!-- Account bar markup injected by shared/lobby-ui.js -->
+      <div id="account-bar"></div>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen hidden">
+    <header class="bar game-bar">
+      <span class="logo small">LEXICORP</span>
+      <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
+      <span class="grow"></span>
+      <button id="btn-notify" class="chip hidden" title="Notify me when it's my turn">🔔</button>
+      <button id="btn-leave" class="chip">LEAVE</button>
+    </header>
+
+    <div id="players-strip" class="players-strip"></div>
+
+    <div class="play-area">
+      <div id="turn-banner" class="turn-banner"></div>
+
+      <section class="panel">
+        <div class="panel-head">PATENTS <span id="patent-hint" class="panel-sub"></span></div>
+        <div id="patents" class="patents"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">SHARED POOL</div>
+        <div id="pool" class="tiles pool"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">YOUR HAND</div>
+        <div id="hand" class="tiles hand"></div>
+      </section>
+
+      <section class="panel build-panel">
+        <div class="panel-head">YOUR WORD <span id="word-target" class="panel-sub hidden"></span></div>
+        <div id="word-tray" class="tiles tray"></div>
+        <div id="second-wrap" class="hidden">
+          <div class="panel-head">SECOND WORD</div>
+          <div id="second-tray" class="tiles tray"></div>
+        </div>
+        <div id="word-preview" class="word-preview"></div>
+        <div id="ability-controls" class="ability-controls"></div>
+        <div id="buy-row" class="buy-row"></div>
+        <div class="row build-actions">
+          <button id="btn-clear" class="btn-ghost" disabled>CLEAR</button>
+          <button id="btn-play" class="btn-primary" disabled>PLAY WORD</button>
+        </div>
+        <button id="btn-swap" class="link-btn">Stuck? Swap your whole hand (skip turn)</button>
+        <p id="status-line" class="status-line"></p>
+      </section>
+    </div>
+
+    <!-- Pre-start overlay -->
+    <div id="prestart-overlay" class="board-overlay hidden">
+      <div class="overlay-card">
+        <div id="start-title" class="overlay-title">WAITING FOR PLAYERS</div>
+        <p id="start-info" class="muted"></p>
+        <button id="btn-start" class="btn-primary hidden">START GAME</button>
+        <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
+      </div>
+    </div>
+
+    <!-- Final results overlay -->
+    <div id="results-overlay" class="board-overlay hidden">
+      <div class="overlay-card">
+        <div class="overlay-title">FINAL TALLY</div>
+        <div id="results-winner" class="results-winner"></div>
+        <ol id="results-list" class="results-list"></ol>
+        <button id="btn-rematch" class="btn-primary">REMATCH</button>
+        <button id="btn-results-done" class="btn-ghost">LEAVE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="help-close" class="modal-close">✕</button>
+      <div class="modal-title">HOW TO PLAY</div>
+      <div class="help-body">
+        <p>Take turns building words from your hand of 7 cards plus 3 shared pool cards. Each word must be <strong>3+ letters</strong> and use <strong>at least one card from your hand</strong>.</p>
+        <p><strong>Earn</strong> money and stock by word length: longer words pay more, and 6+ letter words also pay stock. Any word with a <strong>Q</strong> pays double money and stock.</p>
+        <p><strong>Patent a letter</strong> from your word (once per turn) by paying its cost. After that, every time an opponent uses that letter you collect <strong>$1 per letter</strong> from the bank.</p>
+        <p>Seven patents carry special powers: <strong>B J K Q V X Z</strong>. Own them for extra doubles, a second word, reusing a card, a free S, or a discard-and-draw.</p>
+        <p>When a player's total patent value reaches the threshold, the round finishes and the game ends. <strong>Highest total of money + stock + patent value wins</strong> (ties go to patent value).</p>
+      </div>
+      <button id="help-got-it" class="btn-primary">GOT IT</button>
+    </div>
+  </div>
+
+  <script type="module" src="../shared/lobby-ui.js"></script>
+  <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="../shared/devtools.js"></script>
+</body>
+</html>
