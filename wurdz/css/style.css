@@ -631,9 +631,10 @@ input, textarea { user-select: text; }
   /* Pull the menu button (and its dropdown) in to the right edge of the centred
      game column so it sits next to the content instead of way out in the
      viewport corner. Falls back to the corner on narrower windows. Scoped to
-     the game screen — landing/lobby keep the corner button. */
-  body[data-screen="game"] .menu-fab,
-  body[data-screen="game"] .app-menu {
+     the game screen — landing/lobby keep the corner button. (The button +
+     dropdown are injected by the shared account-ui as #btn-menu / #app-menu.) */
+  body[data-screen="game"] #btn-menu,
+  body[data-screen="game"] #app-menu {
     right: max(env(safe-area-inset-right, 0px) + 10px, calc(50% - 380px + 6px));
   }
 }
