@@ -181,7 +181,10 @@ body {
   82%     { transform: scale(1.03) translateX(2px); }
 }
 .scoring-total.wiggle { animation: scoring-wiggle 0.55s ease; }
-.scoring-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.scoring-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; scrollbar-width: none; -ms-overflow-style: none; }
+/* Hide the scrollbar (still scrollable) so it doesn't flicker in/out as each
+   scored word is revealed. */
+.scoring-list::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .sw {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
   opacity: 0; transform: translateY(7px);
