@@ -56,6 +56,9 @@
 
     <div id="players-strip" class="players-strip"></div>
 
+    <!-- Positioned wrapper so the overlays below cover only the board, never the
+         header — the LEAVE button must stay reachable while waiting. -->
+    <div class="game-body">
     <div class="play-area">
       <div id="turn-banner" class="turn-banner"></div>
 
@@ -100,6 +103,7 @@
         <p id="start-info" class="muted"></p>
         <button id="btn-start" class="btn-primary hidden">START GAME</button>
         <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
+        <button id="btn-prestart-leave" class="btn-ghost">LEAVE GAME</button>
       </div>
     </div>
 
@@ -113,6 +117,7 @@
         <button id="btn-results-done" class="btn-ghost">LEAVE</button>
       </div>
     </div>
+    </div><!-- /.game-body -->
   </section>
 
   <!-- How to play (opened by the shared menu's "How to play") -->

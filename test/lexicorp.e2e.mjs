@@ -71,6 +71,16 @@ function check(name, cond, detail = '') {
   check('game screen shown after create', await page.evaluate(() => !document.getElementById('screen-game').classList.contains('hidden')));
   check('prestart overlay visible', await page.evaluate(() => !document.getElementById('prestart-overlay').classList.contains('hidden')));
   check('START enabled with 2 players', await page.evaluate(() => !document.getElementById('btn-start').disabled));
+  // The waiting overlay must not bury the header — you have to be able to quit.
+  check('header LEAVE reachable while waiting (not occluded)', await page.evaluate(() => {
+    const b = document.getElementById('btn-leave'); const r = b.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return top === b || b.contains(top);
+  }));
+  check('prestart overlay has its own LEAVE button', await page.evaluate(() => {
+    const b = document.getElementById('btn-prestart-leave');
+    return !!b && !b.classList.contains('hidden') && b.offsetParent !== null;
+  }));
 
   await page.click('#btn-start');
   await page.waitForTimeout(400);
@@ -148,6 +158,36 @@ function check(name, cond, detail = '') {
     await page.evaluate(() => !document.getElementById('btn-swap').disabled));
 
   check('no console/page errors during play', errs.length === 0, errs.slice(0, 3).join(' | '));
+
+  // ---- Leave-while-waiting flow (fresh room) -------------------------------
+  // A guest who opens a room and changes their mind must be able to quit the
+  // waiting screen back to the landing page.
+  await page.goto(`${base}/lexicorp/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(500);
+  await page.click('#btn-create');
+  await page.waitForTimeout(600);
+  await page.click('#btn-prestart-leave'); // real hit-tested click — fails if occluded
+  await page.waitForTimeout(300);
+  check('prestart LEAVE returns guest to landing',
+    await page.evaluate(() => !document.getElementById('screen-landing').classList.contains('hidden')
+      && document.getElementById('screen-game').classList.contains('hidden')));
+
+  // ---- Missed-start catch-up ------------------------------------------------
+  // If the 'start' broadcast is missed but the room is seen as 'playing', the
+  // overlay must still clear (handleRoomUpdate pulls the move log).
+  await page.click('#btn-create');
+  await page.waitForTimeout(600);
+  const code2 = await page.evaluate(() => Array.from(globalThis.__DB.rooms.keys()).pop());
+  // Write a start move straight to the DB (simulating the host) WITHOUT going
+  // through this client, then mark the room playing — the poll/room-update path
+  // should apply it and drop the prestart overlay.
+  await page.evaluate((c) => {
+    globalThis.__DB.moves.push({ room_code: c, move_index: 0, player: 0, type: 'start', payload: {} });
+    globalThis.__DB.rooms.get(c).status = 'playing';
+  }, code2);
+  await page.waitForTimeout(3200);
+  check('missed start is recovered → prestart overlay clears',
+    await page.evaluate(() => document.getElementById('prestart-overlay').classList.contains('hidden')));
 
   await ctx.close();
   await browser.close();

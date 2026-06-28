@@ -203,6 +203,7 @@ async function challengeFriend(friend) {
 // ---- Entering / leaving a room --------------------------------------------
 
 function resetRoomState() {
+  stopSafetyPoll();
   if (app.conn) { app.conn.close(); app.conn = null; }
   app.game = null;
   app.started = false;
@@ -243,10 +244,26 @@ async function enterRoom(code, seat, name, room) {
     onRoomUpdate: handleRoomUpdate,
   });
   app.conn.connect();
+  startSafetyPoll();
   notifyWorkerVisible(true);
 }
 
+// Safety net for turn-based play: the shared connection only polls in DB mode,
+// so on a live websocket a dropped 'move' broadcast would leave us stuck on the
+// opponent's turn forever (board visible, nothing to do). While a game is live
+// we re-pull the move log on a slow timer so missed moves always catch up.
+let safetyPoll = null;
+function startSafetyPoll() {
+  stopSafetyPoll();
+  safetyPoll = setInterval(() => {
+    if (!app.conn || !app.started || app.game?.ended || document.hidden) return;
+    if (app.conn.mode === 'live') app.conn.pollOnce?.().catch(() => {});
+  }, 4000);
+}
+function stopSafetyPoll() { if (safetyPoll) { clearInterval(safetyPoll); safetyPoll = null; } }
+
 $('btn-leave').addEventListener('click', leaveRoom);
+$('btn-prestart-leave').addEventListener('click', leaveRoom);
 async function leaveRoom() {
   if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
     try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch { /* best effort */ }
@@ -331,6 +348,13 @@ function handleRoomUpdate(room) {
   if (room.status === 'finished' && room.result && app.phase !== 'results') {
     app.phase = 'results';
     renderResultsFrom(room.result);
+  } else if (room.status === 'playing' && !app.started) {
+    // The room says play is underway but we haven't applied the 'start' move
+    // yet (e.g. a realtime broadcast was missed while we were connecting). Pull
+    // the move log so the prestart overlay clears instead of stranding us on the
+    // waiting screen — which, since the overlay covers the board, would read as
+    // "I'm in a game but can't take my turn".
+    app.conn?.pollOnce?.().catch(() => {});
   }
   renderAll();
 }
@@ -760,9 +784,12 @@ async function persistResult() {
 // ---- Overlays -------------------------------------------------------------
 
 function renderOverlays() {
-  $('prestart-overlay').classList.toggle('hidden', app.phase !== 'waiting');
+  // Once the game has started the prestart overlay must never show again — gate
+  // on app.started too, so a stale phase can't leave it covering the board.
+  const showPrestart = app.phase === 'waiting' && !app.started;
+  $('prestart-overlay').classList.toggle('hidden', !showPrestart);
   $('results-overlay').classList.toggle('hidden', app.phase !== 'results');
-  if (app.phase === 'waiting') renderPrestart();
+  if (showPrestart) renderPrestart();
 }
 
 function renderPrestart() {
