@@ -179,6 +179,10 @@ body {
 .build-actions { display: flex; gap: 10px; width: min(420px, 92vw); margin: 2px auto 0; }
 .build-actions .btn-primary, .build-actions .btn-ghost { flex: 1; }
 #btn-swap { align-self: center; font-size: 0.62rem; }
+/* The swap relief valve only works on your turn; .link-btn has no disabled look
+   of its own, so grey it out and drop the pointer when it isn't actionable. */
+#btn-swap:disabled { opacity: 0.35; cursor: default; }
+#btn-swap:disabled:hover { color: color-mix(in srgb, var(--cyan) 55%, transparent); }
 
 /* ---- Overlays ---- */
 .board-overlay {

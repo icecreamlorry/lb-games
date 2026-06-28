@@ -141,6 +141,11 @@ function check(name, cond, detail = '') {
   await page.waitForTimeout(3200); // poll interval is 2.5s
   check('opponent move replayed via poll → my turn again',
     await page.evaluate(() => /YOUR TURN/.test(document.getElementById('turn-banner').textContent)));
+  // Regression: the swap relief valve must be live again on our new turn. It is
+  // disabled during a submit and was previously never re-enabled, which left
+  // every bottom button greyed out from your 2nd turn onward.
+  check('swap button re-enabled on a later turn',
+    await page.evaluate(() => !document.getElementById('btn-swap').disabled));
 
   check('no console/page errors during play', errs.length === 0, errs.slice(0, 3).join(' | '));
 

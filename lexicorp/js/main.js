@@ -643,6 +643,11 @@ function updatePreview() {
   const prev = $('word-preview');
   const playBtn = $('btn-play');
   const clearBtn = $('btn-clear');
+  const swapBtn = $('btn-swap');
+  // Swap (the "stuck? redraw" relief valve) is available whenever it's your
+  // turn. sendTurn() disables it during a submit; this re-enables it on the next
+  // render so it's never left permanently dead after your first move.
+  swapBtn.disabled = !myTurn();
   if (!myTurn()) { prev.textContent = ''; prev.className = 'word-preview'; playBtn.disabled = true; clearBtn.disabled = true; return; }
   const hasAny = app.draft.cards.length || (app.draft.second && app.draft.second.cards.length);
   clearBtn.disabled = !hasAny && app.draft.qDiscard == null;
