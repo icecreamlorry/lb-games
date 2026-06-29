@@ -463,6 +463,7 @@ function renderAll() {
   renderPatents();
   renderTiles('pool', app.game ? app.game.pool : [], 'pool');
   renderTiles('hand', app.game ? displayHand() : [], 'hand');
+  $('build-panel').classList.toggle('hidden', !myTurn());
   renderTray();
   renderAbilityControls();
   updatePreview();
@@ -539,6 +540,7 @@ function renderTiles(elId, ids, kind) {
   const wrap = $(elId);
   wrap.innerHTML = '';
   const interactive = myTurn();
+  wrap.classList.toggle('locked', !interactive);
   ids.forEach((id) => {
     const tile = document.createElement('div');
     const used = usageCount(id) > 0;

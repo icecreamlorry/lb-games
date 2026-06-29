@@ -157,6 +157,8 @@ body {
 .tile.tray-tile { background: rgba(0,245,255,0.16); border-color: var(--cyan); }
 .tile.s-bonus { background: rgba(255,220,0,0.18); border-color: var(--yellow); color: var(--yellow); }
 .empty-note { font-size: 0.66rem; color: rgba(0,245,255,0.35); align-self: center; padding: 0 4px; }
+/* Pool/hand while it isn't your turn: greyed out + non-interactive. */
+.tiles.locked { filter: grayscale(0.95); opacity: 0.4; pointer-events: none; }
 
 /* ---- Build controls ---- */
 .build-panel { gap: 8px; }
