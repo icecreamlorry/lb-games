@@ -20,6 +20,11 @@
   --dark:    #04040f;
   --panel:   #07071a;
 
+  /* RGB triplet behind the cyan accent. Games bake faint cyan tints into their
+     boards as rgba(var(--neon), α); on dark themes this is the neon cyan, but a
+     light theme remaps it to a dark ink so those tints stay legible on cream. */
+  --neon:    0, 245, 255;
+
   /* ── aesthetic tokens ──────────────────────────────────────────────────
      Themes can override the *look*, not just the palette. The defaults here
      reproduce the original neon (Synth) aesthetic; the Ocean theme overrides
@@ -541,6 +546,11 @@ button:disabled:hover {
   --yellow:  #d4a042;   /* warm ochre — highlights     */
   --dark:    #f0ede8;   /* cream background             */
   --panel:   #fdf9f5;   /* near-white panel             */
+  /* Board-tints (rgba(var(--neon), α)) take a soft denim-blue instead of the neon
+     cyan, so the games' lines/fills/letters read on cream while staying pastel —
+     not the glowing aqua of the dark themes, nor a hard steel. The lighter --cyan
+     above stays the cute accent for buttons and logos. */
+  --neon:    86, 116, 160;
 
   /* Pastel shares Ocean's clean design language — solid rounded buttons, sans
      type, normal case, no neon glow — just on a light palette, so it looks the
