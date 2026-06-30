@@ -2,6 +2,10 @@
    .modal*, .link-btn, .status-line, .menu-item, .hidden, and the aesthetic
    tokens (--font-ui/--ui-radius/etc.) that carry each theme. */
 
+/* Letter/word font — clearer letterforms than Orbitron (D / A / R are distinct).
+   Same choice as Scramblr; Orbitron stays for headings, Share Tech Mono for UI. */
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&display=swap');
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -127,7 +131,7 @@ body {
   background: rgba(0,245,255,0.04); border: 1px solid rgba(0,245,255,0.15);
   border-radius: 4px; padding: 4px 2px; line-height: 1.1; position: relative;
 }
-.pat-l { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 0.92rem; color: rgba(0,245,255,0.8); }
+.pat-l { font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 0.92rem; color: rgba(0,245,255,0.8); }
 .pat-c { font-size: 0.54rem; color: rgba(0,245,255,0.45); }
 .pat.power { border-style: dashed; }
 .pat.power .pat-l { color: var(--yellow); }
@@ -147,7 +151,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   width: 40px; height: 46px; border-radius: 6px;
   background: rgba(0,245,255,0.06); border: 1px solid rgba(0,245,255,0.3);
-  color: var(--cyan); font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.3rem;
+  color: var(--cyan); font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 1.35rem;
   text-transform: uppercase; transition: transform 0.05s, box-shadow 0.08s, opacity 0.1s;
 }
 .tile.tappable { cursor: pointer; }
