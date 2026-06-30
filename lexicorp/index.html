@@ -78,20 +78,32 @@
       </section>
 
       <section class="panel build-panel" id="build-panel">
-        <div class="panel-head">YOUR WORD <span id="word-target" class="panel-sub hidden"></span></div>
-        <div id="word-tray" class="tiles tray"></div>
-        <div id="second-wrap" class="hidden">
-          <div class="panel-head">SECOND WORD</div>
-          <div id="second-tray" class="tiles tray"></div>
+        <div id="word-build">
+          <div class="panel-head">YOUR WORD <span id="word-target" class="panel-sub hidden"></span></div>
+          <div id="word-tray" class="tiles tray"></div>
+          <div id="second-wrap" class="hidden">
+            <div class="panel-head">SECOND WORD</div>
+            <div id="second-tray" class="tiles tray"></div>
+          </div>
+          <div id="word-preview" class="word-preview"></div>
+          <div id="y-controls" class="ability-controls"></div>
+          <div id="ability-controls" class="ability-controls"></div>
+          <div id="buy-row" class="buy-row"></div>
+          <div class="row build-actions">
+            <button id="btn-clear" class="btn-ghost" disabled>CLEAR</button>
+            <button id="btn-play" class="btn-primary" disabled>PLAY WORD</button>
+          </div>
+          <button id="btn-discard-mode" class="link-btn">Or discard cards &amp; redraw (skips your turn)</button>
+          <button id="btn-swap" class="link-btn">Stuck? Swap your whole hand (skip turn)</button>
         </div>
-        <div id="word-preview" class="word-preview"></div>
-        <div id="ability-controls" class="ability-controls"></div>
-        <div id="buy-row" class="buy-row"></div>
-        <div class="row build-actions">
-          <button id="btn-clear" class="btn-ghost" disabled>CLEAR</button>
-          <button id="btn-play" class="btn-primary" disabled>PLAY WORD</button>
+        <div id="discard-panel" class="hidden">
+          <div class="panel-head">DISCARD &amp; REDRAW</div>
+          <p class="discard-hint">Tap cards in <strong>your hand</strong> to mark them, then confirm. You'll draw the same number of new cards and your turn ends.</p>
+          <div class="row build-actions">
+            <button id="btn-discard-cancel" class="btn-ghost">CANCEL</button>
+            <button id="btn-discard-go" class="btn-primary" disabled>DISCARD (0)</button>
+          </div>
         </div>
-        <button id="btn-swap" class="link-btn">Stuck? Swap your whole hand (skip turn)</button>
         <p id="status-line" class="status-line"></p>
       </section>
     </div>
@@ -126,11 +138,16 @@
       <button id="help-close" class="modal-close">✕</button>
       <div class="modal-title">HOW TO PLAY</div>
       <div class="help-body">
-        <p>Take turns building words from your hand of 7 cards plus 3 shared pool cards. Each word must be <strong>3+ letters</strong> and use <strong>at least one card from your hand</strong>.</p>
-        <p><strong>Earn</strong> money and stock by word length: longer words pay more, and 6+ letter words also pay stock. Any word with a <strong>Q</strong> pays double money and stock.</p>
-        <p><strong>Patent a letter</strong> from your word (once per turn) by paying its cost. After that, every time an opponent uses that letter you collect <strong>$1 per letter</strong> from the bank.</p>
-        <p>Seven patents carry special powers: <strong>B J K Q V X Z</strong>. Own them for extra doubles, a second word, reusing a card, a free S, or a discard-and-draw.</p>
-        <p>When a player's total patent value reaches the threshold, the round finishes and the game ends. <strong>Highest total of money + stock + patent value wins</strong> (ties go to patent value).</p>
+        <p><strong>Goal:</strong> a game for <strong>2–5 players</strong> — build words to earn money and stock, patent the letters you use to collect royalties, and finish with the most wealth.</p>
+        <p><strong>On your turn, do one of two things:</strong></p>
+        <ul>
+          <li><strong>Play a word</strong> using your 7 hand cards plus the 3 shared pool cards. It must be <strong>3+ letters</strong> and use <strong>at least one card from your hand</strong>.</li>
+          <li><strong>Discard &amp; redraw</strong> — discard any number of hand cards, draw that many back, and end your turn (no score). Or use <em>Swap whole hand</em> if you're stuck.</li>
+        </ul>
+        <p><strong>Earn:</strong> longer words pay more money, and 6+ letter words also pay stock. A word containing a <strong>Q</strong> pays <strong>double</strong> money and stock. Stock can't be spent — it's worth points at the end.</p>
+        <p><strong>Patent a letter</strong> you played from a card (one per turn) by paying its cost to the bank. After that, each time an opponent plays a card with that letter you collect <strong>$1</strong> from the bank. You never earn royalties on your own patents, and letters added by a power (Z's S, X's reused card) pay none.</p>
+        <p><strong>Seven patents carry powers — B J K Q V X Z:</strong> double a vowel-bookended / vowel-heavy / single-vowel word, play a second word, reuse a card, add a free S, or swap a card at the start of your turn. A <strong>Y</strong> in your word can be set as a vowel or consonant, which matters for those doublers.</p>
+        <p><strong>Game end:</strong> once a player's total patent value reaches the goal for the table size (2p&nbsp;$45 · 3p&nbsp;$34 · 4p&nbsp;$26 · 5p&nbsp;$21), the round is completed so everyone has had equal turns, then play stops. <strong>Most money + stock + patent value wins</strong> (ties go to patent value).</p>
       </div>
       <button id="help-got-it" class="btn-primary">GOT IT</button>
     </div>

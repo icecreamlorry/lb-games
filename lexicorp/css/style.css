@@ -154,6 +154,8 @@ body {
 .tile.tappable:hover { box-shadow: 0 0 12px rgba(0,245,255,0.35); border-color: var(--cyan); }
 .tile.used { opacity: 0.3; }
 .tile.q-target { border-color: var(--yellow); box-shadow: 0 0 10px rgba(255,220,0,0.4); }
+/* Marked for discard — magenta so it reads clearly without red/green. */
+.tile.discarding { border-color: var(--magenta); color: var(--magenta); background: rgba(255,0,255,0.12); box-shadow: 0 0 10px rgba(255,0,255,0.4); }
 .tile.tray-tile { background: rgba(0,245,255,0.16); border-color: var(--cyan); }
 .tile.s-bonus { background: rgba(255,220,0,0.18); border-color: var(--yellow); color: var(--yellow); }
 .empty-note { font-size: 0.66rem; color: rgba(0,245,255,0.35); align-self: center; padding: 0 4px; }
@@ -162,6 +164,7 @@ body {
 
 /* ---- Build controls ---- */
 .build-panel { gap: 8px; }
+#word-build, #discard-panel { display: flex; flex-direction: column; gap: 8px; }
 .word-target { display: inline-flex; gap: 4px; }
 .tray-tab {
   background: transparent; border: 1px solid rgba(0,245,255,0.25); color: rgba(0,245,255,0.6);
@@ -183,7 +186,8 @@ body {
 .buy-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .build-actions { display: flex; gap: 10px; width: min(420px, 92vw); margin: 2px auto 0; }
 .build-actions .btn-primary, .build-actions .btn-ghost { flex: 1; }
-#btn-swap { align-self: center; font-size: 0.62rem; }
+#btn-swap, #btn-discard-mode { align-self: center; font-size: 0.62rem; }
+.discard-hint { font-size: 0.7rem; color: rgba(0,245,255,0.7); text-align: center; margin: 2px auto 8px; max-width: 36ch; }
 /* The swap relief valve only works on your turn; .link-btn has no disabled look
    of its own, so grey it out and drop the pointer when it isn't actionable. */
 #btn-swap:disabled { opacity: 0.35; cursor: default; }

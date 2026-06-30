@@ -30,7 +30,8 @@ import {
 } from './notify.js';
 
 const $ = (id) => document.getElementById(id);
-const NUM_PLAYERS = 2;            // head-to-head
+const MIN_PLAYERS = 2;           // host can start with as few as 2…
+const MAX_PLAYERS = 5;           // …and as many as 5 (Letter Tycoon's range)
 const SESSION_KEY = 'lexicorp_session';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -50,7 +51,13 @@ const app = {
 };
 
 function freshDraft() {
-  return { cards: [], appendS: false, second: null, activeTray: 'main', buy: null, qDiscard: null, doubledId: null };
+  return {
+    cards: [], appendS: false, second: null, activeTray: 'main', buy: null,
+    qDiscard: null, doubledId: null,
+    yVowels: new Set(),     // Y card ids the player has declared vowels
+    discardMode: false,     // choosing cards to discard instead of building a word
+    discardSet: new Set(),  // hand card ids marked for discard
+  };
 }
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
@@ -77,7 +84,7 @@ $('btn-create').addEventListener('click', async () => {
   const name = requireName(landingError); if (!name) return;
   landingError('');
   try {
-    const room = await createRoom(name, app.userId, null, NUM_PLAYERS);
+    const room = await createRoom(name, app.userId, null, MAX_PLAYERS);
     await enterRoom(room.code, 0, name, room);
   } catch (e) { landingError(e.message || 'Could not create a room.'); }
 });
@@ -131,7 +138,7 @@ function stopLobbyPolling() { if (lobbyPoll) { clearInterval(lobbyPoll); lobbyPo
 
 $('btn-lobby-new').addEventListener('click', async () => {
   try {
-    const room = await createRoom(app.name, app.userId, null, NUM_PLAYERS);
+    const room = await createRoom(app.name, app.userId, null, MAX_PLAYERS);
     await enterRoom(room.code, 0, app.name, room);
   } catch (e) { $('lobby-error').textContent = e.message; }
 });
@@ -194,7 +201,7 @@ async function openFromLobby(room) {
 
 async function challengeFriend(friend) {
   try {
-    const room = await createRoom(app.name, app.userId, { userId: friend.id, name: friend.display_name }, NUM_PLAYERS);
+    const room = await createRoom(app.name, app.userId, { userId: friend.id, name: friend.display_name }, MAX_PLAYERS);
     triggerPush({ user_id: friend.id, title: 'Lexicorp challenge!', body: `${app.name} challenged you to Lexicorp.`, url: location.href.split('#')[0] }).catch(() => {});
     await enterRoom(room.code, 0, app.name, room);
   } catch (e) { $('lobby-error').textContent = e.message; }
@@ -218,10 +225,17 @@ function resetRoomState() {
   if ($('btn-rematch')) $('btn-rematch').disabled = false;
 }
 
+// Build the deterministic game state once the player count is known (fixed at
+// the moment the host starts and carried in the 'start' move, so every client
+// — host, opponents, late replays — deals the same hands from the seed).
+function beginGame(numPlayers) {
+  app.game = initialState(Number(app.room.seed), numPlayers);
+}
+
 async function enterRoom(code, seat, name, room) {
   resetRoomState();
   app.code = code; app.seat = seat; app.name = name; app.room = room;
-  app.game = initialState(Number(room.seed), NUM_PLAYERS);
+  // app.game stays null until the 'start' move sets the final player count.
   $('room-code-text').textContent = code;
   showScreen('game');
   app.phase = 'waiting';
@@ -313,12 +327,14 @@ function drainBuffer() {
 
 function applyOne(move) {
   if (move.type === 'start') {
+    // Older 2-player games predate the player count in the payload — default to 2.
+    if (!app.game) beginGame(move.payload?.players ?? 2);
     app.started = true;
     if (app.phase === 'waiting') app.phase = 'playing';
     if (app.room && app.room.status === 'waiting') app.room.status = 'playing';
     return;
   }
-  if (move.type === 'play' || move.type === 'swap') {
+  if (move.type === 'play' || move.type === 'swap' || move.type === 'discard') {
     applyMove(app.game, move, dictionaryLoaded() ? isWord : undefined);
   }
 }
@@ -364,11 +380,13 @@ function handleRoomUpdate(room) {
 $('btn-start').addEventListener('click', async () => {
   if (app.started) return;
   const players = app.room?.players ?? [];
-  if (players.length < NUM_PLAYERS) { setStartInfo('Waiting for an opponent to join…'); return; }
+  const n = players.length;
+  if (n < MIN_PLAYERS) { setStartInfo('Waiting for players to join…'); return; }
   $('btn-start').disabled = true;
   try {
-    await app.conn.sendMove({ move_index: 0, player: 0, type: 'start', payload: { startAt: Date.now() } });
+    await app.conn.sendMove({ move_index: 0, player: 0, type: 'start', payload: { startAt: Date.now(), players: n } });
     updateRoomStatus(app.code, 'playing').catch(() => {});
+    beginGame(n);
     app.started = true;
     app.phase = 'playing';
     if (app.room) app.room.status = 'playing';
@@ -382,7 +400,7 @@ $('btn-start').addEventListener('click', async () => {
 
 const rematch = createRematch({
   state: app,
-  createRoom: (name, userId) => createRoom(name, userId, null, NUM_PLAYERS),
+  createRoom: (name, userId) => createRoom(name, userId, null, MAX_PLAYERS),
   joinRoom, enterRoom,
   onError: (msg) => { setStatus(msg); },
 });
@@ -425,6 +443,14 @@ function activeCards() {
 
 function addCard(id) {
   if (!myTurn()) return;
+  // Discard mode: tapping a hand card toggles whether it's marked for discard.
+  if (app.draft.discardMode) {
+    if (!app.game.hands[app.seat].includes(id)) return; // only your own hand
+    if (app.draft.discardSet.has(id)) app.draft.discardSet.delete(id);
+    else app.draft.discardSet.add(id);
+    renderAll();
+    return;
+  }
   // Q discard mode: the next hand tile tapped is discarded for a fresh draw.
   if (app.draft.qMode) {
     if (app.game.hands[app.seat].includes(id)) {
@@ -464,10 +490,56 @@ function renderAll() {
   renderTiles('pool', app.game ? app.game.pool : [], 'pool');
   renderTiles('hand', app.game ? displayHand() : [], 'hand');
   $('build-panel').classList.toggle('hidden', !myTurn());
+  renderDiscardUI();
   renderTray();
   renderAbilityControls();
+  renderYControls();
   updatePreview();
   renderOverlays();
+}
+
+// Swap the build panel between "build a word" and "discard & redraw".
+function renderDiscardUI() {
+  const on = !!(app.draft && app.draft.discardMode);
+  $('word-build').classList.toggle('hidden', on);
+  $('discard-panel').classList.toggle('hidden', !on);
+  if (on) {
+    const n = app.draft.discardSet.size;
+    $('btn-discard-go').textContent = `DISCARD (${n})`;
+    $('btn-discard-go').disabled = n === 0;
+  }
+}
+
+// Per-Y vowel/consonant toggles — shown only when a Y is in your word AND you own
+// a power that cares about vowels (B/J/K); otherwise the choice has no effect.
+function renderYControls() {
+  const wrap = $('y-controls');
+  wrap.innerHTML = '';
+  if (!myTurn() || app.draft.discardMode) return;
+  const owned = ownedPowersSet();
+  if (!(owned.has('B') || owned.has('J') || owned.has('K'))) return;
+  const seen = new Set();
+  const yIds = [];
+  const scan = (cards) => { for (const id of cards) if (letterOf(app.game, id) === 'Y' && !seen.has(id)) { seen.add(id); yIds.push(id); } };
+  scan(app.draft.cards);
+  if (app.draft.second) scan(app.draft.second.cards);
+  if (!yIds.length) return;
+  const note = document.createElement('span');
+  note.className = 'ability-note';
+  note.textContent = 'Y counts as:';
+  wrap.appendChild(note);
+  yIds.forEach((id) => {
+    const isV = app.draft.yVowels.has(id);
+    const b = document.createElement('button');
+    b.className = 'ability-btn' + (isV ? ' on' : '');
+    b.textContent = isV ? 'Y = vowel' : 'Y = consonant';
+    b.addEventListener('click', () => {
+      if (app.draft.yVowels.has(id)) app.draft.yVowels.delete(id);
+      else app.draft.yVowels.add(id);
+      renderAll();
+    });
+    wrap.appendChild(b);
+  });
 }
 
 function renderPlayers() {
@@ -531,7 +603,7 @@ function renderPatents() {
     wrap.appendChild(chip);
   }
   $('patent-hint').textContent = app.game
-    ? `· reach ©${endThreshold(NUM_PLAYERS)} to end`
+    ? `· reach ©${endThreshold(app.game.numPlayers)} to end`
     : '';
 }
 
@@ -539,13 +611,16 @@ function renderPatents() {
 function renderTiles(elId, ids, kind) {
   const wrap = $(elId);
   wrap.innerHTML = '';
-  const interactive = myTurn();
+  const discarding = !!(app.draft && app.draft.discardMode);
+  // While discarding you can only act on your own hand; the pool is locked.
+  const interactive = myTurn() && (kind === 'hand' || !discarding);
   wrap.classList.toggle('locked', !interactive);
   ids.forEach((id) => {
     const tile = document.createElement('div');
-    const used = usageCount(id) > 0;
-    tile.className = 'tile' + (used ? ' used' : '') + (interactive ? ' tappable' : '');
-    if (kind === 'hand' && app.draft.qMode && app.game.hands[app.seat].includes(id)) tile.className += ' q-target';
+    const used = !discarding && usageCount(id) > 0;
+    const marked = discarding && kind === 'hand' && app.draft.discardSet.has(id);
+    tile.className = 'tile' + (used ? ' used' : '') + (marked ? ' discarding' : '') + (interactive ? ' tappable' : '');
+    if (!discarding && kind === 'hand' && app.draft.qMode && app.game.hands[app.seat].includes(id)) tile.className += ' q-target';
     tile.textContent = letterOf(app.game, id);
     if (interactive) tile.addEventListener('click', () => addCard(id));
     wrap.appendChild(tile);
@@ -644,13 +719,14 @@ function draftPayload() {
   }
   if (app.draft.buy) payload.buy = app.draft.buy;
   if (app.draft.qDiscard != null) payload.qDiscard = app.draft.qDiscard;
+  if (app.draft.yVowels && app.draft.yVowels.size) payload.yVowels = [...app.draft.yVowels];
   return payload;
 }
 
 // Which letters could be patented with the current word right now.
 function currentBuyable() {
   const out = new Set();
-  if (!myTurn()) return out;
+  if (!myTurn() || app.draft.discardMode) return out;
   const res = validatePlay(app.game, app.seat, draftPayload(), dictionaryLoaded() ? isWord : undefined);
   if (!res.ok || !res.letters) return out;
   const projected = app.game.money[app.seat] + res.money;
@@ -707,6 +783,24 @@ async function playWord() {
 $('btn-swap').addEventListener('click', async () => {
   if (!myTurn()) return;
   await sendTurn({ type: 'swap', payload: {} });
+});
+
+// Discard & redraw: choose specific hand cards, then end the turn.
+$('btn-discard-mode').addEventListener('click', () => {
+  if (!myTurn()) return;
+  app.draft.discardMode = true;
+  app.draft.discardSet = new Set();
+  setStatus('');
+  renderAll();
+});
+$('btn-discard-cancel').addEventListener('click', () => {
+  app.draft.discardMode = false;
+  app.draft.discardSet = new Set();
+  renderAll();
+});
+$('btn-discard-go').addEventListener('click', async () => {
+  if (!myTurn() || !app.draft.discardSet.size) return;
+  await sendTurn({ type: 'discard', payload: { cards: [...app.draft.discardSet] } });
 });
 
 // Apply a turn locally (optimistic) then persist+broadcast it.
@@ -797,12 +891,12 @@ function renderOverlays() {
 function renderPrestart() {
   const players = app.room?.players ?? [];
   const n = players.length;
-  $('start-title').textContent = n >= NUM_PLAYERS ? 'READY?' : 'WAITING FOR PLAYERS';
-  setStartInfo(`${n}/${NUM_PLAYERS} players in · share code <strong>${esc(app.code)}</strong>`);
+  $('start-title').textContent = n >= MIN_PLAYERS ? 'READY?' : 'WAITING FOR PLAYERS';
+  setStartInfo(`${n}/${MAX_PLAYERS} players in · need ${MIN_PLAYERS}+ to start · share code <strong>${esc(app.code)}</strong>`);
   const host = app.seat === 0;
   $('btn-start').textContent = 'START GAME';
   $('btn-start').classList.toggle('hidden', !host);
-  $('btn-start').disabled = n < NUM_PLAYERS;
+  $('btn-start').disabled = n < MIN_PLAYERS;
   $('start-waiting').classList.toggle('hidden', host);
 }
 function setStartInfo(html) { $('start-info').innerHTML = html; }
@@ -813,16 +907,19 @@ function setStatus(msg) { $('status-line').textContent = msg || ''; }
 function maybeNotifyTurn() {
   const mine = myTurn();
   if (mine && !app.wasMyTurn && app.started && document.hidden) {
-    const opp = seatName(app.room, (app.seat + 1) % NUM_PLAYERS) || 'Your opponent';
-    showTurnNotification(`${opp} played. Your move!`);
+    const last = app.game?.log?.[app.game.log.length - 1];
+    const who = (last && seatName(app.room, last.seat)) || 'Someone';
+    showTurnNotification(`${who} played. Your move!`);
   }
   if (mine && !document.hidden) clearTurnNotification();
   app.wasMyTurn = mine;
 }
 
 function pushOpponent() {
-  if (!app.room) return;
-  const oppSeat = (app.seat + 1) % NUM_PLAYERS;
+  if (!app.room || !app.game) return;
+  // Notify whoever's turn it now is (the next player in order), not just "seat 1".
+  const oppSeat = whoseTurn(app.game);
+  if (oppSeat === app.seat) return;
   const oppUserId = app.room.players?.[oppSeat]?.userId || null;
   const route = oppUserId ? { user_id: oppUserId } : { room_code: app.code, player: oppSeat };
   triggerPush({
