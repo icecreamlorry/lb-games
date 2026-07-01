@@ -15,13 +15,17 @@ body {
     linear-gradient(90deg, rgba(var(--neon),0.035) 1px, transparent 1px);
   background-size: 40px 40px;
   color: var(--cyan);
-  font-family: 'Share Tech Mono', monospace;
+  font-family: var(--font-mono);
   -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
 }
 .muted { color: rgba(var(--neon),0.5); }
 .hidden { display: none !important; }
+/* The neon graph-paper backdrop is part of the Synth terminal look only —
+   Ocean/Pastel go flat, same as Chromagrid already does. */
+:root[data-theme="maritime"] body,
+:root[data-theme="pastel"] body { background-image: none; }
 
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
 #screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
@@ -31,20 +35,22 @@ body {
   width: min(420px, 94vw);
   background: var(--panel);
   border: 1px solid rgba(var(--neon),0.22);
-  border-radius: 4px;
+  border-radius: var(--panel-radius);
   padding: 26px 24px 22px;
-  box-shadow: 0 0 40px rgba(var(--neon),0.08), inset 0 0 60px rgba(0,0,0,0.4);
+  box-shadow: var(--panel-aura);
   display: flex; flex-direction: column; gap: 14px;
   text-align: center;
 }
 .logo {
+  /* Brand wordmark keeps Orbitron regardless of theme, like every other
+     game's logo class — only the chrome around it reskins. */
   font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.18em;
   font-size: 2.2rem; margin: 0; color: var(--cyan);
-  text-shadow: 0 0 8px var(--cyan), 0 0 26px rgba(var(--neon),0.5);
+  text-shadow: var(--glow-cyan-lg);
 }
 .logo.small { font-size: 1rem; letter-spacing: 0.15em; }
-.tagline { margin: 0; font-size: 0.66rem; letter-spacing: 0.28em; color: var(--magenta); text-shadow: 0 0 8px var(--magenta); }
-.card-title { font-family: 'Orbitron', monospace; font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
+.tagline { margin: 0; font-size: 0.66rem; letter-spacing: 0.28em; color: var(--magenta); text-shadow: var(--glow-magenta); }
+.card-title { font-family: var(--font-ui); font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
 .hint { font-size: 0.6rem; color: rgba(var(--neon),0.4); line-height: 1.5; margin: 4px 0 0; }
 
 .btn-ghost {
@@ -68,7 +74,7 @@ body {
 .chip {
   background: rgba(var(--neon),0.06); border: 1px solid rgba(var(--neon),0.25);
   color: rgba(var(--neon),0.8); border-radius: 999px; padding: 5px 12px;
-  font-family: 'Share Tech Mono', monospace; font-size: 0.64rem; letter-spacing: 0.08em;
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em;
   cursor: pointer; touch-action: manipulation; white-space: nowrap;
 }
 .chip strong { color: var(--cyan); letter-spacing: 0.12em; }
@@ -78,15 +84,15 @@ body {
 .lobby-game {
   position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
   text-align: left; width: 100%; background: rgba(var(--neon),0.04);
-  border: 1px solid transparent; border-radius: 3px; padding: 12px 14px;
-  color: var(--cyan); cursor: pointer; font-family: 'Share Tech Mono', monospace;
+  border: 1px solid transparent; border-radius: var(--item-radius); padding: 12px 14px;
+  color: var(--cyan); cursor: pointer; font-family: var(--font-mono);
 }
 .lobby-game:hover { border-color: rgba(var(--neon),0.35); }
 .lobby-game.live { border-color: var(--cyan); }
 .lobby-opp { font-weight: 600; }
 .lobby-status { font-size: 0.66rem; color: rgba(var(--neon),0.5); }
 .lobby-game.live .lobby-status { color: var(--cyan); }
-.lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Orbitron', monospace; font-size: 0.9rem; }
+.lobby-score { grid-row: 1 / 3; align-self: center; font-family: var(--font-ui); font-size: 0.9rem; }
 .lobby-dismiss { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); color: rgba(var(--neon),0.4); font-size: 16px; cursor: pointer; padding: 2px 6px; }
 .lobby-dismiss:hover { color: var(--magenta); }
 .lobby-game:has(.lobby-dismiss) { padding-right: 40px; }
@@ -97,7 +103,7 @@ body {
 .pchip {
   display: flex; flex-direction: column; gap: 3px;
   background: rgba(var(--neon),0.05); border: 1px solid rgba(var(--neon),0.2);
-  border-radius: 4px; padding: 6px 12px; min-width: 120px;
+  border-radius: var(--item-radius); padding: 6px 12px; min-width: 120px;
 }
 .pchip.me { border-color: rgba(var(--neon),0.45); }
 .pchip.turn { border-color: var(--cyan); box-shadow: 0 0 12px rgba(var(--neon),0.3); }
@@ -105,8 +111,8 @@ body {
 .pchip .pname { font-size: 0.72rem; color: rgba(var(--neon),0.85); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pchip .pdot { width: 6px; height: 6px; border-radius: 50%; background: #2bd576; box-shadow: 0 0 6px #2bd576; flex-shrink: 0; }
 .pchip .pdot.off { background: #555; box-shadow: none; }
-.pchip .pstats { display: flex; gap: 10px; font-family: 'Orbitron', monospace; font-weight: 700; font-size: 0.78rem; color: var(--cyan); }
-.left-tag { font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--magenta); border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; }
+.pchip .pstats { display: flex; gap: 10px; font-family: var(--font-ui); font-weight: 700; font-size: 0.78rem; color: var(--cyan); }
+.left-tag { font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--magenta); border: 1px solid currentColor; border-radius: var(--item-radius); padding: 0 4px; }
 
 /* ---- Play area ---- */
 /* game-body is the positioned wrapper the overlays anchor to, so they cover the
@@ -114,22 +120,22 @@ body {
 .game-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .play-area { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 12px 24px; display: flex; flex-direction: column; gap: 12px; }
 .turn-banner {
-  text-align: center; font-family: 'Orbitron', monospace; font-weight: 800;
+  text-align: center; font-family: var(--font-ui); font-weight: 800;
   letter-spacing: 0.16em; font-size: 0.82rem; min-height: 1.2em;
   color: rgba(var(--neon),0.5); text-transform: uppercase;
 }
-.turn-banner.mine { color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
+.turn-banner.mine { color: var(--cyan); text-shadow: var(--glow-cyan); }
 
 .panel { display: flex; flex-direction: column; gap: 7px; }
-.panel-head { font-family: 'Orbitron', monospace; font-size: 0.6rem; letter-spacing: 0.14em; color: rgba(var(--neon),0.45); display: flex; align-items: center; gap: 8px; }
-.panel-sub { font-family: 'Share Tech Mono', monospace; letter-spacing: 0.04em; color: rgba(var(--neon),0.35); text-transform: none; }
+.panel-head { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.14em; color: rgba(var(--neon),0.45); display: flex; align-items: center; gap: 8px; }
+.panel-sub { font-family: var(--font-mono); letter-spacing: 0.04em; color: rgba(var(--neon),0.35); text-transform: none; }
 
 /* ---- Patents grid ---- */
 .patents { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 5px; }
 .pat {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: rgba(var(--neon),0.04); border: 1px solid rgba(var(--neon),0.15);
-  border-radius: 4px; padding: 4px 2px; line-height: 1.1; position: relative;
+  border-radius: var(--item-radius); padding: 4px 2px; line-height: 1.1; position: relative;
 }
 .pat-l { font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 0.92rem; color: rgba(var(--neon),0.8); }
 .pat-c { font-size: 0.54rem; color: rgba(var(--neon),0.45); }
@@ -137,9 +143,9 @@ body {
 .pat.power .pat-l { color: var(--yellow); }
 .pat.own-me { background: rgba(var(--neon),0.18); border-color: var(--cyan); }
 .pat.own-me .pat-l { color: var(--cyan); }
-.pat.own-opp { background: rgba(255,0,160,0.12); border-color: rgba(255,0,160,0.4); }
+.pat.own-opp { background: color-mix(in srgb, var(--magenta) 12%, transparent); border-color: color-mix(in srgb, var(--magenta) 40%, transparent); }
 .pat.own-opp .pat-l { color: var(--magenta); }
-.pat.buyable { cursor: pointer; border-color: var(--yellow); box-shadow: 0 0 8px rgba(255,220,0,0.25); }
+.pat.buyable { cursor: pointer; border-color: var(--yellow); box-shadow: 0 0 8px color-mix(in srgb, var(--yellow) 25%, transparent); }
 .pat.buyable .pat-c { color: var(--yellow); }
 .pat.selected { background: var(--yellow); }
 .pat.selected .pat-l, .pat.selected .pat-c { color: #25221b; }
@@ -157,11 +163,11 @@ body {
 .tile.tappable { cursor: pointer; }
 .tile.tappable:hover { box-shadow: 0 0 12px rgba(var(--neon),0.35); border-color: var(--cyan); }
 .tile.used { opacity: 0.3; }
-.tile.q-target { border-color: var(--yellow); box-shadow: 0 0 10px rgba(255,220,0,0.4); }
+.tile.q-target { border-color: var(--yellow); box-shadow: 0 0 10px color-mix(in srgb, var(--yellow) 40%, transparent); }
 /* Marked for discard — magenta so it reads clearly without red/green. */
-.tile.discarding { border-color: var(--magenta); color: var(--magenta); background: rgba(255,0,255,0.12); box-shadow: 0 0 10px rgba(255,0,255,0.4); }
+.tile.discarding { border-color: var(--magenta); color: var(--magenta); background: color-mix(in srgb, var(--magenta) 12%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--magenta) 40%, transparent); }
 .tile.tray-tile { background: rgba(var(--neon),0.16); border-color: var(--cyan); }
-.tile.s-bonus { background: rgba(255,220,0,0.18); border-color: var(--yellow); color: var(--yellow); }
+.tile.s-bonus { background: color-mix(in srgb, var(--yellow) 18%, transparent); border-color: var(--yellow); color: var(--yellow); }
 .empty-note { font-size: 0.66rem; color: rgba(var(--neon),0.35); align-self: center; padding: 0 4px; }
 /* Pool/hand while it isn't your turn: greyed out + non-interactive. */
 .tiles.locked { filter: grayscale(0.95); opacity: 0.4; pointer-events: none; }
@@ -172,8 +178,8 @@ body {
 .word-target { display: inline-flex; gap: 4px; }
 .tray-tab {
   background: transparent; border: 1px solid rgba(var(--neon),0.25); color: rgba(var(--neon),0.6);
-  border-radius: 3px; padding: 1px 8px; font-size: 0.56rem; letter-spacing: 0.08em; cursor: pointer;
-  font-family: 'Share Tech Mono', monospace;
+  border-radius: var(--ui-radius); padding: 1px 8px; font-size: 0.56rem; letter-spacing: 0.08em; cursor: pointer;
+  font-family: var(--font-mono);
 }
 .tray-tab.active { border-color: var(--cyan); color: var(--cyan); background: rgba(var(--neon),0.12); }
 .word-preview { min-height: 1.4em; text-align: center; font-size: 0.86rem; letter-spacing: 0.04em; color: rgba(var(--neon),0.7); }
@@ -183,7 +189,7 @@ body {
 .ability-btn {
   background: rgba(var(--neon),0.05); border: 1px solid rgba(var(--neon),0.3); color: rgba(var(--neon),0.8);
   border-radius: var(--ui-radius); padding: 4px 10px; font-size: 0.6rem; letter-spacing: 0.06em;
-  cursor: pointer; font-family: 'Share Tech Mono', monospace;
+  cursor: pointer; font-family: var(--font-mono);
 }
 .ability-btn.on { background: var(--cyan); color: var(--dark); border-color: var(--cyan); }
 .ability-note { font-size: 0.58rem; color: rgba(var(--neon),0.45); }
@@ -204,20 +210,20 @@ body {
   background: rgba(4,4,15,0.82); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
 }
 .overlay-card {
-  background: var(--panel); border: 1px solid rgba(var(--neon),0.25); border-radius: 4px;
+  background: var(--panel); border: 1px solid rgba(var(--neon),0.25); border-radius: var(--panel-radius);
   padding: 24px 26px; text-align: center; max-width: 92%; max-height: 90%; overflow-y: auto;
   display: flex; flex-direction: column; gap: 12px; align-items: center;
   box-shadow: 0 0 40px rgba(var(--neon),0.1);
 }
-.overlay-title { font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.15em; color: var(--cyan); text-shadow: 0 0 12px var(--cyan); }
-.results-winner { font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1rem; letter-spacing: 0.12em; color: var(--cyan); text-shadow: 0 0 14px var(--cyan); min-height: 1.4em; }
+.overlay-title { font-family: var(--font-ui); font-weight: 800; letter-spacing: 0.15em; color: var(--cyan); text-shadow: var(--glow-cyan); }
+.results-winner { font-family: var(--font-ui); font-weight: 800; font-size: 1rem; letter-spacing: 0.12em; color: var(--cyan); text-shadow: var(--glow-cyan-lg); min-height: 1.4em; }
 .results-winner.loss { color: rgba(var(--neon),0.55); text-shadow: none; }
 .results-list { text-align: left; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; min-width: min(300px, 80vw); }
 .results-list li { display: grid; grid-template-columns: 1.6em 1fr auto; align-items: center; gap: 4px 10px; font-size: 0.86rem; }
-.results-list .r-rank { font-family: 'Orbitron', monospace; color: var(--magenta); }
+.results-list .r-rank { font-family: var(--font-ui); color: var(--magenta); }
 .results-list .r-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results-list .r-breakdown { grid-column: 2 / 3; font-size: 0.62rem; color: rgba(var(--neon),0.5); }
-.results-list .r-score { grid-row: 1 / 3; grid-column: 3; font-family: 'Orbitron', monospace; font-weight: 800; font-size: 1.3rem; color: var(--cyan); }
+.results-list .r-score { grid-row: 1 / 3; grid-column: 3; font-family: var(--font-ui); font-weight: 800; font-size: 1.3rem; color: var(--cyan); }
 .results-list li.me .r-name { color: #fff; }
 
 .help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.78rem; line-height: 1.55; color: rgba(var(--neon),0.7); }

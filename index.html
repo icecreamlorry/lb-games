@@ -9,11 +9,17 @@
   <link rel="stylesheet" href="shared/shared.css">
   <script src="shared/theme-boot.js"></script>
   <style>
+    /* The landing page is nobody's native game screen — it should wear
+       whichever theme is selected as its own neutral chrome, not permanently
+       borrow Chromagrid's Synth look (Orbitron headings, hard-coded neon-cyan
+       glows/tints, 4px corners). Every value below reads from the shared
+       tokens so Ocean/Pastel actually reskin it instead of just recolouring
+       a frozen Synth layout. */
     body {
       background-color: var(--dark);
       background-image:
-        linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+        linear-gradient(rgba(var(--neon),0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--neon),0.03) 1px, transparent 1px);
       background-size: 44px 44px;
       min-height: 100vh;
       display: flex;
@@ -21,7 +27,7 @@
       align-items: center;
       justify-content: center;
       padding: 40px 20px 60px;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-mono);
       color: var(--cyan);
       gap: 48px;
     }
@@ -30,8 +36,8 @@
        as part of the account block rather than a free-floating row. */
     .lb-theme { width: 100%; max-width: 340px; margin-top: -32px; }
 
-    /* CRT scanlines are part of the neon Synth aesthetic only — they'd look
-       wrong over the Ocean/Pastel surfaces (e.g. dark lines on Pastel cream). */
+    /* CRT scanlines + the dot-grid backdrop are part of the neon Synth
+       aesthetic only — they'd look wrong on Ocean/Pastel surfaces. */
     :root[data-theme="synth"] body::after {
       content: '';
       position: fixed;
@@ -46,6 +52,8 @@
       pointer-events: none;
       z-index: 1000;
     }
+    :root[data-theme="maritime"] body,
+    :root[data-theme="pastel"] body { background-image: none; }
 
     .site-header {
       text-align: center;
@@ -55,15 +63,12 @@
     }
 
     .site-title {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 2.2rem;
       font-weight: 800;
       letter-spacing: 0.2em;
       color: var(--cyan);
-      text-shadow:
-        0 0 8px var(--cyan),
-        0 0 24px var(--cyan),
-        0 0 60px rgba(0,245,255,0.35);
+      text-shadow: var(--glow-cyan-lg);
       animation: flicker 8s infinite;
     }
 
@@ -76,15 +81,15 @@
       font-size: 0.72rem;
       letter-spacing: 0.3em;
       color: var(--magenta);
-      text-shadow: 0 0 8px var(--magenta);
+      text-shadow: var(--glow-magenta);
       text-transform: uppercase;
     }
     .site-version {
       margin-top: 6px;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-mono);
       font-size: 0.56rem;
       letter-spacing: 0.18em;
-      color: rgba(0,245,255,0.4);
+      color: rgba(var(--neon),0.4);
       text-transform: uppercase;
       min-height: 0.7em;
     }
@@ -105,9 +110,9 @@
       gap: 12px;
       padding: 28px 24px 22px;
       background: var(--panel);
-      border: 1px solid rgba(0,245,255,0.18);
-      border-radius: 4px;
-      box-shadow: 0 0 24px rgba(0,245,255,0.05), inset 0 0 40px rgba(0,0,0,0.4);
+      border: 1px solid rgba(var(--neon),0.18);
+      border-radius: var(--panel-radius);
+      box-shadow: var(--panel-aura);
       text-decoration: none;
       color: inherit;
       transition: border-color 0.2s, box-shadow 0.2s;
@@ -116,8 +121,8 @@
     }
 
     .game-card:hover {
-      border-color: rgba(0,245,255,0.5);
-      box-shadow: 0 0 40px rgba(0,245,255,0.12), inset 0 0 40px rgba(0,0,0,0.4);
+      border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
+      box-shadow: var(--panel-aura);
     }
 
     .game-card.coming-soon {
@@ -127,41 +132,42 @@
     }
 
     .game-label {
+      font-family: var(--font-ui);
       font-size: 0.56rem;
       letter-spacing: 0.28em;
       color: var(--magenta);
-      text-shadow: 0 0 6px var(--magenta);
+      text-shadow: var(--glow-magenta-sm);
       text-transform: uppercase;
     }
 
     .game-name {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 1.1rem;
       font-weight: 800;
       letter-spacing: 0.15em;
       color: var(--cyan);
-      text-shadow: 0 0 8px var(--cyan);
+      text-shadow: var(--glow-cyan);
     }
 
     .game-desc {
       font-size: 0.7rem;
-      color: rgba(0,245,255,0.55);
+      color: rgba(var(--neon),0.55);
       letter-spacing: 0.04em;
       line-height: 1.6;
       flex: 1;
     }
 
     .game-play {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.62rem;
       letter-spacing: 0.2em;
       color: var(--cyan);
-      text-shadow: 0 0 8px var(--cyan);
+      text-shadow: var(--glow-cyan);
       margin-top: 4px;
     }
 
     .game-card.coming-soon .game-play {
-      color: rgba(0,245,255,0.4);
+      color: rgba(var(--neon),0.4);
       text-shadow: none;
     }
 
@@ -170,7 +176,7 @@
     footer {
       font-size: 0.6rem;
       letter-spacing: 0.12em;
-      color: rgba(0,245,255,0.25);
+      color: rgba(var(--neon),0.25);
       text-align: center;
     }
 

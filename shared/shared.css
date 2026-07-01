@@ -35,7 +35,49 @@
   --ui-transform:   uppercase;
   --ui-tracking:    0.12em;
   --ui-radius:      2px;
+  /* Cards/panels/modals/chips use a slightly bigger radius than buttons even
+     in Synth (4px vs 2px) — a second token instead of forcing every surface
+     onto --ui-radius, which would nudge Synth's button corners too. */
+  --panel-radius:   4px;
+  /* Smaller surfaces (list rows, room-player chips) — a step between button
+     and panel radius, matching each theme's native games (Wurdz's own lobby
+     rows are 10px, Splitz's are 14px). */
+  --item-radius:    3px;
   --panel-light:    color-mix(in srgb, var(--cyan) 12%, var(--panel));
+
+  /* ── glow tokens ───────────────────────────────────────────────────────
+     Every game hand-wrote its own `text-shadow: 0 0 Npx var(--color)` glow
+     per heading/label/value, which meant Ocean/Pastel had to fight each one
+     individually (or, in Pastel's case, nuke *all* text-shadow with a single
+     `* { text-shadow: none !important }`). Games should reach for these
+     instead: three colours × three sizes (sm = small labels/badges,
+     default = values/headings, lg = hero numbers/titles with a soft outer
+     bloom). Synth is the only theme with any glow at all. */
+  --glow-cyan-sm:    0 0 6px var(--cyan);
+  --glow-cyan:       0 0 10px var(--cyan);
+  --glow-cyan-lg:    0 0 8px var(--cyan), 0 0 24px var(--cyan), 0 0 60px color-mix(in srgb, var(--cyan) 35%, transparent);
+  --glow-magenta-sm: 0 0 6px var(--magenta);
+  --glow-magenta:    0 0 8px var(--magenta);
+  --glow-magenta-lg: 0 0 12px var(--magenta), 0 0 34px color-mix(in srgb, var(--magenta) 50%, transparent);
+  --glow-yellow-sm:  0 0 5px var(--yellow);
+  --glow-yellow:     0 0 8px var(--yellow);
+  --glow-yellow-lg:  0 0 18px color-mix(in srgb, var(--yellow) 60%, transparent), 0 0 36px color-mix(in srgb, var(--yellow) 30%, transparent);
+  /* The one glow colour outside the 3-hue palette: danger/urgency red, used
+     on countdown timers when time is nearly up. */
+  --glow-danger:     0 0 14px #ff4040;
+
+  /* Outlined "CTA" buttons (start/play-again/confirm) get an extra pulsing
+     box-shadow glow on top of the base button tokens above, in Synth only. */
+  --cta-shadow:       0 0 16px rgba(var(--neon),0.3), inset 0 0 14px rgba(var(--neon),0.06);
+  --cta-hover-shadow: 0 0 24px rgba(var(--neon),0.6), inset 0 0 18px rgba(var(--neon),0.1);
+
+  /* The recurring "outer aura + inset vignette" shadow used on every card,
+     panel and overlay. One token instead of each game re-deriving its own
+     opacity numbers (0.05/0.06/0.07/0.08/0.1/0.12 were all the same idea,
+     drifted by copy-paste). */
+  --panel-aura: 0 0 40px color-mix(in srgb, var(--cyan) 8%, transparent), inset 0 0 60px rgba(0,0,0,0.4);
+  /* Same aura, yellow-accented — for gold/daily-challenge panels. */
+  --panel-aura-yellow: 0 0 40px color-mix(in srgb, var(--yellow) 8%, transparent), inset 0 0 60px rgba(0,0,0,0.4);
 
   /* base (secondary) button */
   --btn-bg:           transparent;
@@ -170,9 +212,9 @@ button:disabled:hover {
   width: 100%;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
-  border-radius: 4px;
+  border-radius: var(--panel-radius);
   padding: 26px 26px 22px;
-  box-shadow: 0 0 40px color-mix(in srgb, var(--cyan) 8%, transparent), inset 0 0 60px rgba(0,0,0,0.4);
+  box-shadow: var(--panel-aura);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -193,7 +235,7 @@ button:disabled:hover {
   font-weight: 800;
   letter-spacing: 0.22em;
   color: var(--cyan);
-  text-shadow: 0 0 10px var(--cyan);
+  text-shadow: var(--glow-cyan);
   text-align: center;
 }
 .modal-intro {
@@ -272,7 +314,7 @@ button:disabled:hover {
   min-height: 1em;
   font-size: 0.66rem;
   color: var(--yellow);
-  text-shadow: 0 0 6px rgba(255,230,0,0.4);
+  text-shadow: var(--glow-yellow-sm);
   letter-spacing: 0.04em;
   text-align: center;
   line-height: 1.5;
@@ -489,6 +531,12 @@ button:disabled:hover {
   --dark:    #1c2733;   /* deep navy background  (canonical Wurdz Ocean) */
   --panel:   #263545;   /* mid-navy panel        (canonical Wurdz Ocean) */
 
+  /* RGB triplet of --cyan, for the same rgba(var(--neon),α) board-tint
+     usage as Synth/Pastel. Without this the games' translucent tints stayed
+     hard-coded neon cyan-blue under Ocean — the single biggest source of
+     Ocean looking "confused" outside Wurdz (which never uses --neon). */
+  --neon: 245, 185, 66;
+
   /* Ocean is the original Wurdz look: solid rounded buttons, sans type,
      normal case, no neon glow. This is what makes one theme carry a whole
      aesthetic that every game inherits. */
@@ -497,6 +545,8 @@ button:disabled:hover {
   --ui-transform:   none;
   --ui-tracking:    normal;
   --ui-radius:      8px;
+  --panel-radius:   16px;
+  --item-radius:    10px;
   --panel-light:    #31445a;
 
   --btn-bg:           var(--panel-light);
@@ -524,15 +574,21 @@ button:disabled:hover {
   --btn-ghost-hover-border:   transparent;
   --btn-ghost-hover-bg:       var(--panel-light);
   --btn-ghost-hover-shadow:   none;
+
+  /* No neon glow anywhere on Ocean — every game should reach for these
+     tokens instead of hard-coding text-shadow, so this is the only place
+     "no glow" needs to be said. */
+  --glow-cyan-sm: none;    --glow-cyan: none;    --glow-cyan-lg: none;
+  --glow-magenta-sm: none; --glow-magenta: none; --glow-magenta-lg: none;
+  --glow-yellow-sm: none;  --glow-yellow: none;  --glow-yellow-lg: none;
+  --glow-danger: none;
+  --cta-shadow: none;
+  --cta-hover-shadow: none;
+  --panel-aura: 0 12px 32px rgba(0,0,0,0.38);
+  --panel-aura-yellow: 0 12px 32px rgba(0,0,0,0.38);
 }
 
-/* Ocean chrome refinements — the shared components inherit neon glows; the
-   palette already adapts to gold/navy, so here we just flatten the glow and
-   swap in plain depth shadows to land the original Wurdz look. */
-:root[data-theme="maritime"] .modal-title,
-:root[data-theme="maritime"] .status-line,
-:root[data-theme="maritime"] .theme-picker-label { text-shadow: none; }
-:root[data-theme="maritime"] .modal-panel { box-shadow: 0 12px 32px rgba(0,0,0,0.38); }
+/* Ocean chrome refinements that aren't covered by tokens above. */
 :root[data-theme="maritime"] .auth-tabs .tab.active,
 :root[data-theme="maritime"] #profile-badge,
 :root[data-theme="maritime"] .theme-btn.active { box-shadow: none; }
@@ -560,6 +616,8 @@ button:disabled:hover {
   --ui-transform:   none;
   --ui-tracking:    normal;
   --ui-radius:      8px;
+  --panel-radius:   20px;
+  --item-radius:    14px;
   --panel-light:    #e8e2da;
 
   --btn-bg:           #e8e2da;
@@ -587,34 +645,37 @@ button:disabled:hover {
   --btn-ghost-hover-border:   transparent;
   --btn-ghost-hover-bg:       #e8e2da;
   --btn-ghost-hover-shadow:   none;
+
+  /* No neon glow anywhere on Pastel — see the matching comment in Ocean above. */
+  --glow-cyan-sm: none;    --glow-cyan: none;    --glow-cyan-lg: none;
+  --glow-magenta-sm: none; --glow-magenta: none; --glow-magenta-lg: none;
+  --glow-yellow-sm: none;  --glow-yellow: none;  --glow-yellow-lg: none;
+  --glow-danger: none;
+  --cta-shadow: none;
+  --cta-hover-shadow: none;
+  /* Crucially, also flatten the dark inset "vignette" the games bake into
+     their cards/panels (fine on a dark board, muddy on light cream). */
+  --panel-aura: 0 12px 30px rgba(90,78,66,0.16);
+  --panel-aura-yellow: 0 12px 30px rgba(90,78,66,0.16);
 }
 
-/* Pastel chrome refinements — flatten the inherited neon glows and, crucially,
-   the dark inset "vignette" the games bake into their cards/panels (fine on a
-   dark board, muddy on a light one). Soft depth shadows instead. */
-:root[data-theme="pastel"] .modal-title,
-:root[data-theme="pastel"] .status-line,
-:root[data-theme="pastel"] .theme-picker-label { text-shadow: none; }
-:root[data-theme="pastel"] .modal-panel { box-shadow: 0 12px 30px rgba(90,78,66,0.16); }
+/* Pastel chrome refinements that aren't covered by tokens above. */
 :root[data-theme="pastel"] .auth-tabs .tab.active,
 :root[data-theme="pastel"] #profile-badge,
 :root[data-theme="pastel"] .theme-btn.active { box-shadow: none; }
 :root[data-theme="pastel"] .field:focus { box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 35%, transparent); }
 :root[data-theme="pastel"] .btn-danger { background: #c0392b; color: #fff; border: none; text-shadow: none; box-shadow: none; }
 :root[data-theme="pastel"] .btn-danger:hover { background: #d84632; color: #fff; filter: brightness(1.05); }
-:root[data-theme="pastel"] .card { box-shadow: 0 10px 28px rgba(90,78,66,0.14); }
-:root[data-theme="pastel"] .game-card {
-  border-color: color-mix(in srgb, var(--cyan) 28%, transparent);
-  border-radius: 8px;
-  box-shadow: 0 8px 22px rgba(90,78,66,0.12);
-}
-:root[data-theme="pastel"] .game-card:hover {
-  border-color: var(--cyan);
-  box-shadow: 0 10px 28px rgba(90,78,66,0.2);
-}
-/* No neon text glow anywhere on the light theme — the games scatter text-shadow
-   glows across logos, taglines, titles and scores; flatten them all here. */
-:root[data-theme="pastel"] * { text-shadow: none !important; }
+/* .card/.game-card radius + aura now come from var(--panel-radius)/
+   var(--panel-aura) directly wherever they're used — only the hover border
+   needs a Pastel-specific touch (cyan reads better solid than at the neon
+   tint's default opacity on a light background). */
+:root[data-theme="pastel"] .game-card:hover { border-color: var(--cyan); }
+/* Every game now reaches for var(--glow-*) instead of hard-coding
+   text-shadow, and those tokens are already `none` on Pastel above — no
+   blanket `* { text-shadow: none !important }` needed any more. That
+   sledgehammer was also nuking legitimate non-glow shadows (e.g. Wurdz's
+   logo drop-shadow), which is fixed by removing it. */
 /* Daily button: solid like the rest, not a glowing outline. */
 :root[data-theme="pastel"] .btn-daily {
   background: var(--yellow); color: #3d3424; border: none; box-shadow: none;
@@ -634,7 +695,7 @@ button:disabled:hover {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--magenta);
-  text-shadow: 0 0 6px var(--magenta);
+  text-shadow: var(--glow-magenta-sm);
 }
 .theme-picker { display: flex; gap: 6px; }
 .theme-btn {

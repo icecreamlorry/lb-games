@@ -19,7 +19,7 @@
       align-items: center;
       padding: 14px 16px 16px;
       min-height: 100vh;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-mono);
       color: var(--cyan);
       gap: 12px;
       overscroll-behavior: none;
@@ -65,15 +65,15 @@
     }
 
     h1 {
+      /* Brand wordmark keeps Orbitron regardless of theme, same as Splitz's
+         logo stays Fredoka and Scramblr/Lexicorp's stays Orbitron too — the
+         name doesn't reskin, only the chrome around it does. */
       font-family: 'Orbitron', monospace;
       font-size: 1.55rem;
       font-weight: 800;
       letter-spacing: 0.15em;
       color: var(--cyan);
-      text-shadow:
-        0 0 6px var(--cyan),
-        0 0 20px var(--cyan),
-        0 0 50px rgba(var(--neon),0.4);
+      text-shadow: var(--glow-cyan-lg);
       animation: flicker 8s infinite;
     }
 
@@ -86,7 +86,7 @@
       font-size: 0.7rem;
       letter-spacing: 0.3em;
       color: var(--magenta);
-      text-shadow: 0 0 8px var(--magenta);
+      text-shadow: var(--glow-magenta);
       text-transform: uppercase;
     }
 
@@ -94,7 +94,7 @@
       display: flex;
       align-items: baseline;
       gap: 10px;
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.75rem;
       letter-spacing: 0.15em;
       color: rgba(var(--neon),0.6);
@@ -106,7 +106,7 @@
       font-size: 1.6rem;
       font-weight: 800;
       color: var(--cyan);
-      text-shadow: 0 0 10px var(--cyan);
+      text-shadow: var(--glow-cyan);
       min-width: 80px;
       text-align: right;
       font-variant-numeric: tabular-nums;
@@ -114,18 +114,18 @@
 
     #timer.warn {
       color: var(--yellow);
-      text-shadow: 0 0 12px var(--yellow);
+      text-shadow: var(--glow-yellow);
     }
 
     #timer.danger {
       color: #ff4040;
-      text-shadow: 0 0 14px #ff4040;
+      text-shadow: var(--glow-danger);
       animation: timer-pulse 1s steps(2, start) infinite;
     }
 
     #timer.over {
       color: var(--magenta);
-      text-shadow: 0 0 14px var(--magenta);
+      text-shadow: var(--glow-magenta);
     }
 
     @keyframes timer-pulse {
@@ -137,7 +137,7 @@
       font-size: 1.6rem;
       font-weight: 800;
       color: var(--cyan);
-      text-shadow: 0 0 10px var(--cyan);
+      text-shadow: var(--glow-cyan);
       transition: color 0.15s;
       min-width: 56px;
       font-variant-numeric: tabular-nums;
@@ -146,7 +146,7 @@
     #score-delta {
       font-size: 0.85rem;
       color: var(--yellow);
-      text-shadow: 0 0 8px var(--yellow);
+      text-shadow: var(--glow-yellow);
       opacity: 0;
       transform: translateY(0px);
       transition: opacity 0.4s, transform 0.4s;
@@ -164,10 +164,8 @@
       padding: 12px;
       background: var(--panel);
       border: 1px solid rgba(var(--neon),0.18);
-      border-radius: 4px;
-      box-shadow:
-        0 0 30px rgba(var(--neon),0.07),
-        inset 0 0 60px rgba(0,0,0,0.5);
+      border-radius: var(--panel-radius);
+      box-shadow: var(--panel-aura);
       line-height: 0;
     }
 
@@ -191,7 +189,7 @@
 
     /* ── best score bar ──────────────────────────────────────────────────── */
     #best-score-bar {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.6rem;
       letter-spacing: 0.2em;
       color: rgba(var(--neon),0.35);
@@ -226,8 +224,8 @@
     }
     .score-action-btn.copied {
       color: var(--yellow);
-      border-color: rgba(255,230,0,0.5);
-      box-shadow: 0 0 8px rgba(255,230,0,0.3);
+      border-color: color-mix(in srgb, var(--yellow) 50%, transparent);
+      box-shadow: 0 0 8px color-mix(in srgb, var(--yellow) 30%, transparent);
     }
     .score-action-btn.trophy svg { width: 12px; height: 12px; }
 
@@ -242,7 +240,7 @@
       align-items: center;
       justify-content: center;
       gap: 14px;
-      border-radius: 4px;
+      border-radius: var(--panel-radius);
     }
 
     #start-overlay { background: rgba(4,4,15,0.55); }
@@ -258,7 +256,7 @@
       font-size: 0.68rem;
       letter-spacing: 0.3em;
       color: var(--magenta);
-      text-shadow: 0 0 8px var(--magenta);
+      text-shadow: var(--glow-magenta);
     }
 
     #btn-start,
@@ -267,23 +265,23 @@
       padding: 14px 42px;
       color: var(--cyan);
       border-color: var(--cyan);
-      text-shadow: 0 0 10px var(--cyan);
-      box-shadow: 0 0 16px rgba(var(--neon),0.3), inset 0 0 14px rgba(var(--neon),0.06);
+      text-shadow: var(--glow-cyan);
+      box-shadow: var(--cta-shadow);
     }
     #btn-start:hover,
     #btn-play-again:hover {
       background: rgba(var(--neon),0.12);
-      box-shadow: 0 0 24px rgba(var(--neon),0.6), inset 0 0 18px rgba(var(--neon),0.1);
+      box-shadow: var(--cta-hover-shadow);
       color: #fff;
     }
 
     .go-title {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 2.1rem;
       letter-spacing: 0.16em;
       color: var(--magenta);
-      text-shadow: 0 0 12px var(--magenta), 0 0 34px rgba(255,0,200,0.5);
+      text-shadow: var(--glow-magenta-lg);
     }
     .go-score-label {
       font-size: 0.7rem;
@@ -292,11 +290,11 @@
       margin-top: 4px;
     }
     #go-score {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 2.3rem;
       color: var(--cyan);
-      text-shadow: 0 0 14px var(--cyan);
+      text-shadow: var(--glow-cyan-lg);
       margin-bottom: 6px;
     }
 
@@ -332,9 +330,9 @@
       width: 100%;
       background: var(--panel);
       border: 1px solid rgba(var(--neon),0.22);
-      border-radius: 4px;
+      border-radius: var(--panel-radius);
       padding: 28px 28px 24px;
-      box-shadow: 0 0 40px rgba(var(--neon),0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      box-shadow: var(--panel-aura);
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -344,29 +342,29 @@
       top: 10px; right: 10px;
       width: 26px; height: 26px;
       padding: 0;
-      border-radius: 2px;
+      border-radius: var(--ui-radius);
       font-size: 0.7rem;
       letter-spacing: 0;
       line-height: 1;
     }
     .help-heading {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.25em;
       color: var(--cyan);
-      text-shadow: 0 0 10px var(--cyan);
+      text-shadow: var(--glow-cyan);
       text-align: center;
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(var(--neon),0.15);
     }
     .help-section { display: flex; flex-direction: column; gap: 6px; }
     .help-label {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.6rem;
       letter-spacing: 0.22em;
       color: var(--magenta);
-      text-shadow: 0 0 6px var(--magenta);
+      text-shadow: var(--glow-magenta-sm);
     }
     .help-row {
       display: grid;
@@ -375,10 +373,10 @@
       align-items: baseline;
     }
     .help-key {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.58rem;
       color: var(--yellow);
-      text-shadow: 0 0 5px var(--yellow);
+      text-shadow: var(--glow-yellow-sm);
     }
     .help-val {
       font-size: 0.72rem;
@@ -397,13 +395,13 @@
       padding: 11px 30px;
       color: var(--cyan);
       border-color: var(--cyan);
-      text-shadow: 0 0 10px var(--cyan);
-      box-shadow: 0 0 14px rgba(var(--neon),0.25), inset 0 0 12px rgba(var(--neon),0.06);
+      text-shadow: var(--glow-cyan);
+      box-shadow: var(--cta-shadow);
       align-self: center;
     }
     #help-got-it:hover {
       background: rgba(var(--neon),0.12);
-      box-shadow: 0 0 22px rgba(var(--neon),0.5), inset 0 0 16px rgba(var(--neon),0.1);
+      box-shadow: var(--cta-hover-shadow);
       color: #fff;
     }
 
@@ -498,19 +496,20 @@
       width: min(420px, 94vw);
       background: var(--panel);
       border: 1px solid rgba(var(--neon),0.22);
-      border-radius: 4px;
+      border-radius: var(--panel-radius);
       padding: 26px 24px 22px;
-      box-shadow: 0 0 40px rgba(var(--neon),0.08), inset 0 0 60px rgba(0,0,0,0.4);
+      box-shadow: var(--panel-aura);
       display: flex; flex-direction: column; gap: 14px;
       text-align: center;
     }
     .logo {
+      /* Brand wordmark: same Orbitron as h1, not the reskinnable var(--font-ui). */
       font-family: 'Orbitron', monospace; font-weight: 800; letter-spacing: 0.18em;
       font-size: 2.2rem; margin: 0; color: var(--cyan);
-      text-shadow: 0 0 8px var(--cyan), 0 0 26px rgba(var(--neon),0.5);
+      text-shadow: var(--glow-cyan-lg);
     }
     .logo.small { font-size: 1rem; letter-spacing: 0.15em; }
-    .card-title { font-family: 'Orbitron', monospace; font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
+    .card-title { font-family: var(--font-ui); font-size: 0.9rem; letter-spacing: 0.1em; margin: 6px 0 0; }
 
     .btn-ghost {
       background: var(--btn-ghost-bg); color: var(--btn-ghost-fg);
@@ -523,20 +522,20 @@
     .btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: default; }
     .btn-daily {
       background: transparent; color: var(--yellow);
-      border: 1px solid rgba(255,220,0,0.4); border-radius: var(--ui-radius);
+      border: 1px solid color-mix(in srgb, var(--yellow) 40%, transparent); border-radius: var(--ui-radius);
       padding: 8px 18px; font-family: var(--font-ui); font-size: 0.66rem;
       font-weight: 600; letter-spacing: var(--ui-tracking); text-transform: var(--ui-transform);
       cursor: pointer; touch-action: manipulation; white-space: nowrap;
-      text-shadow: 0 0 8px rgba(255,220,0,0.5);
+      text-shadow: var(--glow-yellow);
     }
-    .btn-daily:hover { color: #fff; border-color: var(--yellow); box-shadow: 0 0 14px rgba(255,220,0,0.3); }
+    .btn-daily:hover { color: #fff; border-color: var(--yellow); box-shadow: 0 0 14px color-mix(in srgb, var(--yellow) 30%, transparent); }
     :root[data-theme="maritime"] .btn-daily { background: var(--yellow); color: #25221b; border: none; text-shadow: none; }
     :root[data-theme="maritime"] .btn-daily:hover { color: #25221b; box-shadow: none; filter: brightness(1.15); }
 
     .chip {
       background: rgba(var(--neon),0.06); border: 1px solid rgba(var(--neon),0.25);
       color: rgba(var(--neon),0.8); border-radius: 999px; padding: 5px 12px;
-      font-family: 'Share Tech Mono', monospace; font-size: 0.64rem; letter-spacing: 0.08em;
+      font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.08em;
       cursor: pointer; touch-action: manipulation; white-space: nowrap;
     }
     .chip strong { color: var(--cyan); letter-spacing: 0.12em; }
@@ -544,15 +543,15 @@
     .lobby-game {
       position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
       text-align: left; width: 100%; background: rgba(var(--neon),0.04);
-      border: 1px solid transparent; border-radius: 3px; padding: 12px 14px;
-      color: var(--cyan); cursor: pointer; font-family: 'Share Tech Mono', monospace;
+      border: 1px solid transparent; border-radius: var(--item-radius); padding: 12px 14px;
+      color: var(--cyan); cursor: pointer; font-family: var(--font-mono);
     }
     .lobby-game:hover { border-color: rgba(var(--neon),0.35); }
     .lobby-game.live { border-color: var(--cyan); }
     .lobby-opp { font-weight: 600; }
     .lobby-status { font-size: 0.66rem; color: rgba(var(--neon),0.5); }
     .lobby-game.live .lobby-status { color: var(--cyan); }
-    .lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Orbitron', monospace; font-size: 0.9rem; }
+    .lobby-score { grid-row: 1 / 3; align-self: center; font-family: var(--font-ui); font-size: 0.9rem; }
     .lobby-dismiss { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); color: rgba(var(--neon),0.4); font-size: 16px; cursor: pointer; padding: 2px 6px; }
     .lobby-dismiss:hover { color: var(--magenta); }
     .lobby-game:has(.lobby-dismiss) { padding-right: 40px; }
@@ -570,7 +569,7 @@
       align-items: center;
       justify-content: center;
       gap: 14px;
-      border-radius: 4px;
+      border-radius: var(--panel-radius);
       padding: 18px;
       text-align: center;
     }
@@ -584,12 +583,12 @@
       overflow-y: auto;
     }
     .room-title {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 1.5rem;
       letter-spacing: 0.14em;
       color: var(--cyan);
-      text-shadow: 0 0 12px var(--cyan);
+      text-shadow: var(--glow-cyan);
     }
     .room-code-line { font-size: 0.72rem; letter-spacing: 0.05em; color: rgba(var(--neon),0.6); }
     .room-code-line strong { color: var(--yellow); font-weight: 700; letter-spacing: 0.18em; }
@@ -608,32 +607,32 @@
       color: rgba(var(--neon),0.7);
       padding: 4px 8px;
       border: 1px solid rgba(var(--neon),0.12);
-      border-radius: 3px;
+      border-radius: var(--item-radius);
     }
     .room-player.me { color: var(--cyan); border-color: rgba(var(--neon),0.35); }
     .room-player .pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--matrix, #22CC55); box-shadow: 0 0 6px currentColor; flex-shrink: 0; }
     .room-player .pdot.off { background: rgba(255,255,255,0.18); box-shadow: none; }
     .room-player .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-    .room-player .pscore { font-family: 'Orbitron', monospace; font-weight: 700; color: var(--yellow); }
+    .room-player .pscore { font-family: var(--font-ui); font-weight: 700; color: var(--yellow); }
     .room-btn-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
     #countdown-num {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 5rem;
       color: var(--cyan);
-      text-shadow: 0 0 20px var(--cyan), 0 0 50px rgba(var(--neon),0.4);
+      text-shadow: var(--glow-cyan-lg);
       animation: cd-pop 1s ease infinite;
     }
     @keyframes cd-pop { 0% { transform: scale(0.7); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } }
     .results-winner {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 1.3rem;
       letter-spacing: 0.1em;
       color: var(--yellow);
-      text-shadow: 0 0 12px rgba(255,220,0,0.5);
+      text-shadow: var(--glow-yellow);
     }
-    .results-winner.loss { color: var(--magenta); text-shadow: 0 0 12px var(--magenta); }
+    .results-winner.loss { color: var(--magenta); text-shadow: var(--glow-magenta); }
     #results-list {
       list-style: none;
       margin: 0;
@@ -653,9 +652,9 @@
       padding: 3px 6px;
     }
     #results-list li.me { color: var(--cyan); font-weight: 700; }
-    #results-list .r-rank { font-family: 'Orbitron', monospace; font-size: 0.62rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
+    #results-list .r-rank { font-family: var(--font-ui); font-size: 0.62rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
     #results-list .r-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
-    #results-list .r-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
+    #results-list .r-score { font-family: var(--font-ui); font-weight: 800; color: var(--cyan); flex-shrink: 0; }
     #results-list li.me .r-score { color: var(--yellow); }
     .left-tag { font-size: 0.6rem; color: var(--magenta); margin-left: 4px; }
 
@@ -693,12 +692,11 @@
     :root[data-theme="pastel"] body::after {
       display: none;
     }
-    /* Pastel: drop the dark inset "vignette" on the board and use light scrims
-       on the overlays so they don't read as a muddy dark blob on the light page. */
-    :root[data-theme="pastel"] #grid {
-      box-shadow: 0 6px 20px rgba(90,78,66,0.12);
-      border-color: color-mix(in srgb, var(--cyan) 28%, transparent);
-    }
+    /* The dark inset "vignette" + border tint on #grid now come from
+       var(--panel-aura) / var(--neon), both already flattened/recoloured
+       correctly for Pastel — no per-theme override needed here any more.
+       Only the full-screen overlay scrims still need a light-theme variant
+       (they're a fixed dark scrim in the base rules, not token-driven). */
     :root[data-theme="pastel"] #start-overlay { background: rgba(253,249,245,0.84); }
     :root[data-theme="pastel"] #gameover-overlay,
     :root[data-theme="pastel"] #room-overlay,
@@ -714,13 +712,13 @@
       font-size: 0.78rem;
       padding: 8px 22px;
       color: var(--yellow);
-      border-color: rgba(255,230,0,0.4);
-      text-shadow: 0 0 8px rgba(255,220,0,0.5);
+      border-color: color-mix(in srgb, var(--yellow) 40%, transparent);
+      text-shadow: var(--glow-yellow);
     }
     #btn-daily:hover {
-      background: rgba(255,230,0,0.08);
+      background: color-mix(in srgb, var(--yellow) 8%, transparent);
       border-color: var(--yellow);
-      box-shadow: 0 0 16px rgba(255,220,0,0.3);
+      box-shadow: 0 0 16px color-mix(in srgb, var(--yellow) 30%, transparent);
       color: #fff;
     }
     #daily-modal {
@@ -742,10 +740,10 @@
       max-width: 360px;
       width: 100%;
       background: var(--panel);
-      border: 1px solid rgba(255,220,0,0.22);
-      border-radius: 4px;
+      border: 1px solid color-mix(in srgb, var(--yellow) 22%, transparent);
+      border-radius: var(--panel-radius);
       padding: 28px 24px 24px;
-      box-shadow: 0 0 40px rgba(255,220,0,0.06), inset 0 0 60px rgba(0,0,0,0.4);
+      box-shadow: var(--panel-aura-yellow);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -756,18 +754,18 @@
       top: 10px; right: 10px;
       width: 26px; height: 26px;
       padding: 0;
-      border-radius: 2px;
+      border-radius: var(--ui-radius);
       font-size: 0.7rem;
       letter-spacing: 0;
       line-height: 1;
     }
     .daily-heading {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.82rem;
       font-weight: 800;
       letter-spacing: 0.2em;
       color: var(--yellow);
-      text-shadow: 0 0 10px var(--yellow);
+      text-shadow: var(--glow-yellow);
     }
     .daily-date-label {
       font-size: 0.62rem;
@@ -776,11 +774,11 @@
       text-align: center;
     }
     .daily-final-score {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-weight: 800;
       font-size: 2.2rem;
       color: var(--yellow);
-      text-shadow: 0 0 18px rgba(255,220,0,0.6);
+      text-shadow: var(--glow-yellow-lg);
     }
     .daily-score-label {
       font-size: 0.65rem;
@@ -790,7 +788,7 @@
     }
     .daily-lb-section { width: 100%; display: flex; flex-direction: column; gap: 6px; }
     .daily-lb-head {
-      font-family: 'Orbitron', monospace;
+      font-family: var(--font-ui);
       font-size: 0.6rem;
       letter-spacing: 0.12em;
       color: rgba(var(--neon),0.45);
@@ -800,10 +798,10 @@
     .daily-lb-list { display: flex; flex-direction: column; gap: 3px; }
     .daily-lb-row { display: flex; align-items: baseline; gap: 8px; font-size: 0.78rem; color: rgba(var(--neon),0.65); padding: 2px 0; }
     .daily-lb-row.me { color: var(--cyan); font-weight: 700; }
-    .daily-lb-rank { font-family: 'Orbitron', monospace; font-size: 0.6rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
+    .daily-lb-rank { font-family: var(--font-ui); font-size: 0.6rem; color: var(--magenta); width: 1.4em; flex-shrink: 0; }
     .daily-lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .daily-lb-score { font-family: 'Orbitron', monospace; font-weight: 800; color: var(--cyan); flex-shrink: 0; }
-    .daily-lb-row.me .daily-lb-score { color: var(--yellow); text-shadow: 0 0 8px rgba(255,220,0,0.5); }
+    .daily-lb-score { font-family: var(--font-ui); font-weight: 800; color: var(--cyan); flex-shrink: 0; }
+    .daily-lb-row.me .daily-lb-score { color: var(--yellow); text-shadow: var(--glow-yellow); }
     .daily-lb-empty { font-size: 0.72rem; color: rgba(var(--neon),0.4); text-align: center; padding: 8px 0; }
     .daily-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     #btn-daily-lb { font-size: 0.88rem; letter-spacing: 0; padding: 0; }
@@ -1222,6 +1220,15 @@
     function invalidate() { if (!rafId) rafId = requestAnimationFrame(frame); }
     function frame(now) { rafId = 0; if (render(now)) invalidate(); }
 
+    // Canvas can't parse `var(--neon)` in a fillStyle/shadowColor string (that
+    // only works in an actual stylesheet) — resolve the theme's RGB triplet
+    // once per frame instead so the press/hover glow recolours with the theme.
+    let neonRGB = '0,245,255';
+    function refreshNeonRGB() {
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--neon').trim();
+      if (v) neonRGB = v;
+    }
+
     // ── easing / keyframe helpers ──────────────────────────────────────────
     const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
     function lightenHex(hex, t) {
@@ -1258,6 +1265,7 @@
     function render(now) {
       ctx.clearRect(0, 0, boardW, boardH);
       if (phase === 'idle' || !state.length) return false;
+      refreshNeonRGB();
 
       let active = false;
       const bombsOnTop = [];
@@ -1419,11 +1427,11 @@
 
       if (press && press.i === i) {
         const t = Math.min(1, (now - press.start) / PRESS_MS);
-        glowColor = 'rgba(var(--neon),0.9)'; glowBlur = 2 + 18 * t;
+        glowColor = `rgba(${neonRGB},0.9)`; glowBlur = 2 + 18 * t;
         white = Math.max(white, 0.22 * t);
       } else if (hoverIdx === i && !press && phase === 'playing' && !isAnimating) {
         sc *= 1.1; sx *= 0.95;
-        glowColor = 'rgba(var(--neon),0.7)'; glowBlur = 8;
+        glowColor = `rgba(${neonRGB},0.7)`; glowBlur = 8;
       }
 
       if (alpha <= 0 || sc <= 0) return active;
