@@ -78,7 +78,18 @@ button, button:hover, button:focus { box-shadow: none; }
 .account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* ---- Top bars ---- */
-.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 52px 8px 12px; }
+/* Right padding clears the shared hamburger menu button (fixed top-right by
+   account-ui) with real breathing room, not just its bare width. */
+.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 64px 8px 12px; }
+/* This screen has no bounded content column (it's full-bleed), so unlike
+   Chromagrid/Wurdz/the landing page the menu button shouldn't pull in toward
+   a virtual column here — it should just sit at the true corner, same as
+   every other header control, so the two can never end up on a collision
+   course at wide viewports. */
+#screen-game:not(.hidden) ~ #btn-menu,
+#screen-game:not(.hidden) ~ #app-menu {
+  right: max(calc(env(safe-area-inset-right, 0px) + 10px), 10px);
+}
 .chip {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
   border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
