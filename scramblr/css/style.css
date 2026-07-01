@@ -67,7 +67,6 @@ body {
 .account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
 /* ---- Top bars ---- */
-/* Right padding clears the shared menu button (fixed top-right by account-ui). */
 /* Right padding clears the shared hamburger menu button (fixed top-right by
    account-ui) with real breathing room, not just its bare width. Top padding
    matches the button's own safe-area inset so both move down together on a
@@ -75,15 +74,6 @@ body {
 .game-bar {
   padding: calc(env(safe-area-inset-top, 0px) + 8px) 64px 8px 12px;
   border-bottom: 1px solid rgba(var(--neon),0.12);
-}
-/* This screen has no bounded content column (it's full-bleed), so unlike
-   Chromagrid/Wurdz/the landing page the menu button shouldn't pull in toward
-   a virtual column here — it should just sit at the true corner, same as
-   every other header control, so the two can never end up on a collision
-   course at wide viewports. */
-#screen-game:not(.hidden) ~ #btn-menu,
-#screen-game:not(.hidden) ~ #app-menu {
-  right: max(calc(env(safe-area-inset-right, 0px) + 10px), 10px);
 }
 .chip {
   background: rgba(var(--neon),0.06); border: 1px solid rgba(var(--neon),0.25);
@@ -93,6 +83,27 @@ body {
 }
 .chip strong { color: var(--cyan); letter-spacing: 0.12em; }
 .conn { color: var(--yellow); }
+
+/* ---- Desktop: keep the whole game screen in a centred column ----------- */
+/* Mobile-first: below this width every rule here is a no-op (the column is
+   already narrower than the max-width) and the game fills the viewport like
+   normal. Above it, the header and roster stay lined up with the board's own
+   natural width (it self-centres via .board-wrap already) instead of
+   stretching out across a wide window. */
+.game-bar, .players-strip, .play-foot {
+  max-width: 560px;
+  margin-inline: auto;
+  width: 100%;
+}
+@media (min-width: 561px) {
+  /* Pull the menu button (and its dropdown) in to the right edge of the
+     centred game column, same technique as Wurdz, instead of sitting out in
+     the true corner of a wide window disconnected from everything else. */
+  #screen-game:not(.hidden) ~ #btn-menu,
+  #screen-game:not(.hidden) ~ #app-menu {
+    right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 280px + 6px));
+  }
+}
 .conn.live { color: #2bd576; border-color: rgba(43,213,118,0.4); }
 
 /* ---- Lobby list ---- */

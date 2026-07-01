@@ -77,16 +77,28 @@ body {
   padding: calc(env(safe-area-inset-top, 0px) + 8px) 64px 8px 12px;
   border-bottom: 1px solid rgba(var(--neon),0.12); display: flex; align-items: center; gap: 8px;
 }
-/* This screen has no bounded content column (it's full-bleed), so unlike
-   Chromagrid/Wurdz/the landing page the menu button shouldn't pull in toward
-   a virtual column here — it should just sit at the true corner, same as
-   every other header control, so the two can never end up on a collision
-   course at wide viewports. */
-#screen-game:not(.hidden) ~ #btn-menu,
-#screen-game:not(.hidden) ~ #app-menu {
-  right: max(calc(env(safe-area-inset-right, 0px) + 10px), 10px);
-}
 .grow { flex: 1; }
+
+/* ---- Desktop: keep the whole game screen in a centred column ----------- */
+/* Mobile-first: below this width every rule here is a no-op (the column is
+   already narrower than the max-width) and the game fills the viewport like
+   normal. Above it, the header/roster/play area stay in one Wurdz/Chromagrid-
+   width column instead of the patents grid and tile rows stretching out to
+   fill a wide window with huge gaps between letters. */
+.game-bar, .players-strip, .game-body {
+  max-width: 640px;
+  margin-inline: auto;
+  width: 100%;
+}
+@media (min-width: 561px) {
+  /* Pull the menu button (and its dropdown) in to the right edge of the
+     centred game column, same technique as Wurdz, instead of sitting out in
+     the true corner of a wide window disconnected from everything else. */
+  #screen-game:not(.hidden) ~ #btn-menu,
+  #screen-game:not(.hidden) ~ #app-menu {
+    right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 320px + 6px));
+  }
+}
 .chip {
   background: rgba(var(--neon),0.06); border: 1px solid rgba(var(--neon),0.25);
   color: rgba(var(--neon),0.8); border-radius: 999px; padding: 5px 12px;
