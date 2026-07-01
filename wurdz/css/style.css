@@ -608,8 +608,13 @@ input, textarea { user-select: text; }
      panels (~84px), rack (~74px), status line (~21px), controls (~40px),
      exchange bar when visible (~60px), and all gaps + table padding (~107px).
      A small extra buffer keeps the arithmetic comfortable. */
+  /* The dvh term has no floor of its own, so on a short window it just kept
+     shrinking the board toward nothing instead of stopping anywhere sane —
+     max(400px, ...) puts a floor under it. Past that point .table's own
+     overflow-y:auto scrolls instead of the board becoming illegible, which
+     is a better trade than "always fits, but eventually too small to read". */
   .board-wrap {
-    width: min(100%, calc(100dvh - 440px));
+    width: min(100%, max(400px, calc(100dvh - 440px)));
     margin-inline: auto;
   }
 
@@ -668,7 +673,9 @@ input, textarea { user-select: text; }
   .player-name { font-size: 16px; }
   .score { font-size: 20px; }
   .rack { padding: 8px; min-height: 62px; gap: 6px; }
-  .board { width: min(100%, calc(100dvh - 360px)); margin-inline: auto; }
+  /* Same floor as the desktop board-wrap formula above — a short landscape
+     phone shouldn't shrink the board past legibility either. */
+  .board { width: min(100%, max(400px, calc(100dvh - 360px))); margin-inline: auto; }
   .status-line { min-height: 1.2em; }
 
   .controls { gap: 8px; }
