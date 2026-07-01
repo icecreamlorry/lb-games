@@ -244,7 +244,7 @@ button:disabled:hover {
   top: 10px; right: 10px;
   width: 26px; height: 26px;
   padding: 0;
-  border-radius: 2px;
+  border-radius: var(--ui-radius);
   font-size: 0.7rem;
   letter-spacing: 0;
   line-height: 1;
@@ -311,7 +311,7 @@ button:disabled:hover {
   width: 100%;
   background: color-mix(in srgb, var(--cyan) 4%, transparent);
   border: 1px solid color-mix(in srgb, var(--cyan) 22%, transparent);
-  border-radius: 3px;
+  border-radius: var(--ui-radius);
   padding: 10px 12px;
   font-family: var(--font-mono);
   font-size: 0.8rem;
@@ -375,7 +375,7 @@ button:disabled:hover {
   padding: 4px 8px;
   font-size: 0.72rem;
   color: color-mix(in srgb, var(--cyan) 70%, transparent);
-  border-radius: 2px;
+  border-radius: var(--ui-radius);
 }
 .lb-item.lb-me {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
@@ -434,7 +434,7 @@ button:disabled:hover {
   min-width: 170px;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
-  border-radius: 10px;
+  border-radius: var(--item-radius);
   box-shadow: 0 10px 30px rgba(0,0,0,0.32);
   animation: ov-fade 0.15s ease;
 }
@@ -445,7 +445,7 @@ button:disabled:hover {
   width: 100%;
   padding: 9px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--ui-radius);
   background: none;
   color: color-mix(in srgb, var(--cyan) 85%, transparent);
   font-family: var(--font-mono);
@@ -531,7 +531,7 @@ button:disabled:hover {
   color: var(--cyan);
   background: color-mix(in srgb, var(--cyan) 5%, transparent);
   border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
-  border-radius: 3px;
+  border-radius: var(--ui-radius);
   padding: 8px 10px;
 }
 .profile-add-row { display: flex; gap: 8px; }
@@ -546,7 +546,7 @@ button:disabled:hover {
   font-size: 0.72rem;
   color: color-mix(in srgb, var(--cyan) 80%, transparent);
   background: color-mix(in srgb, var(--cyan) 4%, transparent);
-  border-radius: 2px;
+  border-radius: var(--ui-radius);
 }
 .friend-item .friend-name    { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .friend-item .friend-actions { display: flex; gap: 6px; }
