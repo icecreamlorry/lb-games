@@ -947,6 +947,11 @@
       <button id="help-close">✕</button>
       <div class="help-heading">// CHROMAGRID //</div>
 
+      <!-- .help-body (shared.css) caps this at 50vh with its own scrollbar,
+           same as every other game's rules modal, so the heading and GOT IT
+           button always stay pinned and reachable regardless of how tall the
+           ruleset is or how short the window is. -->
+      <div class="help-body">
       <div class="help-section">
         <div class="help-note">2 minutes. Flip tiles, match colours, pop groups. Score exponentially more for bigger combos.</div>
       </div>
@@ -994,6 +999,7 @@
             <span class="cbm-slider"></span>
           </label>
         </div>
+      </div>
       </div>
 
       <button id="help-got-it">GOT IT</button>

@@ -254,8 +254,7 @@ body {
 .results-list .r-score { grid-row: 1 / 3; grid-column: 3; font-family: var(--font-ui); font-weight: 800; font-size: 1.3rem; color: var(--cyan); }
 .results-list li.me .r-name { color: #fff; }
 
-.help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.78rem; line-height: 1.55; color: rgba(var(--neon),0.7); }
-.help-body strong { color: var(--cyan); }
+/* .help-body is shared.css now (same rule every game used to duplicate). */
 
 @media (max-width: 420px) {
   .logo { font-size: 1.7rem; }

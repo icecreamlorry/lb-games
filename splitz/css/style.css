@@ -234,8 +234,7 @@ button, button:hover, button:focus { box-shadow: none; }
 
 .status-line { margin: 0; font-size: 0.74rem; text-align: center; min-height: 1.4em; line-height: 1.4; color: var(--magenta); font-weight: 500; }
 
-.help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.82rem; line-height: 1.55; color: color-mix(in srgb, var(--cyan) 75%, transparent); }
-.help-body strong { color: var(--cyan); }
+/* .help-body's base rule is shared.css now; keep only Splitz's own <em> use. */
 .help-body em { color: var(--magenta); font-style: normal; font-weight: 600; }
 
 @media (max-width: 420px) {

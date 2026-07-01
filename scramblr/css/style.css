@@ -269,8 +269,7 @@ body {
 /* Reserve height so text appearing here never shifts the layout */
 .status-line { margin: 0; font-size: 0.7rem; text-align: center; min-height: 1.4em; line-height: 1.4; }
 
-.help-body { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 0.78rem; line-height: 1.55; color: rgba(var(--neon),0.7); }
-.help-body strong { color: var(--cyan); }
+/* .help-body is shared.css now (same rule every game used to duplicate). */
 
 @media (max-width: 420px) {
   .logo { font-size: 1.7rem; }

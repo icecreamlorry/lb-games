@@ -246,6 +246,30 @@ button:disabled:hover {
   text-align: center;
 }
 
+/* ── help modal body ─────────────────────────────────────────────────────── */
+/* Every "How to Play" modal used this same shape, but three games each kept
+   their own copy of this rule (with drifting font-size/colour), and none of
+   them capped its height — a long ruleset (Lexicorp's, easily the longest)
+   just grew the whole modal past the viewport with zero margin and the
+   title/"Got it" button nearly falling off-screen on anything but a tall
+   window, while a short ruleset (Scramblr's) looked comfortably centred at
+   the exact same window size. One shared rule, and the long content scrolls
+   *inside* this box instead of the whole modal doing it — title and button
+   stay put, matching what Wurdz's own help modal already did correctly. */
+.help-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: rgba(var(--neon), 0.7);
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.help-body strong { color: var(--cyan); }
+
 /* ── auth form ───────────────────────────────────────────────────────────── */
 
 .auth-tabs { display: flex; gap: 8px; }
@@ -353,7 +377,10 @@ button:disabled:hover {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 9px);
   right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 250px));
-  z-index: 901;
+  /* Above every modal (.modal is 950, the confirm dialog stacks on top of
+     that at 960) — the menu is how you reach Leave/quit, so it must never
+     end up trapped underneath a popup with no way back out. */
+  z-index: 970;
   width: 36px; height: 36px;
   display: flex;
   align-items: center;
@@ -376,7 +403,10 @@ button:disabled:hover {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 54px);
   right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 250px));
-  z-index: 901;
+  /* Above every modal (.modal is 950, the confirm dialog stacks on top of
+     that at 960) — the menu is how you reach Leave/quit, so it must never
+     end up trapped underneath a popup with no way back out. */
+  z-index: 970;
   display: flex;
   flex-direction: column;
   gap: 2px;

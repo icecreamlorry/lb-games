@@ -457,6 +457,11 @@ input, textarea { user-select: text; }
 }
 
 .modal-card {
+  /* shared.css's .modal-close is position:absolute (every other game's
+     modal pins its × to the card's own corner this way) — without a
+     positioned ancestor here, it fell through to .modal itself and floated
+     at the true viewport corner instead of next to this card's title. */
+  position: relative;
   background: var(--panel);
   border-radius: 14px;
   padding: 22px 26px;
