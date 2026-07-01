@@ -165,7 +165,6 @@ function applyAuthToUI() {
   const user = app.user;
   $('btn-go-lobby')?.classList.toggle('hidden', !user);
   if (user) $('lobby-name').textContent = app.name;
-  $('btn-leave').textContent = 'Leave';
   renderNotifyBtns();
 }
 

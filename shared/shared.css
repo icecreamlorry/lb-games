@@ -153,6 +153,26 @@ button:disabled:hover {
 
 .hidden { display: none !important; }
 
+/* Icon-only variant of a game header's .chip (each game's own .chip rule
+   still supplies the pill shape/colour/border — this only overrides the
+   sizing so an icon replaces a text label without the wide text padding).
+   Used for header actions like Leave, where the label was routinely the
+   widest thing in the bar and the first to force wrapping or crowd the
+   fixed menu button on a narrower window.
+   Selector is .chip.chip-icon (not just .chip-icon) so its padding/size
+   reliably beats each game's own later-loaded .chip rule regardless of
+   cascade order — same specificity as a plain .chip would tie and lose. */
+.chip.chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.chip-icon svg { display: block; }
+
 /* Badge shown next to a player's name when they've left/forfeited a game. */
 .left-tag {
   font-family: var(--font-ui);
