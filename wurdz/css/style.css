@@ -624,6 +624,16 @@ input, textarea { user-select: text; }
      column never clips its top. */
   .table { justify-content: center; }
 
+  /* Below this, the player panels' name/score/tile-count row and the header's
+     room/resign/leave chips no longer have enough room and start squeezing,
+     wrapping and drifting off-centre instead of the clean centred column
+     this is meant to be — this is desktop chrome, not the mobile layout
+     (that's the separate, actually-narrow-tuned layout below 561px). Rather
+     than let that keep shrinking into something that looks broken, stop
+     shrinking here and let html/body's own overflow:hidden simply cover
+     the excess — a frozen, still-correct column beats a squished one. */
+  .table, .game-header { min-width: 660px; }
+
   /* Align the header to the same centred column as the table so the logo and
      room/leave controls line up with the board instead of spreading across the
      full width of a wide window. */
