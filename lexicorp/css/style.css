@@ -153,6 +153,13 @@ body {
   color: rgba(var(--neon),0.5); text-transform: uppercase;
 }
 .turn-banner.mine { color: var(--cyan); text-shadow: var(--glow-cyan); }
+/* Last-move announcement under the banner ("Bob played FIRE for $2 …"). */
+.last-move {
+  text-align: center; font-size: 0.68rem; line-height: 1.45; letter-spacing: 0.04em;
+  color: rgba(var(--neon),0.8); background: rgba(var(--neon),0.05);
+  border: 1px solid rgba(var(--neon),0.15); border-radius: var(--item-radius);
+  padding: 5px 10px;
+}
 
 .panel { display: flex; flex-direction: column; gap: 7px; }
 .panel-head { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 0.14em; color: rgba(var(--neon),0.45); display: flex; align-items: center; gap: 8px; }
@@ -164,19 +171,36 @@ body {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: rgba(var(--neon),0.04); border: 1px solid rgba(var(--neon),0.15);
   border-radius: var(--item-radius); padding: 4px 2px; line-height: 1.1; position: relative;
+  cursor: pointer; /* every chip taps open its details (no hover on touch) */
 }
 .pat-l { font-family: 'Chakra Petch', 'Orbitron', monospace; font-weight: 700; font-size: 0.92rem; color: rgba(var(--neon),0.8); }
 .pat-c { font-size: 0.54rem; color: rgba(var(--neon),0.45); }
 .pat.power { border-style: dashed; }
 .pat.power .pat-l { color: var(--yellow); }
-.pat.own-me { background: rgba(var(--neon),0.18); border-color: var(--cyan); }
-.pat.own-me .pat-l { color: var(--cyan); }
-.pat.own-opp { background: color-mix(in srgb, var(--magenta) 12%, transparent); border-color: color-mix(in srgb, var(--magenta) 40%, transparent); }
-.pat.own-opp .pat-l { color: var(--magenta); }
-.pat.buyable { cursor: pointer; border-color: var(--yellow); box-shadow: 0 0 8px color-mix(in srgb, var(--yellow) 25%, transparent); }
+/* Ownership reads at a glance: solid fills (translucent tints were too easy to
+   confuse across seats), dark text for contrast. Mine = cyan, theirs = magenta. */
+.pat.own-me { background: var(--cyan); border-color: var(--cyan); }
+.pat.own-me .pat-l, .pat.own-me .pat-c { color: var(--dark); }
+.pat.own-opp { background: var(--magenta); border-color: var(--magenta); }
+.pat.own-opp .pat-l, .pat.own-opp .pat-c { color: var(--dark); }
+.pat.buyable { border-color: var(--yellow); box-shadow: 0 0 8px color-mix(in srgb, var(--yellow) 25%, transparent); }
 .pat.buyable .pat-c { color: var(--yellow); }
-.pat.selected { background: var(--yellow); }
+.pat.selected { background: var(--yellow); border-color: var(--yellow); }
 .pat.selected .pat-l, .pat.selected .pat-c { color: #25221b; }
+.pat.info-open { outline: 2px solid rgba(var(--neon),0.6); outline-offset: 1px; }
+
+/* Tap-to-open patent details (cost / owner / power) — replaces hover-only titles. */
+.pat-info {
+  font-size: 0.66rem; line-height: 1.5; color: rgba(var(--neon),0.85);
+  background: rgba(var(--neon),0.05); border: 1px solid rgba(var(--neon),0.2);
+  border-radius: var(--item-radius); padding: 6px 10px;
+}
+.pat-info strong { color: var(--yellow); font-family: var(--font-ui); }
+
+/* ---- Your powers (visible on anyone's turn) ---- */
+.powers-list { display: flex; flex-direction: column; gap: 3px; }
+.power-chip { font-size: 0.64rem; line-height: 1.4; color: rgba(var(--neon),0.75); }
+.power-chip strong { color: var(--yellow); font-family: var(--font-ui); margin-right: 6px; }
 
 /* ---- Tiles (pool / hand / tray) ---- */
 .tiles { display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; align-content: flex-start; }
@@ -197,8 +221,20 @@ body {
 .tile.tray-tile { background: rgba(var(--neon),0.16); border-color: var(--cyan); }
 .tile.s-bonus { background: color-mix(in srgb, var(--yellow) 18%, transparent); border-color: var(--yellow); color: var(--yellow); }
 .empty-note { font-size: 0.66rem; color: rgba(var(--neon),0.35); align-self: center; padding: 0 4px; }
-/* Pool/hand while it isn't your turn: greyed out + non-interactive. */
-.tiles.locked { filter: grayscale(0.95); opacity: 0.4; pointer-events: none; }
+/* The pool while you can't use it: greyed out. (No pointer-events:none — the
+   hand must keep pointer events for drag-reordering on an opponent's turn.) */
+.tiles.locked { filter: grayscale(0.95); opacity: 0.4; }
+
+/* ---- Hand drag (reorder / drop onto the word tray) ---- */
+#hand .tile { touch-action: none; } /* let pointermove drive the drag on touch */
+.tile.drag-src { opacity: 0.25; }
+.tile.drag-ghost {
+  position: fixed; z-index: 50; pointer-events: none;
+  transform: translate(-50%, -60%) scale(1.15);
+  background: var(--panel); border-color: var(--cyan); color: var(--cyan);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 14px rgba(var(--neon),0.4);
+}
+.tiles.tray.drop-target { border-color: var(--cyan); border-style: solid; background: rgba(var(--neon),0.1); }
 
 /* ---- Build controls ---- */
 .build-panel { gap: 8px; }
@@ -222,6 +258,23 @@ body {
 .ability-btn.on { background: var(--cyan); color: var(--dark); border-color: var(--cyan); }
 .ability-note { font-size: 0.58rem; color: rgba(var(--neon),0.45); }
 .buy-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.buy-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: rgba(var(--neon),0.05); border: 1px solid var(--yellow);
+  border-radius: var(--item-radius); padding: 5px 12px; min-width: 52px;
+  cursor: pointer; font-family: var(--font-mono); line-height: 1.1;
+}
+.buy-chip .pat-l { color: var(--yellow); }
+.buy-chip .pat-c { color: rgba(var(--neon),0.6); }
+.buy-chip.selected { background: var(--yellow); }
+.buy-chip.selected .pat-l, .buy-chip.selected .pat-c { color: #25221b; }
+
+/* Step 2's turn summary — every effect of the play, before it's locked in. */
+.turn-summary { display: flex; flex-direction: column; gap: 3px; font-size: 0.78rem; max-width: 340px; width: 100%; margin: 0 auto; }
+.sum-row { display: flex; justify-content: space-between; gap: 12px; color: rgba(var(--neon),0.85); }
+.sum-row.roy span:last-child { color: var(--magenta); }
+.sum-row.bad { color: var(--magenta); justify-content: center; }
+.sum-row.total { border-top: 1px solid rgba(var(--neon),0.2); margin-top: 3px; padding-top: 5px; color: var(--cyan); font-weight: 600; }
 .build-actions { display: flex; gap: 10px; width: min(420px, 92vw); margin: 2px auto 0; }
 .build-actions .btn-primary, .build-actions .btn-ghost { flex: 1; }
 #btn-swap, #btn-discard-mode { align-self: center; font-size: 0.62rem; }

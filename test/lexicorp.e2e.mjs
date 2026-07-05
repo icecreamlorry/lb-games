@@ -127,7 +127,18 @@ function check(name, cond, detail = '') {
     }
     await page.waitForTimeout(150);
     check('word preview accepts the word', await page.evaluate(() => document.getElementById('word-preview').classList.contains('ok')));
-    check('PLAY enabled for valid word', await page.evaluate(() => !document.getElementById('btn-play').disabled));
+    check('NEXT enabled for valid word', await page.evaluate(() => !document.getElementById('btn-next').disabled));
+
+    // Step 2: the buy/review stage replaces the build UI and shows a summary
+    // (earnings + royalties) before the turn is locked in.
+    await page.click('#btn-next');
+    await page.waitForTimeout(150);
+    check('buy stage shown after NEXT', await page.evaluate(() =>
+      !document.getElementById('buy-stage').classList.contains('hidden')
+      && document.getElementById('word-stage').classList.contains('hidden')));
+    check('turn summary previews earnings', await page.evaluate(() =>
+      document.getElementById('turn-summary').textContent.includes('$')));
+    check('END TURN enabled in buy stage', await page.evaluate(() => !document.getElementById('btn-play').disabled));
 
     await page.click('#btn-play');
     await page.waitForTimeout(300);
@@ -144,6 +155,34 @@ function check(name, cond, detail = '') {
     check('move written to moves table', after.movesInDb >= 2, `got ${after.movesInDb} (start + play)`);
   }
 
+  // Tapping a patent chip must open its details (no hover on mobile).
+  await page.click('#patents .pat:nth-child(26)'); // Z — a powered letter
+  await page.waitForTimeout(100);
+  check('patent chip tap opens details', await page.evaluate(() => {
+    const info = document.getElementById('pat-info');
+    return !info.classList.contains('hidden') && /Z/.test(info.textContent) && info.textContent.length > 10;
+  }));
+  await page.click('#patents .pat:nth-child(26)'); // tap again to dismiss
+  await page.waitForTimeout(100);
+  check('patent details dismiss on second tap',
+    await page.evaluate(() => document.getElementById('pat-info').classList.contains('hidden')));
+
+  // Hand tiles can be drag-reordered even when it is NOT our turn.
+  {
+    const before = await page.evaluate(() => Array.from(document.querySelectorAll('#hand .tile')).map((t) => t.textContent));
+    const boxes = await page.evaluate(() => Array.from(document.querySelectorAll('#hand .tile')).map((t) => {
+      const r = t.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }));
+    await page.mouse.move(boxes[0].x, boxes[0].y);
+    await page.mouse.down();
+    await page.mouse.move(boxes[2].x + 5, boxes[2].y, { steps: 8 });
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const after = await page.evaluate(() => Array.from(document.querySelectorAll('#hand .tile')).map((t) => t.textContent));
+    check('hand tile drag-reorders off-turn', after[0] === before[1] && after.length === before.length,
+      `before ${before.join('')} after ${after.join('')}`);
+  }
+
   // Opponent's move arrives via the DB poll: inject a seat-1 swap and confirm
   // the client replays it and hands the turn back to us.
   const code = await page.evaluate(() => Array.from(globalThis.__DB.rooms.keys())[0]);
@@ -151,6 +190,8 @@ function check(name, cond, detail = '') {
   await page.waitForTimeout(3200); // poll interval is 2.5s
   check('opponent move replayed via poll → my turn again',
     await page.evaluate(() => /YOUR TURN/.test(document.getElementById('turn-banner').textContent)));
+  check('last-move line announces the opponent swap',
+    await page.evaluate(() => /swapped/.test(document.getElementById('last-move').textContent)));
   // Regression: the swap relief valve must be live again on our new turn. It is
   // disabled during a submit and was previously never re-enabled, which left
   // every bottom button greyed out from your 2nd turn onward.

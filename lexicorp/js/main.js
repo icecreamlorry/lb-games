@@ -48,10 +48,13 @@ const app = {
   rematching: false,
   resultPersisted: false,
   wasMyTurn: false,        // to fire the "your turn" notification on the edge
+  handOrder: [],           // local-only display order of my hand's card ids
+  patInfo: null,           // letter whose patent details are open, or null
 };
 
 function freshDraft() {
   return {
+    stage: 'word',          // 'word' (build) → 'buy' (review earnings + patent)
     cards: [], appendS: false, second: null, activeTray: 'main', buy: null,
     qDiscard: null, doubledId: null,
     yVowels: new Set(),     // Y card ids the player has declared vowels
@@ -222,6 +225,8 @@ function resetRoomState() {
   app.rematching = false;
   app.resultPersisted = false;
   app.wasMyTurn = false;
+  app.handOrder = [];
+  app.patInfo = null;
   if ($('btn-rematch')) $('btn-rematch').disabled = false;
 }
 
@@ -420,6 +425,8 @@ function ownedPowersSet() {
   return set;
 }
 
+function seatNameOr(seat) { return seatName(app.room, seat) || `P${seat + 1}`; }
+
 // The hand to display this turn, accounting for a pending Q discard/draw.
 function displayHand() {
   const hand = app.game.hands[app.seat].slice();
@@ -428,6 +435,39 @@ function displayHand() {
   if (i !== -1) hand.splice(i, 1);
   if (app.game.top < app.game.deck.length) hand.push(app.game.top);
   return hand;
+}
+
+// Apply (and refresh) the player's local drag-reorder over the current hand:
+// keep the remembered order for cards still held, append anything newly drawn.
+// Purely cosmetic — the engine never reads display order, so this stays local.
+function orderedHand(ids) {
+  const held = new Set(ids);
+  const kept = app.handOrder.filter((id) => held.has(id));
+  const seen = new Set(kept);
+  for (const id of ids) if (!seen.has(id)) kept.push(id);
+  app.handOrder = kept;
+  return kept.slice();
+}
+
+// $ each OTHER player would collect in royalties from these cards (seat -> $).
+function royaltyPreview(usedIds) {
+  const out = new Map();
+  for (const id of usedIds) {
+    const owner = app.game.patents[letterOf(app.game, id)];
+    if (owner != null && owner !== app.seat) out.set(owner, (out.get(owner) || 0) + 1);
+  }
+  return out;
+}
+
+// One line describing an applied log entry ("Bob played FIRE for $2, patented F").
+function describeLog(entry, who) {
+  if (!entry) return `${who} moved.`;
+  if (entry.swap) return `${who} swapped their whole hand.`;
+  if (entry.discard != null) return `${who} discarded ${entry.discard} card${entry.discard === 1 ? '' : 's'}.`;
+  const words = (entry.words || []).map((w) => w.word).join(' + ') || '—';
+  let txt = `${who} played ${words} for $${entry.money}${entry.stock ? ` + ▣${entry.stock}` : ''}`;
+  if (entry.bought) txt += `, patented ${entry.bought}`;
+  return txt + '.';
 }
 
 function usageCount(id) {
@@ -484,18 +524,71 @@ $('btn-clear').addEventListener('click', clearDraft);
 // ---- Rendering ------------------------------------------------------------
 
 function renderAll() {
+  syncDraftStage();
   renderPlayers();
   renderTurnBanner();
+  renderLastMove();
   renderPatents();
+  renderPowers();
   renderTiles('pool', app.game ? app.game.pool : [], 'pool');
-  renderTiles('hand', app.game ? displayHand() : [], 'hand');
+  renderTiles('hand', app.game ? orderedHand(displayHand()) : [], 'hand');
   $('build-panel').classList.toggle('hidden', !myTurn());
   renderDiscardUI();
+  renderStages();
   renderTray();
   renderAbilityControls();
   renderYControls();
+  renderBuyRow();
+  renderBuySummary();
   updatePreview();
   renderOverlays();
+}
+
+// The buy stage only makes sense while it's your turn and the word is still
+// valid; anything else snaps the draft back to the word stage.
+function syncDraftStage() {
+  if (!app.draft || app.draft.stage !== 'buy') return;
+  if (!myTurn()) { app.draft.stage = 'word'; return; }
+  const p = draftPayload();
+  delete p.buy; // the buy is re-checked separately (renderBuyRow clears a stale one)
+  const res = validatePlay(app.game, app.seat, p, dictionaryLoaded() ? isWord : undefined);
+  if (!res.ok) app.draft.stage = 'word';
+}
+
+function renderStages() {
+  const buying = !!app.draft && app.draft.stage === 'buy';
+  $('word-stage').classList.toggle('hidden', buying);
+  $('buy-stage').classList.toggle('hidden', !buying);
+}
+
+// Persistent line under the turn banner announcing the last completed move,
+// so you always see what your opponents just played (à la Wurdz).
+function renderLastMove() {
+  const el = $('last-move');
+  const entry = app.game?.log?.[app.game.log.length - 1];
+  if (!app.started || !entry || app.game.ended) { el.textContent = ''; el.classList.add('hidden'); return; }
+  const who = entry.seat === app.seat ? 'You' : seatNameOr(entry.seat);
+  let txt = describeLog(entry, who);
+  const mine = entry.royalties?.[app.seat] || 0;
+  if (entry.seat !== app.seat && mine > 0) txt += ` You collected $${mine} in royalties.`;
+  el.textContent = txt;
+  el.classList.remove('hidden');
+}
+
+// Your owned patent powers, listed whether or not it's your turn.
+function renderPowers() {
+  const panel = $('powers-panel');
+  const list = $('powers-list');
+  const owned = ownedPowersSet();
+  panel.classList.toggle('hidden', !app.started || !owned.size);
+  list.innerHTML = '';
+  for (const p of Object.keys(POWER_TEXT)) {
+    if (!owned.has(p)) continue;
+    const div = document.createElement('div');
+    div.className = 'power-chip';
+    div.innerHTML = `<strong>${p}</strong> ${esc(POWER_TEXT[p])}`;
+    list.appendChild(div);
+  }
 }
 
 // Swap the build panel between "build a word" and "discard & redraw".
@@ -596,36 +689,197 @@ function renderPatents() {
     if (p.power) cls += ' power';
     if (buyable.has(letter)) cls += ' buyable';
     if (app.draft.buy === letter) cls += ' selected';
+    if (app.patInfo === letter) cls += ' info-open';
     chip.className = cls;
-    chip.innerHTML = `<span class="pat-l">${letter}</span><span class="pat-c">$${p.cost}</span>`;
+    chip.innerHTML = `<span class="pat-l">${letter}</span><span class="pat-c">$${p.cost}${p.power ? '★' : ''}</span>`;
     if (p.power) chip.title = POWER_TEXT[p.power];
-    if (buyable.has(letter)) chip.addEventListener('click', () => toggleBuy(letter));
+    // Tap any chip for its details (cost/owner/power) — hover isn't available
+    // on touch screens. Buying happens in the turn's step 2, not here.
+    chip.addEventListener('click', () => {
+      app.patInfo = app.patInfo === letter ? null : letter;
+      renderAll();
+    });
     wrap.appendChild(chip);
   }
+  renderPatInfo();
   $('patent-hint').textContent = app.game
     ? `· reach ©${endThreshold(app.game.numPlayers)} to end`
     : '';
 }
 
+function renderPatInfo() {
+  const el = $('pat-info');
+  const letter = app.patInfo;
+  if (!letter || !PATENTS[letter]) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+  const p = PATENTS[letter];
+  const owner = app.game?.patents?.[letter];
+  const ownerTxt = owner == null ? 'unowned'
+    : owner === app.seat ? 'owned by you'
+    : `owned by ${esc(seatNameOr(owner))}`;
+  const powerTxt = p.power ? `★ ${esc(POWER_TEXT[p.power])}` : 'No special power — value and royalties only.';
+  el.innerHTML = `<strong>${letter}</strong> · $${p.cost} · ${ownerTxt}<br>${powerTxt}`;
+  el.classList.remove('hidden');
+}
+
 // Generic tile renderer for pool/hand.
 function renderTiles(elId, ids, kind) {
   const wrap = $(elId);
+  if (kind === 'hand' && handDragCleanup) handDragCleanup(); // re-render kills a live drag
   wrap.innerHTML = '';
   const discarding = !!(app.draft && app.draft.discardMode);
-  // While discarding you can only act on your own hand; the pool is locked.
-  const interactive = myTurn() && (kind === 'hand' || !discarding);
-  wrap.classList.toggle('locked', !interactive);
+  const buying = !!(app.draft && app.draft.stage === 'buy');
+  // Tap-to-build only while composing the word (step 1) on your turn; while
+  // discarding you can only act on your own hand.
+  const canTap = myTurn() && !buying && (kind === 'hand' || !discarding);
+  // Only the pool greys out — your hand stays bright and drag-reorderable even
+  // on an opponent's turn.
+  wrap.classList.toggle('locked', kind === 'pool' && !canTap);
   ids.forEach((id) => {
     const tile = document.createElement('div');
     const used = !discarding && usageCount(id) > 0;
     const marked = discarding && kind === 'hand' && app.draft.discardSet.has(id);
-    tile.className = 'tile' + (used ? ' used' : '') + (marked ? ' discarding' : '') + (interactive ? ' tappable' : '');
+    tile.className = 'tile' + (used ? ' used' : '') + (marked ? ' discarding' : '') + (canTap ? ' tappable' : '');
     if (!discarding && kind === 'hand' && app.draft.qMode && app.game.hands[app.seat].includes(id)) tile.className += ' q-target';
     tile.textContent = letterOf(app.game, id);
-    if (interactive) tile.addEventListener('click', () => addCard(id));
+    if (canTap) tile.addEventListener('click', () => { if (suppressNextClick) return; addCard(id); });
+    if (kind === 'hand') tile.addEventListener('pointerdown', (e) => startHandDrag(e, id));
     wrap.appendChild(tile);
   });
   if (!ids.length) wrap.innerHTML = '<span class="empty-note">—</span>';
+}
+
+// ---- Hand drag (pointer-based, mouse + touch) -------------------------------
+//
+// Dragging a hand tile within the hand reorders your letters (any time, even on
+// an opponent's turn) — the other tiles slide aside to open a gap where the
+// dragged tile will land, like Wurdz's rack. On your turn (step 1) a tile can
+// also be dropped straight onto a word tray to add it to the word.
+
+let suppressNextClick = false; // a drag's trailing click must not add a card
+let handDragCleanup = null;    // tears down an in-progress drag on re-render
+
+function startHandDrag(e, id) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (app.draft.discardMode || app.draft.qMode) return; // those modes are tap-driven
+
+  const tileEl = e.currentTarget;
+  const startX = e.clientX, startY = e.clientY;
+  let active = false, ghost = null;
+  let allTiles = [];  // every hand tile in display order (DOM index == order index)
+  let slots = [];     // base center of each slot, captured before any shifting
+  let gapIdx = null;  // current insertion index, or null when no gap is shown
+
+  const canPlace = () => myTurn() && app.draft.stage !== 'buy';
+  const trayUnder = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    return el && el.closest('#word-tray, #second-tray');
+  };
+  const clearTrayHighlight = () => {
+    document.querySelectorAll('.tiles.tray.drop-target').forEach((t) => t.classList.remove('drop-target'));
+  };
+
+  const showGap = (ins) => {
+    if (ins === gapIdx) return;
+    gapIdx = ins;
+    let k = 0; // running index among the non-dragged tiles
+    allTiles.forEach((t, fi) => {
+      if (t === tileEl) return;
+      const target = k < ins ? k : k + 1;
+      t.style.transform = `translate(${slots[target].x - slots[fi].x}px, ${slots[target].y - slots[fi].y}px)`;
+      k++;
+    });
+  };
+  const hideGap = () => {
+    if (gapIdx === null) return;
+    gapIdx = null;
+    allTiles.forEach((t) => { if (t !== tileEl) t.style.transform = ''; });
+  };
+  // Insertion index in reading order — the hand may wrap onto a second row on
+  // narrow screens, so compare rows first, then x within the row.
+  const insAt = (x, y) => {
+    let n = 0;
+    for (const s of slots) {
+      if (y > s.y + s.h / 2) n++;
+      else if (Math.abs(y - s.y) <= s.h / 2 && x > s.x) n++;
+    }
+    return Math.max(0, Math.min(n, slots.length - 1));
+  };
+
+  const onMove = (ev) => {
+    if (!active) {
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 8) return;
+      active = true;
+      tileEl.classList.add('drag-src');
+      ghost = document.createElement('div');
+      ghost.className = 'tile drag-ghost';
+      ghost.textContent = letterOf(app.game, id);
+      document.body.appendChild(ghost);
+      allTiles = [...$('hand').querySelectorAll('.tile')];
+      slots = allTiles.map((t) => {
+        const r = t.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, h: r.height };
+      });
+      allTiles.forEach((t) => { if (t !== tileEl) t.style.transition = 'transform 0.15s ease'; });
+      handDragCleanup = teardown;
+    }
+    ghost.style.left = `${ev.clientX}px`;
+    ghost.style.top = `${ev.clientY}px`;
+    clearTrayHighlight();
+    const tray = canPlace() && usageCount(id) === 0 && trayUnder(ev.clientX, ev.clientY);
+    if (tray) { tray.classList.add('drop-target'); hideGap(); return; }
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    if (el && el.closest('#hand')) showGap(insAt(ev.clientX, ev.clientY));
+    else hideGap();
+  };
+
+  // Removes all drag DOM/listeners without committing anything.
+  const teardown = () => {
+    if (handDragCleanup === teardown) handDragCleanup = null;
+    tileEl.removeEventListener('pointermove', onMove);
+    tileEl.removeEventListener('pointerup', onUp);
+    tileEl.removeEventListener('pointercancel', onCancel);
+    if (ghost) { ghost.remove(); ghost = null; }
+    clearTrayHighlight();
+    allTiles.forEach((t) => { t.style.transition = ''; t.style.transform = ''; });
+    tileEl.classList.remove('drag-src');
+  };
+
+  const onUp = (ev) => {
+    const wasActive = active;
+    const dropIdx = gapIdx;
+    const x = ev.clientX, y = ev.clientY;
+    teardown();
+    if (!wasActive) return; // it was a tap → let the click handler run
+
+    ev.preventDefault();
+    suppressNextClick = true;
+    setTimeout(() => { suppressNextClick = false; }, 350);
+
+    const tray = canPlace() && trayUnder(x, y);
+    if (tray) {
+      if (tray.id === 'second-tray' && app.draft.second) app.draft.activeTray = 'second';
+      else if (tray.id === 'word-tray') app.draft.activeTray = 'main';
+      addCard(id);
+      return;
+    }
+    const el = document.elementFromPoint(x, y);
+    if (dropIdx !== null && el && el.closest('#hand')) {
+      const order = app.handOrder;
+      const from = order.indexOf(id);
+      if (from !== -1) {
+        order.splice(from, 1);
+        order.splice(Math.max(0, Math.min(dropIdx, order.length)), 0, id);
+        renderAll();
+      }
+    }
+  };
+
+  const onCancel = () => teardown();
+
+  tileEl.setPointerCapture(e.pointerId);
+  tileEl.addEventListener('pointermove', onMove);
+  tileEl.addEventListener('pointerup', onUp);
+  tileEl.addEventListener('pointercancel', onCancel);
 }
 
 function renderTray() {
@@ -723,11 +977,14 @@ function draftPayload() {
   return payload;
 }
 
-// Which letters could be patented with the current word right now.
+// Which letters could be patented with the current word right now. Evaluated
+// without any already-selected buy, so a stale selection can't zero the set.
 function currentBuyable() {
   const out = new Set();
   if (!myTurn() || app.draft.discardMode) return out;
-  const res = validatePlay(app.game, app.seat, draftPayload(), dictionaryLoaded() ? isWord : undefined);
+  const payload = draftPayload();
+  delete payload.buy;
+  const res = validatePlay(app.game, app.seat, payload, dictionaryLoaded() ? isWord : undefined);
   if (!res.ok || !res.letters) return out;
   const projected = app.game.money[app.seat] + res.money;
   for (const letter of res.letters) {
@@ -741,34 +998,103 @@ function toggleBuy(letter) {
   renderAll();
 }
 
+// Step 2's patent picker: the buyable letters as tappable chips.
+function renderBuyRow() {
+  const row = $('buy-row');
+  row.innerHTML = '';
+  if (!myTurn() || app.draft.stage !== 'buy') return;
+  const buyable = currentBuyable();
+  if (app.draft.buy && !buyable.has(app.draft.buy)) app.draft.buy = null; // word changed under it
+  if (!buyable.size) {
+    row.innerHTML = '<span class="ability-note">No patent is affordable from this word — just end your turn.</span>';
+    return;
+  }
+  for (const letter of [...buyable].sort((a, b) => PATENTS[b].cost - PATENTS[a].cost)) {
+    const p = PATENTS[letter];
+    const b = document.createElement('button');
+    b.className = 'buy-chip' + (app.draft.buy === letter ? ' selected' : '');
+    b.innerHTML = `<span class="pat-l">${letter}</span><span class="pat-c">$${p.cost}${p.power ? '★' : ''}</span>`;
+    if (p.power) b.title = POWER_TEXT[p.power];
+    b.addEventListener('click', () => toggleBuy(letter));
+    row.appendChild(b);
+  }
+}
+
+// Step 2's summary: your earnings, what each patent owner will collect from
+// this play, the patent you're buying, and where that leaves you — everything
+// the turn does, shown before you lock it in.
+function renderBuySummary() {
+  const el = $('turn-summary');
+  const playBtn = $('btn-play');
+  if (!myTurn() || app.draft.stage !== 'buy') { el.innerHTML = ''; playBtn.disabled = true; return; }
+  const res = validatePlay(app.game, app.seat, draftPayload(), dictionaryLoaded() ? isWord : undefined);
+  if (!res.ok) {
+    el.innerHTML = `<div class="sum-row bad">${esc(res.error)}</div>`;
+    playBtn.disabled = true;
+    return;
+  }
+  const rows = res.words.map((w) =>
+    `<div class="sum-row"><span>${esc(w.word)}</span><span>+$${w.money}${w.stock ? ` · ▣${w.stock}` : ''}</span></div>`);
+  for (const [seat, amt] of royaltyPreview(res.usedIds)) {
+    rows.push(`<div class="sum-row roy"><span>${esc(seatNameOr(seat))} collects royalties</span><span>+$${amt} to them</span></div>`);
+  }
+  const buyCost = app.draft.buy ? PATENTS[app.draft.buy].cost : 0;
+  if (app.draft.buy) rows.push(`<div class="sum-row"><span>Patent ${app.draft.buy}</span><span>−$${buyCost}</span></div>`);
+  const endMoney = app.game.money[app.seat] + res.money - buyCost;
+  const endStock = app.game.stock[app.seat] + res.stock;
+  rows.push(`<div class="sum-row total"><span>You'll have</span><span>$${endMoney} · ▣${endStock}</span></div>`);
+  el.innerHTML = rows.join('');
+  playBtn.disabled = false;
+}
+
 function updatePreview() {
   const prev = $('word-preview');
-  const playBtn = $('btn-play');
+  const nextBtn = $('btn-next');
   const clearBtn = $('btn-clear');
   const swapBtn = $('btn-swap');
   // Swap (the "stuck? redraw" relief valve) is available whenever it's your
   // turn. sendTurn() disables it during a submit; this re-enables it on the next
   // render so it's never left permanently dead after your first move.
   swapBtn.disabled = !myTurn();
-  if (!myTurn()) { prev.textContent = ''; prev.className = 'word-preview'; playBtn.disabled = true; clearBtn.disabled = true; return; }
+  if (!myTurn()) { prev.textContent = ''; prev.className = 'word-preview'; nextBtn.disabled = true; clearBtn.disabled = true; return; }
   const hasAny = app.draft.cards.length || (app.draft.second && app.draft.second.cards.length);
   clearBtn.disabled = !hasAny && app.draft.qDiscard == null;
-  if (!hasAny) { prev.textContent = ''; prev.className = 'word-preview'; playBtn.disabled = true; return; }
+  if (!hasAny) { prev.textContent = ''; prev.className = 'word-preview'; nextBtn.disabled = true; return; }
 
-  const res = validatePlay(app.game, app.seat, draftPayload(), dictionaryLoaded() ? isWord : undefined);
+  const p = draftPayload();
+  delete p.buy; // the patent is chosen in step 2
+  const res = validatePlay(app.game, app.seat, p, dictionaryLoaded() ? isWord : undefined);
   if (!res.ok) {
     prev.textContent = res.error;
     prev.className = 'word-preview bad';
-    playBtn.disabled = true;
+    nextBtn.disabled = true;
     return;
   }
   const parts = res.words.map((w) => `${w.word} +$${w.money}${w.stock ? ` ▣${w.stock}` : ''}`);
   let txt = parts.join('   ·   ');
-  if (app.draft.buy) txt += `   →  patent ${app.draft.buy} (−$${PATENTS[app.draft.buy].cost})`;
+  const roy = royaltyPreview(res.usedIds);
+  if (roy.size) txt += '   ·   ' + [...roy].map(([s, amt]) => `${seatNameOr(s)} collects $${amt}`).join(', ');
   prev.textContent = txt;
   prev.className = 'word-preview ok';
-  playBtn.disabled = false;
+  nextBtn.disabled = false;
 }
+
+// Step navigation: NEXT locks the word shape and moves to the buy/review step;
+// EDIT WORD goes back (keeping everything staged).
+$('btn-next').addEventListener('click', () => {
+  if (!myTurn()) return;
+  const p = draftPayload();
+  delete p.buy;
+  const res = validatePlay(app.game, app.seat, p, dictionaryLoaded() ? isWord : undefined);
+  if (!res.ok) { setStatus(res.error); return; }
+  app.draft.stage = 'buy';
+  setStatus('');
+  renderAll();
+});
+$('btn-back').addEventListener('click', () => {
+  app.draft.stage = 'word';
+  renderAll();
+});
 
 $('btn-play').addEventListener('click', playWord);
 async function playWord() {
@@ -909,7 +1235,7 @@ function maybeNotifyTurn() {
   if (mine && !app.wasMyTurn && app.started && document.hidden) {
     const last = app.game?.log?.[app.game.log.length - 1];
     const who = (last && seatName(app.room, last.seat)) || 'Someone';
-    showTurnNotification(`${who} played. Your move!`);
+    showTurnNotification(`${describeLog(last, who)} Your move!`);
   }
   if (mine && !document.hidden) clearTurnNotification();
   app.wasMyTurn = mine;
@@ -925,7 +1251,7 @@ function pushOpponent() {
   triggerPush({
     ...route,
     title: "Lexicorp — it's your turn",
-    body: `${app.name} played their word.`,
+    body: describeLog(app.game.log[app.game.log.length - 1], app.name),
     url: location.href.split('#')[0],
   }).catch(() => {});
 }
