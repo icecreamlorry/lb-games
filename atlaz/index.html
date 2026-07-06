@@ -2,7 +2,7 @@
 <html lang="en" data-theme="maritime">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
   <title>ATLAZ // LB GAMES</title>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#04040f">
@@ -16,7 +16,7 @@
   <script>
     // Configures the shared account layer (account-ui.js) for this game.
     // `daily: true` gives the lobby a solo button (relabelled by main.js).
-    window.LB_CONFIG = { gameSlug: 'atlaz', gameName: 'Atlaz', history: true, daily: true, defaultTheme: 'maritime' };
+    window.LB_CONFIG = { gameSlug: 'atlaz', gameName: 'Atlaz', history: true, defaultTheme: 'maritime' };
   </script>
   <script src="../shared/theme-boot.js"></script>
 </head>
@@ -29,10 +29,7 @@
       <p class="tagline">// KNOW YOUR MAPS //</p>
 
       <div class="row">
-        <button id="btn-solo" class="btn-primary">PLAY SOLO</button>
-      </div>
-      <div class="row">
-        <button id="btn-create" class="btn-ghost">CREATE ROOM</button>
+        <button id="btn-create" class="btn-primary">CREATE ROOM</button>
         <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
       </div>
       <div id="join-box" class="row hidden">
@@ -53,7 +50,6 @@
   <section id="screen-game" class="screen hidden">
     <header class="bar game-bar">
       <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
-      <span id="solo-chip" class="chip solo-chip hidden">SOLO</span>
       <span class="grow"></span>
       <span id="mode-chip" class="chip mode-chip hidden"></span>
       <span id="timer-chip" class="chip timer-chip hidden">0:00</span>
@@ -96,7 +92,8 @@
             <div id="cfg-modes" class="cfg-grid modes"></div>
           </div>
           <p id="start-info" class="muted"></p>
-          <button id="btn-start" class="btn-primary" disabled>START</button>
+          <button id="btn-start" class="btn-primary" disabled>NEXT</button>
+          <button id="btn-cfg-back" class="link-btn hidden">CHANGE MAP / MODE</button>
           <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
         </div>
       </div>

@@ -43,6 +43,15 @@ export class AtlazMap {
     this.vp.appendChild(this.pathLayer);
     this.vp.appendChild(this.labelLayer);
 
+    // Non-playable neighbouring land + lakes render beneath/above the
+    // playable layer; neither takes pointer events (CSS pointer-events:none).
+    for (const d of region.ctx || []) {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.classList.add('ctx-land');
+      this.pathLayer.appendChild(p);
+    }
+
     this.paths = new Map();
     this.labels = new Map();
     for (const it of region.items) {
@@ -53,6 +62,13 @@ export class AtlazMap {
       if (it.dot) p.classList.add('dot');
       this.pathLayer.appendChild(p);
       this.paths.set(it.id, p);
+    }
+
+    for (const d of region.lakes || []) {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.classList.add('lake');
+      this.pathLayer.appendChild(p);
     }
 
     svg.addEventListener('pointerdown', (e) => this.#pointerDown(e));
@@ -191,6 +207,9 @@ export class AtlazMap {
   #pointerUp(e) {
     const wasTap = this.tapStart && !this.tapStart.moved && this.pointers.size === 1
       && Date.now() - this.tapStart.t < 600;
+    // NB: after setPointerCapture, e.target is retargeted to the svg itself —
+    // the element actually under the finger is the pointerDOWN target.
+    const downTarget = this.tapStart?.target ?? null;
     this.#pointerGone(e);
     if (!wasTap) return;
 
@@ -199,7 +218,7 @@ export class AtlazMap {
     this.lastTap = { t: isDouble ? 0 : now, x: e.clientX, y: e.clientY };
     if (isDouble) { this.zoomBy(2.1, e.clientX, e.clientY); return; }
 
-    const id = this.hitTest(e.clientX, e.clientY, e.target);
+    const id = this.hitTest(e.clientX, e.clientY, downTarget);
     this.onTap?.(id, this.clientToMap(e.clientX, e.clientY));
   }
 
@@ -219,16 +238,23 @@ export class AtlazMap {
     this.zoomBy(e.deltaY < 0 ? 1.18 : 1 / 1.18, e.clientX, e.clientY);
   }
 
-  // Direct hit on a territory path wins; otherwise snap to the nearest item's
-  // bbox centre within NEAR_PX screen pixels (rescues tiny territories).
+  // Direct hit on a territory path wins (checked at the pointer-up point, then
+  // via the pointer-down target); otherwise snap to the item whose bounding box
+  // is nearest, within NEAR_PX screen pixels (rescues tiny territories).
   hitTest(clientX, clientY, target = null) {
-    const el = (target instanceof Element ? target : document.elementFromPoint(clientX, clientY))?.closest?.('path[data-id]');
-    if (el && this.svg.contains(el)) return el.dataset.id;
+    const fromPoint = document.elementFromPoint(clientX, clientY)?.closest?.('path[data-id]');
+    if (fromPoint && this.svg.contains(fromPoint)) return fromPoint.dataset.id;
+    const fromDown = target instanceof Element ? target.closest?.('path[data-id]') : null;
+    if (fromDown && this.svg.contains(fromDown)) return fromDown.dataset.id;
     const [mx, my] = this.clientToMap(clientX, clientY);
     const ppu = this.pxPerUnit();
     let best = null, bestD = NEAR_PX;
     for (const it of this.items.values()) {
-      const d = Math.hypot(mx - (it.bbox[0] + it.bbox[2]) / 2, my - (it.bbox[1] + it.bbox[3]) / 2) * ppu;
+      // Distance to the bbox rectangle (not its centre) so long, thin
+      // territories — Norway, Chile — are reachable along their whole length.
+      const dx = Math.max(it.bbox[0] - mx, 0, mx - it.bbox[2]);
+      const dy = Math.max(it.bbox[1] - my, 0, my - it.bbox[3]);
+      const d = Math.hypot(dx, dy) * ppu;
       if (d < bestD) { bestD = d; best = it.id; }
     }
     return best;

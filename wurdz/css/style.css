@@ -58,7 +58,7 @@ input, textarea { user-select: text; }
 
 .screen { height: 100%; }
 
-#screen-landing { overflow-y: auto; min-height: 100%; }
+#screen-landing { overflow-y: auto; overflow-x: hidden; min-height: 100%; }
 
 #screen-game {
   display: flex;
@@ -81,6 +81,7 @@ input, textarea { user-select: text; }
   text-align: center;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
   width: min(420px, 92vw);
+  max-width: 100%;
 }
 
 .logo {
@@ -722,6 +723,7 @@ input, textarea { user-select: text; }
    .grow), so these mirror the other games' lobby while keeping Wurdz's look. */
 .card {
   width: min(420px, 92vw);
+  max-width: 100%;
   background: var(--panel);
   border-radius: var(--panel-radius);
   padding: 24px 28px 28px;

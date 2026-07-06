@@ -13,6 +13,11 @@
   -webkit-touch-callout: none;
 }
 
+/* No LB Games page ever scrolls sideways at page level — a 1px overhang on a
+   phone otherwise turns into a wiggle on every intro screen. `clip` blocks
+   scrolling without creating a new scroll container. */
+html { overflow-x: clip; }
+
 :root {
   --cyan:    #00f5ff;
   --magenta: #ff00c8;

@@ -10,6 +10,12 @@
 // dev environment's proxy allows raw.githubusercontent.com. The generated
 // JSON is checked into git; the game never fetches or builds at runtime.
 //
+// Each region file contains three layers:
+//   items — the playable territories (id/name/alt/d/cx/cy/bbox)
+//   ctx   — non-playable neighbouring land, cropped by the frame, so maps
+//           don't show impossible gaps (Türkiye-shaped hole in Europe etc.)
+//   lakes — large lakes, drawn as water so Michigan doesn't look broken
+//
 // See atlaz/PLAN.md §3 for the full pipeline description.
 
 import { execFileSync } from 'node:child_process';
@@ -26,15 +32,11 @@ const CACHE = join(HERE, 'cache');
 const OUT = join(HERE, '..', 'data', 'maps');
 const W = 1000; // every region is emitted 1000 units wide
 
+const NE = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson';
 const SOURCES = {
-  admin0: {
-    file: 'ne50_admin0.geojson',
-    url: 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson',
-  },
-  admin1: {
-    file: 'ne10_admin1.geojson',
-    url: 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_1_states_provinces.geojson',
-  },
+  admin0: { file: 'ne50_admin0.geojson', url: `${NE}/ne_50m_admin_0_countries.geojson` },
+  admin1: { file: 'ne10_admin1.geojson', url: `${NE}/ne_10m_admin_1_states_provinces.geojson` },
+  lakes: { file: 'ne50_lakes.geojson', url: `${NE}/ne_50m_lakes.geojson` },
 };
 
 // ---- Country name/alias overrides (id = ISO 3166-1 a2, NE's ISO_A2_EH) -----
@@ -57,7 +59,7 @@ const COUNTRY_NAMES = {
   BA: { name: 'Bosnia and Herzegovina', alt: ['bosnia'] },
   VA: { name: 'Vatican City', alt: ['vatican', 'holy see'] },
   PS: { name: 'Palestine', alt: ['palestinian territories'] },
-  TR: { name: 'Turkey', alt: ['turkiye'] },
+  TR: { name: 'Türkiye', alt: ['turkey', 'turkiye'] },
   KN: { name: 'Saint Kitts and Nevis', alt: ['st kitts'] },
   VC: { name: 'Saint Vincent and the Grenadines', alt: ['st vincent'] },
   AG: { name: 'Antigua and Barbuda', alt: ['antigua'] },
@@ -80,12 +82,18 @@ const COUNTRY_NAMES = {
 // falls outside are dropped (removes overseas territories from the frame).
 // normLon: add 360 to negative longitudes before the window test (Pacific).
 // fitExclude: ids drawn but ignored when fitting the projection (Russia).
+// windowSkip: ids exempt from the window test (clipExtent crops them instead).
 // labelAt: manual [lon, lat] label anchors for ids whose centroid misbehaves.
+// ctx: ISO list of non-playable neighbour countries drawn as cropped scenery.
+// ctxAdmin1: admin-1 filter (props => bool) merged into ONE scenery shape —
+//   used by the UK nations, whose neighbours are other parts of one country.
+// Transcontinental countries are deliberately playable in TWO regions:
+// Türkiye (europe + w-asia) and Egypt (africa + w-asia).
 
 const AFRICA = 'DZ AO BJ BW BF BI CV CM CF TD KM CG CD CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW';
-const EUROPE = 'AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA';
+const EUROPE = 'AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA TR';
 const SE_ASIA = 'BN KH ID LA MY MM PH SG TH TL VN';
-const W_ASIA = 'AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE';
+const W_ASIA = 'AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE EG';
 const OCEANIA = 'AU NZ PG FJ SB VU WS TO KI FM MH PW NR TV';
 const C_AMERICA = 'BZ CR SV GT HN NI PA';
 const S_AMERICA = 'AR BO BR CL CO EC GY PY PE SR UY VE';
@@ -96,58 +104,89 @@ const conic = (parallels, lon0) => geoConicConformal().parallels(parallels).rota
 
 const REGIONS = [
   { id: 'africa', label: 'Africa', kind: 'countries', iso: AFRICA,
-    window: [-26, 64, -36, 38], proj: mercator, simplifyQ: 0.3 },
+    window: [-26, 64, -36, 38], proj: mercator, simplifyQ: 0.3,
+    ctx: 'ES PT IT GR MT CY TR SA YE OM AE QA BH KW JO IL PS LB SY IQ IR' },
   { id: 'europe', label: 'Europe', kind: 'countries', iso: EUROPE,
-    window: [-25, 65, 34, 72], proj: () => conic([40, 60], 15),
-    fitExclude: ['RU'], windowSkip: ['RU'], labelAt: { RU: [37.6, 55.8], NO: [8.5, 61] }, simplifyQ: 0.3 },
+    window: [-25, 65, 30, 72], proj: () => conic([40, 60], 15),
+    fitExclude: ['RU', 'TR'], windowSkip: ['RU'],
+    labelAt: { RU: [37.6, 55.8], NO: [8.5, 61] }, simplifyQ: 0.3,
+    ctx: 'MA DZ TN LY EG SY LB IL IQ IR JO SA GE AM AZ KZ TM UZ KW' },
   { id: 'se-asia', label: 'South East Asia', kind: 'countries', iso: SE_ASIA,
-    window: [90, 142, -12, 29], proj: mercator, simplifyQ: 0.5 },
+    window: [90, 142, -12, 29], proj: mercator, simplifyQ: 0.5,
+    ctx: 'CN TW IN BD BT NP AU PG PW' },
   { id: 'w-asia', label: 'Western Asia', kind: 'countries', iso: W_ASIA,
-    window: [24, 64, 11, 44], proj: mercator },
+    window: [22, 64, 11, 44], proj: mercator, simplifyQ: 0.5,
+    ctx: 'GR BG MK AL RO UA RU KZ TM UZ AF PK SD SS ER DJ ET SO LY CY' },
   { id: 'oceania', label: 'Australasia & Polynesia', kind: 'countries', iso: OCEANIA,
-    window: [110, 215, -48, 20], normLon: true, proj: () => geoMercator().rotate([-160, 0]) },
+    window: [110, 215, -48, 20], normLon: true, proj: () => geoMercator().rotate([-160, 0]),
+    ctx: 'ID TL PH MY BN' },
   { id: 'c-america', label: 'Central America', kind: 'countries', iso: C_AMERICA,
-    window: [-93, -77, 5.5, 18.8], proj: mercator },
+    window: [-93, -77, 5.5, 18.8], proj: mercator,
+    ctx: 'MX CO CU JM' },
   { id: 's-america', label: 'South America', kind: 'countries', iso: S_AMERICA,
-    window: [-82, -34, -56, 13], proj: mercator, simplifyQ: 0.6 },
+    window: [-82, -34, -56, 13], proj: mercator, simplifyQ: 0.6,
+    ctx: 'PA CR NI TT FR FK' },
   { id: 'n-america', label: 'North America & Caribbean', kind: 'countries', iso: N_AMERICA,
     window: [-170, -50, 7, 84], proj: () => conic([30, 60], -96),
-    dropRing: (lon, lat) => lon < -140 && lat < 35 /* Hawaii */, simplifyQ: 0.3 },
+    dropRing: (lon, lat) => lon < -140 && lat < 35 /* Hawaii */, simplifyQ: 0.3,
+    ctx: 'GL CO VE GY SR EC RU FR' },
 
   { id: 'usa', label: 'USA', kind: 'states', admin: 'United States of America',
     proj: () => geoAlbersUsa(), simplifyQ: 0.3,
+    ctx: 'CA MX CU BS',
     alt: { 'district-of-columbia': ['washington dc', 'dc'] } },
-  { id: 'britain', label: 'Britain', kind: 'states', admin: 'United Kingdom',
-    window: [-8.7, 2, 49.8, 61.2], proj: () => conic([50, 60], -3), simplifyQ: 0.5,
-    dissolve: britainGroup,
-    alt: {
-      'greater-london': ['london'], 'county-durham': ['durham'],
-      'outer-hebrides': ['western isles', 'na h eileanan siar', 'eilean siar'],
-      anglesey: ['ynys mon'], 'perth-and-kinross': ['perthshire and kinross'],
-      'rhondda-cynon-taf': ['rhondda cynon taff', 'rhondda'],
-    } },
+  { id: 'england', label: 'England', kind: 'states', admin: 'United Kingdom', unit: 'England',
+    proj: () => conic([50, 55], -1.5), simplifyQ: 0.5, dissolve: englandGroup,
+    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'England',
+    ctx: 'IE FR BE NL',
+    alt: { 'greater-london': ['london'], 'county-durham': ['durham'] } },
+  { id: 'scotland', label: 'Scotland', kind: 'states', admin: 'United Kingdom', unit: 'Scotland',
+    window: [-8.2, 0.5, 54.5, 61.2], proj: () => conic([55, 60], -4), simplifyQ: 0.5,
+    dissolve: (p) => SCOTLAND_FIX[p.name] || p.name,
+    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Scotland',
+    ctx: 'IE',
+    alt: { 'outer-hebrides': ['western isles', 'na h eileanan siar', 'eilean siar'],
+           'perth-and-kinross': ['perthshire and kinross'] } },
+  { id: 'wales', label: 'Wales', kind: 'states', admin: 'United Kingdom', unit: 'Wales',
+    proj: () => conic([51, 53.5], -3.8), simplifyQ: 0.5,
+    dissolve: (p) => WALES_FIX[p.name] || p.name,
+    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Wales',
+    ctx: 'IE',
+    alt: { anglesey: ['ynys mon'], 'rhondda-cynon-taf': ['rhondda cynon taff', 'rhondda'] } },
+  { id: 'northern-ireland', label: 'Northern Ireland', kind: 'states', admin: 'United Kingdom', unit: 'Northern Ireland',
+    proj: () => conic([54, 55.5], -6.7), simplifyQ: 0.6, dissolve: niGroup,
+    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Northern Ireland',
+    ctx: 'IE',
+    alt: { londonderry: ['derry', 'county londonderry'], down: ['county down'],
+           antrim: ['county antrim'], armagh: ['county armagh'], tyrone: ['county tyrone'],
+           fermanagh: ['county fermanagh'] } },
   { id: 'ireland', label: 'Ireland', kind: 'states', admin: 'Ireland',
-    proj: mercator, simplifyQ: 0.5, dissolve: irelandGroup },
+    proj: mercator, simplifyQ: 0.5, dissolve: irelandGroup,
+    ctxAdmin1: (p) => p.admin === 'United Kingdom' },
   { id: 'canada', label: 'Canada', kind: 'states', admin: 'Canada',
     proj: () => conic([49, 77], -96), simplifyQ: 0.15,
+    ctx: 'US GL',
     alt: { quebec: ['quebec'], 'newfoundland-and-labrador': ['newfoundland'],
            'prince-edward-island': ['pei'], 'northwest-territories': ['nwt'] } },
   { id: 'brazil', label: 'Brazil', kind: 'states', admin: 'Brazil',
     proj: mercator, simplifyQ: 0.3,
+    ctx: 'AR BO CL CO EC GY PE PY SR UY VE FR FK',
     alt: { 'distrito-federal': ['federal district'] } },
   { id: 'australia', label: 'Australia', kind: 'states', admin: 'Australia',
     drop: ['Jervis Bay Territory', 'Lord Howe Island', 'Macquarie Island'],
     window: [112, 155, -44.5, -9], proj: mercator, simplifyQ: 0.4,
+    ctx: 'ID TL PG',
     alt: { 'australian-capital-territory': ['act', 'capital territory'],
            'new-south-wales': ['nsw'], 'northern-territory': ['nt'],
            'western-australia': ['wa'], 'south-australia': ['sa'] } },
   { id: 'japan', label: 'Japan', kind: 'states', admin: 'Japan',
-    window: [122, 154, 24, 46], proj: mercator, simplifyQ: 0.5 },
+    window: [122, 154, 24, 46], proj: mercator, simplifyQ: 0.5,
+    ctx: 'RU KR KP CN TW' },
 ];
 
-// ---- Britain: dissolve NE's ~150 English LAD-level units into the 47-ish
-// ceremonial counties (City of London folded into Greater London). Wales and
-// Scotland units pass through (with a few NE typos fixed). Key = NE `name`.
+// ---- UK dissolve tables ------------------------------------------------------
+// England: NE's ~150 LAD-level units → 47 ceremonial counties (City of London
+// folded into Greater London). Key = NE `name`.
 const ENGLAND_COUNTY = {
   Bedfordshire: ['Bedford', 'Central Bedfordshire', 'Luton'],
   Berkshire: ['Bracknell Forest', 'Reading', 'Slough', 'West Berkshire', 'Wokingham', 'Royal Borough of Windsor and Maidenhead'],
@@ -201,6 +240,12 @@ const ENGLAND_LOOKUP = new Map();
 for (const [county, units] of Object.entries(ENGLAND_COUNTY)) {
   for (const u of units) ENGLAND_LOOKUP.set(u, county);
 }
+function englandGroup(props) {
+  const county = ENGLAND_LOOKUP.get(props.name);
+  if (!county) throw new Error(`No ceremonial county mapping for England unit "${props.name}"`);
+  return county;
+}
+
 const SCOTLAND_FIX = {
   'North Ayshire': 'North Ayrshire',           // NE typo
   'Perthshire and Kinross': 'Perth and Kinross',
@@ -208,18 +253,24 @@ const SCOTLAND_FIX = {
 };
 const WALES_FIX = { 'Rhondda, Cynon, Taff': 'Rhondda Cynon Taf' };
 
-function britainGroup(props) {
-  const name = props.name;
-  const unit = props.geonunit;
-  if (unit === 'Northern Ireland') return null; // Britain = GB only
-  if (unit === 'England') {
-    const county = ENGLAND_LOOKUP.get(name);
-    if (!county) throw new Error(`No ceremonial county mapping for England unit "${name}"`);
-    return county;
-  }
-  if (unit === 'Scotland') return SCOTLAND_FIX[name] || name;
-  if (unit === 'Wales') return WALES_FIX[name] || name;
-  throw new Error(`Unexpected UK geonunit ${unit} for ${name}`);
+// Northern Ireland: NE's 26 districts → the 6 traditional counties (close
+// approximation; modern district boundaries don't follow the counties exactly).
+const NI_COUNTY = {
+  Antrim: ['Antrim', 'Ballymena', 'Ballymoney', 'Belfast', 'Carrickfergus', 'Larne', 'Lisburn', 'Moyle', 'Newtownabbey'],
+  Londonderry: ['Coleraine', 'Derry', 'Limavady', 'Magherafelt'],
+  Tyrone: ['Dungannon', 'Mid Ulster', 'Omagh', 'Strabane'],
+  Fermanagh: ['Fermanagh'],
+  Armagh: ['Armagh', 'Craigavon'],
+  Down: ['Ards', 'Banbridge', 'Castlereagh', 'Down', 'Newry and Mourne', 'North Down'],
+};
+const NI_LOOKUP = new Map();
+for (const [county, units] of Object.entries(NI_COUNTY)) {
+  for (const u of units) NI_LOOKUP.set(u, county);
+}
+function niGroup(props) {
+  const county = NI_LOOKUP.get(props.name);
+  if (!county) throw new Error(`No county mapping for NI district "${props.name}"`);
+  return county;
 }
 
 const IRELAND_FIX = {
@@ -267,8 +318,17 @@ function windowGeometry(geom, region) {
   return geom;
 }
 
+// Loosened window for context/lakes: the frame clip does the real cropping,
+// the window only stops far-flung territories (mainland France in South
+// America via French Guiana is wanted; metropolitan France is not).
+function ctxWindow(region) {
+  if (!region.window) return null;
+  const [a, b, c, d] = region.window;
+  return { window: [a - 14, b + 14, c - 10, d + 10], normLon: region.normLon, dropRing: region.dropRing };
+}
+
 // Load + filter + (optionally) dissolve one region into working features
-// [{ id, name, alt, labelAt, geometry }] in geographic coordinates.
+// [{ id, name, alt, labelLonLat, geometry }] in geographic coordinates.
 function collectFeatures(region, sources) {
   const out = [];
   if (region.kind === 'countries') {
@@ -291,8 +351,10 @@ function collectFeatures(region, sources) {
     return out;
   }
 
-  // states: filter by admin country, apply drop list, then dissolve groups.
+  // states: filter by admin country (and geonunit for the UK nations), apply
+  // drop list, then dissolve groups.
   let feats = sources.admin1.features.filter((f) => f.properties.admin === region.admin);
+  if (region.unit) feats = feats.filter((f) => f.properties.geonunit === region.unit);
   if (region.drop) feats = feats.filter((f) => !region.drop.includes(f.properties.name));
   const groups = new Map(); // group name -> [feature indices]
   const kept = [];
@@ -319,14 +381,67 @@ function collectFeatures(region, sources) {
   return out;
 }
 
-// Simplify all features together (shared borders stay watertight).
-function simplifyFeatures(items, q) {
-  if (!q) return items;
-  const fc = { type: 'FeatureCollection', features: items.map((it) => ({ type: 'Feature', properties: {}, geometry: it.geometry })) };
+// Non-playable neighbouring land: admin0 countries (region.ctx, each its own
+// shape) plus an optional merged admin1 blob (region.ctxAdmin1 — the other UK
+// nations). Playable ids never repeat here.
+function collectContext(region, sources) {
+  const out = [];
+  const win = ctxWindow(region);
+  const playable = region.kind === 'countries' ? new Set(region.iso.split(' ')) : new Set();
+  for (const a2 of (region.ctx ? region.ctx.split(' ') : [])) {
+    if (playable.has(a2)) continue;
+    const f = sources.admin0.features.find((x) => x.properties.ISO_A2_EH === a2);
+    if (!f) { console.warn(`  ! ctx country ${a2} not found`); continue; }
+    const geom = win ? windowGeometry(f.geometry, win) : f.geometry;
+    if (geom) out.push({ geometry: geom });
+  }
+  if (region.ctxAdmin1) {
+    const feats = sources.admin1.features.filter((f) => region.ctxAdmin1(f.properties));
+    if (feats.length) {
+      const topo = topology({ u: { type: 'FeatureCollection', features: feats } }, 1e5);
+      out.push({ geometry: merge(topo, topo.objects.u.geometries) });
+    }
+  }
+  return out;
+}
+
+// Large lakes near the region (drawn as water over the land). The projection
+// clip crops them to the frame; a small geo-area threshold keeps only lakes
+// that read at map scale.
+function collectLakes(region, sources) {
+  const win = ctxWindow(region);
+  const out = [];
+  for (const f of sources.lakes.features) {
+    const area = ringAreaDeg(f.geometry);
+    if (area < 0.18) continue;
+    const geom = win ? windowGeometry(f.geometry, win) : f.geometry;
+    if (geom) out.push({ geometry: geom });
+  }
+  return out;
+}
+
+// Rough polygon area in square degrees (for lake size filtering only).
+function ringAreaDeg(geom) {
+  const ringArea = (ring) => {
+    let a = 0;
+    for (let i = 0; i < ring.length - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+    return Math.abs(a / 2);
+  };
+  if (geom.type === 'Polygon') return ringArea(geom.coordinates[0]);
+  if (geom.type === 'MultiPolygon') return geom.coordinates.reduce((s, p) => s + ringArea(p[0]), 0);
+  return 0;
+}
+
+// Simplify playable + context together (shared borders stay watertight).
+function simplifyAll(items, ctx, q) {
+  if (!q) return { items, ctx };
+  const all = [...items, ...ctx];
+  const fc = { type: 'FeatureCollection', features: all.map((it) => ({ type: 'Feature', properties: {}, geometry: it.geometry })) };
   let topo = topology({ u: fc }, 1e5);
   topo = presimplify(topo);
   topo = simplify(topo, quantile(topo, q));
-  return items.map((it, i) => ({ ...it, geometry: feature(topo, topo.objects.u.geometries[i]).geometry }));
+  const simple = all.map((it, i) => ({ ...it, geometry: feature(topo, topo.objects.u.geometries[i]).geometry }));
+  return { items: simple.slice(0, items.length), ctx: simple.slice(items.length) };
 }
 
 // Round path coordinates to 1 decimal (d3-geo ≥3.1 has .digits(); fall back to no-op).
@@ -367,7 +482,9 @@ function labelAnchor(item, path, w, h) {
 function buildRegion(region, sources) {
   console.log(`— ${region.id}`);
   let items = collectFeatures(region, sources);
-  items = simplifyFeatures(items, region.simplifyQ);
+  let ctx = collectContext(region, sources);
+  ({ items, ctx } = simplifyAll(items, ctx, region.simplifyQ));
+  const lakes = collectLakes(region, sources);
 
   const drawFC = { type: 'FeatureCollection', features: items.map((it) => ({ type: 'Feature', properties: {}, geometry: it.geometry })) };
   const fitFC = region.fitExclude
@@ -384,8 +501,8 @@ function buildRegion(region, sources) {
   path = makePath(projection);
   const h = Math.ceil(path.bounds(fitFC)[1][1]) + 1;
   // Clip to the frame in projected space (composite geoAlbersUsa lacks
-  // clipExtent). Keeps windowSkip geometry (Russia's far east) from bloating
-  // paths, and puts a clean cut edge exactly on the map border.
+  // clipExtent — it clips to the US insets by construction). Crops windowSkip
+  // geometry (Russia's far east), all context land, and lakes to the frame.
   if (typeof projection.clipExtent === 'function') {
     projection.clipExtent([[-2, -2], [W + 2, h + 2]]);
     path = makePath(projection);
@@ -416,16 +533,27 @@ function buildRegion(region, sources) {
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
 
+  // Context + lakes render as bare path strings (no interaction, no names).
+  const inFrame = (bb) => bb[0][0] < W && bb[1][0] > 0 && bb[0][1] < h && bb[1][1] > 0;
+  const layer = (feats) => feats
+    .map((it) => {
+      const f = { type: 'Feature', properties: {}, geometry: it.geometry };
+      const d = path(f);
+      return d && inFrame(path.bounds(f)) ? d : null;
+    })
+    .filter(Boolean);
+
   const json = {
     id: region.id, label: region.label, kind: region.kind, w: W, h,
     credit: 'Map data: Natural Earth (public domain)',
     items: out,
+    ctx: layer(ctx),
+    lakes: layer(lakes),
   };
   mkdirSync(OUT, { recursive: true });
-  const file = join(OUT, `${region.id}.json`);
-  writeFileSync(file, JSON.stringify(json));
+  writeFileSync(join(OUT, `${region.id}.json`), JSON.stringify(json));
   const kb = Math.round(JSON.stringify(json).length / 1024);
-  console.log(`  ${out.length} items, ${W}×${h}, ${kb} KB${out.filter((o) => o.dot).length ? `, dots: ${out.filter((o) => o.dot).map((o) => o.id).join(' ')}` : ''}`);
+  console.log(`  ${out.length} items, ${json.ctx.length} ctx, ${json.lakes.length} lakes, ${W}×${h}, ${kb} KB${out.filter((o) => o.dot).length ? `, dots: ${out.filter((o) => o.dot).map((o) => o.id).join(' ')}` : ''}`);
 }
 
 // ---- main -------------------------------------------------------------------
@@ -434,9 +562,13 @@ const wanted = process.argv.slice(2);
 const regions = wanted.length ? REGIONS.filter((r) => wanted.includes(r.id)) : REGIONS;
 if (!regions.length) { console.error(`Unknown region(s): ${wanted}. Known: ${REGIONS.map((r) => r.id).join(' ')}`); process.exit(1); }
 
-const sources = {};
-if (regions.some((r) => r.kind === 'countries')) sources.admin0 = JSON.parse(readFileSync(download(SOURCES.admin0), 'utf8'));
-if (regions.some((r) => r.kind === 'states')) sources.admin1 = JSON.parse(readFileSync(download(SOURCES.admin1), 'utf8'));
+const sources = {
+  admin0: JSON.parse(readFileSync(download(SOURCES.admin0), 'utf8')),
+  lakes: JSON.parse(readFileSync(download(SOURCES.lakes), 'utf8')),
+};
+if (regions.some((r) => r.kind === 'states' || r.ctxAdmin1)) {
+  sources.admin1 = JSON.parse(readFileSync(download(SOURCES.admin1), 'utf8'));
+}
 
 for (const region of regions) buildRegion(region, sources);
 console.log('done.');

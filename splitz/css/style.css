@@ -23,11 +23,12 @@ body {
 .hidden { display: none !important; }
 
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
-#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; overflow-x: hidden; }
 
 /* ---- Cards (landing / lobby) ---- */
 .card {
   width: min(420px, 94vw);
+  max-width: 100%;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
   border-radius: 22px;

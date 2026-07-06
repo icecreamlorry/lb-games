@@ -22,14 +22,15 @@ body {
 .hidden { display: none !important; }
 
 .screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
-#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; overflow-x: hidden; }
 
 /* ---- Cards (landing / lobby) ---- */
 .card {
   width: min(420px, 94vw);
+  max-width: 100%;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
-  border-radius: 22px;
+  border-radius: var(--panel-radius);
   padding: 26px 24px 22px;
   box-shadow: 0 12px 34px rgba(0,0,0,0.10), 0 2px 0 color-mix(in srgb, var(--cyan) 10%, transparent);
   display: flex; flex-direction: column; gap: 14px;
@@ -48,9 +49,9 @@ body {
 button, button:hover, button:focus, button:active { text-shadow: none; }
 button, button:hover, button:focus { box-shadow: none; }
 .btn-primary, .btn-ghost {
-  font-family: 'Fredoka', sans-serif; font-weight: 600; letter-spacing: 0.03em;
-  border-radius: 999px; padding: 9px 18px; cursor: pointer; touch-action: manipulation;
-  font-size: 0.78rem; text-transform: none; text-shadow: none; transition: transform 0.06s, box-shadow 0.15s, background 0.15s;
+  font-family: var(--font-ui); font-weight: 600; letter-spacing: var(--ui-tracking);
+  border-radius: var(--ui-radius); padding: 9px 18px; cursor: pointer; touch-action: manipulation;
+  font-size: 0.78rem; text-transform: var(--ui-transform); text-shadow: none; transition: transform 0.06s, box-shadow 0.15s, background 0.15s;
 }
 .btn-primary {
   background: var(--cyan); color: var(--panel); border: none;
@@ -84,12 +85,13 @@ button, button:hover, button:focus { box-shadow: none; }
 .chip {
   background: color-mix(in srgb, var(--cyan) 10%, transparent);
   border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
-  color: color-mix(in srgb, var(--cyan) 85%, transparent); border-radius: 999px; padding: 6px 13px;
-  font-family: 'Fredoka', sans-serif; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--cyan) 85%, transparent); border-radius: var(--ui-radius); padding: 6px 13px;
+  font-family: var(--font-ui); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.02em;
   cursor: pointer; touch-action: manipulation; white-space: nowrap;
 }
 .chip strong { color: var(--cyan); font-weight: 700; }
-.solo-chip, .mode-chip { cursor: default; }
+.mode-chip { cursor: default; }
+.timer-chip { font-variant-numeric: tabular-nums; }
 .mode-chip { overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
 .grow { flex: 1 1 auto; }
 
@@ -97,8 +99,8 @@ button, button:hover, button:focus { box-shadow: none; }
 .lobby-game {
   position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
   text-align: left; width: 100%; background: color-mix(in srgb, var(--cyan) 7%, var(--panel));
-  border: 1.5px solid transparent; border-radius: 14px; padding: 12px 14px;
-  color: var(--cyan); cursor: pointer; font-family: 'Fredoka', sans-serif;
+  border: 1.5px solid transparent; border-radius: var(--item-radius); padding: 12px 14px;
+  color: var(--cyan); cursor: pointer; font-family: var(--font-ui);
   box-shadow: 0 3px 10px rgba(0,0,0,0.06);
 }
 .lobby-game:hover { border-color: color-mix(in srgb, var(--cyan) 35%, transparent); }
@@ -124,7 +126,7 @@ button, button:hover, button:focus { box-shadow: none; }
 .pchip {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   background: var(--panel); border: 1.5px solid color-mix(in srgb, var(--cyan) 18%, transparent);
-  border-radius: 14px; padding: 5px 12px; min-width: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-radius: var(--item-radius); padding: 5px 12px; min-width: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   cursor: pointer;
 }
 .pchip.me { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
@@ -149,6 +151,19 @@ button, button:hover, button:focus { box-shadow: none; }
 .board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 .map-host { position: absolute; inset: 0; }
 .atlaz-map { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+
+.ctx-land {
+  /* Neighbouring land from other regions: visible, clearly not in play. */
+  fill: color-mix(in srgb, var(--cyan) 9%, var(--dark));
+  stroke: color-mix(in srgb, var(--cyan) 5%, var(--dark));
+  stroke-width: 1; vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.lake {
+  fill: var(--dark);
+  stroke: none;
+  pointer-events: none;
+}
 
 .territory {
   fill: color-mix(in srgb, var(--cyan) 26%, var(--panel));
@@ -200,6 +215,8 @@ button, button:hover, button:focus { box-shadow: none; }
   background: color-mix(in srgb, var(--panel) 88%, transparent);
   border: 1.5px solid color-mix(in srgb, var(--cyan) 30%, transparent);
   color: var(--cyan); font-size: 1.1rem; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  font-family: system-ui, sans-serif; /* consistent glyph metrics for + − ⌖ */
   cursor: pointer; touch-action: manipulation;
   box-shadow: 0 3px 10px rgba(0,0,0,0.14);
 }
@@ -220,15 +237,19 @@ button, button:hover, button:focus { box-shadow: none; }
   font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 0.72rem;
   background: color-mix(in srgb, var(--cyan) 8%, var(--panel));
   border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
-  color: var(--cyan); border-radius: 10px; padding: 8px 6px; cursor: pointer;
-  touch-action: manipulation; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--cyan); border-radius: var(--item-radius); padding: 4px 6px; cursor: pointer;
+  touch-action: manipulation;
+  /* Flex-centred with a real min-height: Android's Fredoka line box otherwise
+     sits low and clips descenders against the padding box. */
+  display: flex; align-items: center; justify-content: center;
+  min-height: 42px; line-height: 1.25;
 }
 .option-btn:hover { background: color-mix(in srgb, var(--cyan) 18%, var(--panel)); }
 
 .tray-row { display: flex; gap: 14px; align-items: center; justify-content: center; width: 100%; }
 .tray-piece {
   width: 96px; height: 96px; flex: 0 0 auto;
-  border: 2px dashed color-mix(in srgb, var(--cyan) 35%, transparent); border-radius: 14px;
+  border: 2px dashed color-mix(in srgb, var(--cyan) 35%, transparent); border-radius: var(--item-radius);
   background: color-mix(in srgb, var(--cyan) 5%, transparent);
   display: flex; align-items: center; justify-content: center;
   touch-action: none; cursor: grab;
@@ -248,7 +269,7 @@ button, button:hover, button:focus { box-shadow: none; }
 }
 .overlay-card {
   position: relative;
-  background: var(--panel); border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent); border-radius: 22px;
+  background: var(--panel); border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent); border-radius: var(--panel-radius);
   padding: 26px 28px; text-align: center; max-width: min(480px, 92%);
   display: flex; flex-direction: column; gap: 14px; align-items: center;
   box-shadow: 0 16px 40px rgba(0,0,0,0.16);
@@ -274,8 +295,8 @@ button, button:hover, button:focus { box-shadow: none; }
   font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 0.68rem;
   background: color-mix(in srgb, var(--cyan) 7%, var(--panel));
   border: 1.5px solid color-mix(in srgb, var(--cyan) 20%, transparent);
-  color: var(--cyan); border-radius: 12px; padding: 8px 6px; cursor: pointer;
-  touch-action: manipulation; display: flex; flex-direction: column; gap: 2px; align-items: center;
+  color: var(--cyan); border-radius: var(--item-radius); padding: 8px 6px; cursor: pointer;
+  touch-action: manipulation; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center;
 }
 .cfg-btn small { font-size: 0.56rem; font-weight: 400; color: color-mix(in srgb, var(--cyan) 55%, transparent); }
 .cfg-btn span { font-weight: 700; }
@@ -286,6 +307,15 @@ button, button:hover, button:focus { box-shadow: none; }
 }
 
 /* ---- Countdown ---- */
+#btn-cfg-back {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: 0.66rem; letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--cyan) 60%, transparent);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+#btn-cfg-back:hover { color: var(--cyan); }
+.start-note { font-size: 0.64rem; color: color-mix(in srgb, var(--cyan) 45%, transparent); }
+
 .countdown-num {
   font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 6rem;
   color: var(--cyan); text-shadow: 0 6px 30px rgba(0,0,0,0.35);
@@ -301,7 +331,7 @@ button, button:hover, button:focus { box-shadow: none; }
   display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center;
   background: color-mix(in srgb, var(--cyan) 6%, var(--panel));
   border: 1.5px solid color-mix(in srgb, var(--cyan) 15%, transparent);
-  border-radius: 12px; padding: 8px 12px; cursor: pointer; text-align: left;
+  border-radius: var(--item-radius); padding: 8px 12px; cursor: pointer; text-align: left;
 }
 .results-list li.me { border-color: color-mix(in srgb, var(--cyan) 50%, transparent); }
 .results-list li:hover { border-color: var(--cyan); }

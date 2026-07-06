@@ -1,16 +1,24 @@
 # ATLAZ — map guessing game: implementation plan
 
-**Status: v1 implemented on branch `claude/map-geography-game-8j4ojm` (see checklist §10).**
+**Status: v1 + first phone-feedback round implemented (see checklist §10).**
 This document is the handoff spec: any agent (or human) should be able to pick up the work
 from here. Update the checklist at the bottom as pieces land.
 
 ## 1. What the game is
 
 ATLAZ (GAME 06) is a map-based country/state guessing game. You pick a **region**, then a
-**game mode**, and play solo or against up to **5 players** in a room. All modes are a
-simultaneous race over the *same* seeded question order — nobody waits for turns. At the end
-everyone's attempts are reviewable by tapping their player card at the top (exactly like
-Splitz's end-of-game board spectating).
+**game mode**, and race up to **5 players** in a room (a 1-player room IS solo play — there
+is deliberately no separate solo mode). All modes are a simultaneous race over the *same*
+seeded question order — nobody waits for turns. At the end everyone's attempts are
+reviewable by tapping their player card at the top (exactly like Splitz's end-of-game board
+spectating). Prestart is two-stage for the host: pick map+mode → NEXT → a READY card with
+player count + share code + START, so starting is always a deliberate, separate tap.
+
+Every region file also carries two non-playable layers: **ctx** (neighbouring land from
+other regions, drawn dimmed and cropped by the frame — no Türkiye-shaped hole in Europe)
+and **lakes** (Natural Earth 50m lakes ≥ ~0.18 deg², so the Great Lakes read as water).
+Transcontinental countries are playable in BOTH of their regions: Türkiye (europe +
+w-asia) and Egypt (africa + w-asia).
 
 ### Regions
 
@@ -21,9 +29,9 @@ Two groups, one picker (two tabs / sections):
 | id | label | contents (ISO a2) |
 |----|-------|-------------------|
 | `africa` | Africa | DZ AO BJ BW BF BI CV CM CF TD KM CG CD CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW (54) |
-| `europe` | Europe | AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA (46; Russia drawn but clipped at the frame edge, microstates get min-hit-area treatment) |
+| `europe` | Europe | AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA TR (47; Russia and Türkiye drawn but clipped at the frame edge, microstates get min-hit-area treatment) |
 | `se-asia` | South East Asia | BN KH ID LA MY MM PH SG TH TL VN (11) |
-| `w-asia` | Western Asia | AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE (19; Iran included deliberately even though UN M49 calls it Southern Asia — the map reads wrong without it) |
+| `w-asia` | Western Asia | AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE EG (20; Iran included deliberately even though UN M49 calls it Southern Asia — the map reads wrong without it) |
 | `oceania` | Australasia & Polynesia | AU NZ PG FJ SB VU WS TO KI FM MH PW NR TV (14; island micro-states rendered with a minimum marker size — see §4) |
 | `c-america` | Central America | BZ CR SV GT HN NI PA (7) |
 | `s-america` | South America | AR BO BR CL CO EC GY PY PE SR UY VE (12) |
@@ -34,8 +42,11 @@ Two groups, one picker (two tabs / sections):
 | id | label | contents |
 |----|-------|----------|
 | `usa` | USA | 50 states + DC (51). Project with `geoAlbersUsa` (built-in AK/HI insets). |
-| `britain` | Britain | England 47 ceremonial counties (dissolved from NE's ~152 LAD-level units via a hand-written mapping table; City of London folded into Greater London) + Wales 22 principal areas + Scotland 32 council areas = 101. GB only — no NI (Ireland is its own region). |
-| `ireland` | Ireland | 26 counties of the Republic. NE splits Dublin (4) and Cork (2) into sub-units — dissolve back to the traditional counties. (32-county island version = possible future upgrade.) |
+| `england` | England | 47 ceremonial counties (dissolved from NE's ~150 LAD-level units via a hand-written mapping table; City of London folded into Greater London). |
+| `scotland` | Scotland | 32 council areas (NE typos fixed; Eilean Siar shown as Outer Hebrides). |
+| `wales` | Wales | 22 principal areas (Rhondda Cynon Taf renamed from NE's comma form). |
+| `northern-ireland` | Northern Ireland | NE's 26 districts dissolved to the 6 traditional counties (approximate — modern district boundaries don't follow the counties exactly). |
+| `ireland` | Ireland | 26 counties of the Republic. NE splits Dublin (4) and Cork (2) into sub-units — dissolve back to the traditional counties. NI appears as ctx land. (32-county island version = possible future upgrade.) |
 | `canada` | Canada | 13 provinces & territories. |
 | `brazil` | Brazil | 27 states (incl. DF). |
 | `australia` | Australia | 6 states + NT + ACT (8; drop NE's Jervis Bay / external territories). |
@@ -269,9 +280,33 @@ and append a fresh GAME 07 coming-soon card.
 - [x] Playwright smoke of all 5 solo modes + a simulated 2-player room (stubbed Supabase, injected seat-1 result, card-tap review verified)
 - [x] Push to `claude/map-geography-game-8j4ojm`
 
-Not yet done / next playtest round: on-device pinch feel, per-mode question caps for
-huge regions, Splitz-style live progress moves, solo sweep leaderboard, real
-two-device multiplayer against production Supabase.
+Phone-feedback round 1 (all landed):
+
+- [x] Tap hit-testing fixed: `setPointerCapture` retargets pointerup to the svg, so direct
+      path hits never fired and selection fell back to bbox-centre distance (Norway/Denmark
+      unselectable — centres in the sea). Now: elementFromPoint → pointerdown target →
+      nearest-bbox-rect assist.
+- [x] Solo mode removed (landing + lobby); a 1-player room is solo. Player cards hidden
+      when fewer than 2 players; 1-player rooms excluded from Game History.
+- [x] Two-stage host prestart (pick → READY card with count/code/START RACE + change link).
+- [x] Britain split into England / Scotland / Wales / Northern Ireland (6 counties).
+- [x] Türkiye playable in europe + w-asia; Egypt in africa + w-asia; every region gets a
+      dimmed, cropped `ctx` neighbour layer and a `lakes` layer (Great Lakes etc.).
+- [x] Zoom-button glyphs centred; Line-up option buttons flex-centred (Android clipping);
+      timer chip tabular-nums + room chip hidden during play so the map/mode chip never
+      ellipsizes; theme radius/font tokens used so Synth corners render right.
+- [x] `interactive-widget=resizes-content` viewport + scroll-to-origin guard: the keyboard
+      can never scroll the game chrome off-screen (Namedrop/Sweep inputs).
+- [x] Horizontal scroll on intro screens fixed across ALL games (`.card` overflowed its
+      padded flex parent: min(420px, 94vw) + 40px padding > 100vw on phones; also
+      `overflow-x` clamped on the landing scroll containers and `html`).
+- [x] shared/history.js: theme-token restyle (was hard-coded Synth neon in every game),
+      1-player rooms filtered out, per-game detail line via `LB_CONFIG.historyDetail`
+      (Atlaz shows "Region · MODE").
+
+Next playtest round candidates: on-device pinch feel, per-mode question caps for huge
+regions, Splitz-style live progress moves, sweep leaderboard, real two-device multiplayer
+against production Supabase.
 
 Open questions parked for playtesting (don't block v1): per-mode question caps for huge
 regions (Africa jigsaw = 54 drags — maybe cap at 20 with seeded subset?), sweep leaderboard as

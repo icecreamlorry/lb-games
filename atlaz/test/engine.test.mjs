@@ -118,18 +118,20 @@ function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), `${name} â
 {
   const dir = join(HERE, '..', 'data', 'maps');
   const expected = {
-    'africa': 54, 'europe': 46, 'se-asia': 11, 'w-asia': 19, 'oceania': 14,
+    'africa': 54, 'europe': 47, 'se-asia': 11, 'w-asia': 20, 'oceania': 14,
     'c-america': 7, 's-america': 12, 'n-america': 16,
-    'usa': 51, 'britain': 101, 'ireland': 26, 'canada': 13, 'brazil': 27,
-    'australia': 8, 'japan': 47,
+    'usa': 51, 'england': 47, 'scotland': 32, 'wales': 22, 'northern-ireland': 6,
+    'ireland': 26, 'canada': 13, 'brazil': 27, 'australia': 8, 'japan': 47,
   };
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
-  eq(files.length, Object.keys(expected).length, 'all 15 region files exist');
+  eq(files.length, Object.keys(expected).length, 'all 18 region files exist');
   for (const f of files) {
     const d = JSON.parse(readFileSync(join(dir, f), 'utf8'));
     ok(expected[d.id] === d.items.length, `${d.id}: ${d.items.length} items (want ${expected[d.id]})`);
     ok(d.w === 1000 && Number.isFinite(d.h) && d.h > 100, `${d.id}: sensible viewBox`);
     ok(typeof d.credit === 'string' && d.credit.includes('Natural Earth'), `${d.id}: credit line present`);
+    ok(Array.isArray(d.ctx) && d.ctx.every((c) => typeof c === 'string' && c.length > 5), `${d.id}: ctx layer well-formed`);
+    ok(Array.isArray(d.lakes), `${d.id}: lakes layer present`);
     const ids = new Set();
     for (const it of d.items) {
       ok(it.id && !ids.has(it.id), `${d.id}/${it.id}: unique id`);

@@ -37,8 +37,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const app = {
   user: null, userId: null, name: null,
   code: null, seat: null, room: null, conn: null,
-  solo: false,
-  phase: 'idle',            // idle | config | countdown | playing | results
+  phase: 'idle',             // idle | config | countdown | playing | results
   regionId: null, modeId: null, regionData: null,
   startAt: null,            // epoch ms the countdown began
   order: [],
@@ -55,7 +54,8 @@ const app = {
 };
 
 function playerName() { return app.user ? displayName(app.user) : getGuestName(); }
-function seats() { return app.solo ? 1 : (app.room?.players ?? []).length || 1; }
+function seats() { return (app.room?.players ?? []).length || 1; }
+function soloRoom() { return seats() <= 1; }
 
 // ---- Screens ----------------------------------------------------------------
 
@@ -74,12 +74,6 @@ function requireName(errFn) {
   if (!n) { errFn('Set your name first.'); return null; }
   return n;
 }
-
-$('btn-solo').addEventListener('click', () => {
-  const name = requireName(landingError); if (!name) return;
-  landingError('');
-  enterSolo();
-});
 
 $('btn-create').addEventListener('click', async () => {
   const name = requireName(landingError); if (!name) return;
@@ -139,9 +133,6 @@ $('btn-lobby-new').addEventListener('click', async () => {
     await enterRoom(room.code, 0, app.name, room);
   } catch (e) { $('lobby-error').textContent = e.message; }
 });
-// lobby-ui's "daily" slot doubles as our solo entry.
-const soloBtn = $('btn-lobby-daily');
-if (soloBtn) { soloBtn.textContent = '◎ SOLO'; soloBtn.title = 'Practice on your own'; soloBtn.addEventListener('click', () => enterSolo()); }
 $('btn-lobby-join').addEventListener('click', () => { $('lobby-join-box').classList.toggle('hidden'); $('lobby-code-input').focus(); });
 $('btn-lobby-join-go').addEventListener('click', () => doJoin($('lobby-code-input'), (m) => ($('lobby-error').textContent = m)));
 $('lobby-code-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btn-lobby-join-go').click(); });
@@ -214,8 +205,8 @@ function resetGame() {
   if (app.conn) { app.conn.close(); app.conn = null; }
   app.ctl?.destroy(); app.ctl = null;
   app.map?.destroy(); app.map = null;
-  app.solo = false;
   app.phase = 'idle';
+  app.cfgStep = 'pick';
   app.regionId = null; app.modeId = null; app.regionData = null;
   app.startAt = null;
   app.order = [];
@@ -242,7 +233,6 @@ async function enterRoom(code, seat, name, room) {
   app.code = code; app.seat = seat; app.name = name; app.room = room;
   $('room-code-text').textContent = code;
   $('room-code-chip').classList.remove('hidden');
-  $('solo-chip').classList.add('hidden');
   showScreen('game');
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, name }));
   setPhase('config');
@@ -259,24 +249,11 @@ async function enterRoom(code, seat, name, room) {
   if (notifyEnabled()) subscribeToPush({ userId: app.userId || undefined, roomCode: app.userId ? undefined : code, player: app.userId ? undefined : seat }).catch(() => {});
 }
 
-function enterSolo() {
-  resetGame();
-  app.solo = true;
-  app.code = null; app.seat = 0;
-  app.name = playerName() || 'Player';
-  app.room = { players: [{ seat: 0, name: app.name }], status: 'waiting' };
-  $('room-code-chip').classList.add('hidden');
-  $('solo-chip').classList.remove('hidden');
-  showScreen('game');
-  setPhase('config');
-  renderAll();
-}
-
 $('btn-leave').addEventListener('click', leaveRoom);
 $('btn-results-done').addEventListener('click', () => { if (app.code) dismissGame(app.userId, app.code); leaveRoom(); });
 
 async function leaveRoom() {
-  if (!app.solo && app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
+  if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
     try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch { /* best effort */ }
   }
   sessionStorage.removeItem(SESSION_KEY);
@@ -341,7 +318,7 @@ function loadCfg() {
 }
 function saveCfg() { try { localStorage.setItem(CFG_KEY, JSON.stringify(app.cfgSel)); } catch {} }
 
-function canConfigure() { return app.solo || app.seat === 0; }
+function canConfigure() { return app.seat === 0; }
 
 function buildCfgButtons() {
   const mk = (host, defs, key) => {
@@ -365,39 +342,57 @@ function buildCfgButtons() {
   mk($('cfg-modes'), MODES, 'mode');
 }
 
+// Two-stage prestart: the host first PICKS map+mode ("NEXT"), then sits on a
+// separate READY card — player count + share code — and starts the race when
+// everyone's in. Keeps START well away from the picker grid (no mis-taps) and
+// gives the host an explicit waiting stage like the other games.
 function renderPrestart() {
   if (app.phase !== 'config') return;
   const host = canConfigure();
-  $('cfg').classList.toggle('hidden', !host);
-  $('start-title').textContent = host ? 'PICK A MAP & MODE' : 'WAITING FOR THE HOST';
+  const picked = regionMeta(app.cfgSel.region) && modeMeta(app.cfgSel.mode);
+  const picking = host && (app.cfgStep !== 'ready' || !picked);
+  const n = (app.room?.players ?? []).length;
+
+  $('cfg').classList.toggle('hidden', !picking);
+  $('btn-cfg-back').classList.toggle('hidden', picking || !host);
+  $('start-title').textContent = !host ? 'WAITING FOR THE HOST'
+    : picking ? 'PICK A MAP & MODE'
+    : (n > 1 ? 'READY?' : 'WAITING FOR PLAYERS');
 
   for (const b of document.querySelectorAll('.cfg-btn')) {
     b.classList.toggle('on', b.dataset.val === app.cfgSel.region || b.dataset.val === app.cfgSel.mode);
   }
 
-  const n = (app.room?.players ?? []).length;
-  const picked = regionMeta(app.cfgSel.region) && modeMeta(app.cfgSel.mode);
-  if (app.solo) {
-    $('start-info').textContent = picked
-      ? `${regionMeta(app.cfgSel.region).label} — ${modeMeta(app.cfgSel.mode).name}`
-      : 'Pick a region and a mode.';
+  const summary = picked
+    ? `${esc(regionMeta(app.cfgSel.region).label)} — ${esc(modeMeta(app.cfgSel.mode).name)}`
+    : '';
+  if (!host) {
+    $('start-info').innerHTML = `${n} player${n === 1 ? '' : 's'} in · code <strong>${esc(app.code)}</strong>`;
+  } else if (picking) {
+    $('start-info').innerHTML = summary || 'Pick a region and a mode.';
   } else {
-    $('start-info').innerHTML = `${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`
-      + (host && picked ? ` · ${esc(regionMeta(app.cfgSel.region).label)} — ${esc(modeMeta(app.cfgSel.mode).name)}` : '');
+    $('start-info').innerHTML = `${summary}<br>${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`
+      + `<br><span class="start-note">${n > 1 ? 'Everyone in the room plays.' : 'Friends can join until you start — or race solo.'}</span>`;
   }
   $('btn-start').classList.toggle('hidden', !host);
   $('btn-start').disabled = !picked;
-  $('btn-start').textContent = app.solo ? 'PLAY' : 'START';
+  $('btn-start').textContent = picking ? 'NEXT' : (n > 1 ? 'START RACE' : 'START');
   $('start-waiting').classList.toggle('hidden', host);
 }
+
+$('btn-cfg-back').addEventListener('click', () => {
+  if (app.phase !== 'config') return;
+  app.cfgStep = 'pick';
+  renderPrestart();
+});
 
 $('btn-start').addEventListener('click', async () => {
   if (!canConfigure() || app.phase !== 'config') return;
   const { region, mode } = app.cfgSel;
   if (!regionMeta(region) || !modeMeta(mode)) return;
+  if (app.cfgStep !== 'ready') { app.cfgStep = 'ready'; renderPrestart(); return; }
   $('btn-start').disabled = true;
   const startAt = Date.now() + 400; // small lead so the move lands first
-  if (app.solo) { beginGame(region, mode, startAt); return; }
   try {
     await app.conn.sendMove({ move_index: 0, player: app.seat, type: 'start', payload: { region, mode, startAt } });
     updateRoomStatus(app.code, 'playing').catch(() => {});
@@ -414,6 +409,9 @@ $('btn-start').addEventListener('click', async () => {
 
 function setPhase(p) {
   app.phase = p;
+  // Once the race starts the code chip retires — that frees header space so
+  // the map/mode chip never gets ellipsized by a growing timer.
+  $('room-code-chip').classList.toggle('hidden', p !== 'config');
   $('prestart-overlay').classList.toggle('hidden', p !== 'config');
   $('countdown-overlay').classList.toggle('hidden', p !== 'countdown');
   $('results-overlay').classList.toggle('hidden', p !== 'results' || app.resultsDismissed);
@@ -430,8 +428,7 @@ async function beginGame(regionId, modeId, startAt) {
 
   app.map?.destroy();
   app.map = new AtlazMap($('map-host'), data);
-  const seed = app.solo ? (Math.random() * 2 ** 31) >>> 0 : (Number(app.room?.seed) >>> 0);
-  app.order = questionOrder(data.items, seed);
+  app.order = questionOrder(data.items, (Number(app.room?.seed) >>> 0));
 
   const m = modeMeta(modeId);
   $('mode-chip').textContent = `${data.label} · ${m.name}`;
@@ -487,12 +484,11 @@ function renderTimer(ms) {
 
 // ---- Progress persistence (survive a refresh mid-run) ------------------------------
 
-function progressKey() { return `atlaz.progress.${app.solo ? 'solo' : app.code}.${app.seat}`; }
+function progressKey() { return `atlaz.progress.${app.code}.${app.seat}`; }
 function saveProgress(state) {
   try { localStorage.setItem(progressKey(), JSON.stringify(state)); } catch {}
 }
 function loadProgress() {
-  if (app.solo) return null; // solo runs restart clean
   try { return JSON.parse(localStorage.getItem(progressKey()) || 'null'); } catch { return null; }
 }
 function clearProgress() { try { localStorage.removeItem(progressKey()); } catch {} }
@@ -504,21 +500,17 @@ async function onMyFinish(result) {
   app.results[app.seat] = result;
   app.submittedResult = true;
   app.ctl?.destroy(); app.ctl = null;
-  if (app.timerInt && app.solo) { clearInterval(app.timerInt); app.timerInt = null; }
   renderReview(app.map, app.regionData, app.modeId, result); // my own map stays reviewable
   app.viewingSeat = app.seat;
   setPhase('results');
   onResultsUpdate();
 
-  if (!app.solo) {
-    const move = { move_index: RESULT_MOVE_BASE + app.seat, player: app.seat, type: 'result', payload: result };
-    try { await app.conn.sendMove(move); } catch { /* dup = already stored */ }
-  }
+  const move = { move_index: RESULT_MOVE_BASE + app.seat, player: app.seat, type: 'result', payload: result };
+  try { await app.conn.sendMove(move); } catch { /* dup = already stored */ }
 }
 
 // Seats that still owe a result (ignoring players flagged as having left).
 function pendingSeats() {
-  if (app.solo) return [];
   const players = app.room?.players ?? [];
   return players.filter((p) => !app.results[p.seat] && !seatLeft(app.room, p.seat)).map((p) => p.seat);
 }
@@ -533,7 +525,7 @@ function onResultsUpdate() {
     $('results-waiting').textContent = `Waiting for ${names}…`;
   }
   renderResults(done);
-  if (done && !app.solo) persistResult();
+  if (done) persistResult();
 }
 
 function fmtTime(ms) {
@@ -553,17 +545,16 @@ function resultLine(r) {
 
 function renderResults(complete) {
   const n = seats();
-  $('results-title').textContent = app.solo ? 'YOUR RUN' : complete ? 'RESULTS' : 'FINISHED!';
+  $('results-title').textContent = soloRoom() ? 'YOUR RUN' : complete ? 'RESULTS' : 'FINISHED!';
   const ol = $('results-list');
   ol.innerHTML = '';
   const ranked = rankSeats(app.modeId, app.results, n);
   ranked.forEach((seat, i) => {
     const r = app.results[seat];
-    if (!r && app.solo) return;
     const li = document.createElement('li');
     if (seat === app.seat) li.className = 'me';
-    const name = app.solo ? app.name : (seatName(app.room, seat) || `P${seat + 1}`);
-    const leftTag = !app.solo && seatLeft(app.room, seat) && !r ? ' <span class="left-tag">left</span>' : '';
+    const name = seatName(app.room, seat) || `P${seat + 1}`;
+    const leftTag = seatLeft(app.room, seat) && !r ? ' <span class="left-tag">left</span>' : '';
     li.innerHTML = `<span class="r-rank">${r ? i + 1 : '·'}</span>`
       + `<span class="r-name">${esc(name)}${leftTag}</span>`
       + `<span class="r-score">${esc(resultLine(r))}</span>`;
@@ -572,7 +563,7 @@ function renderResults(complete) {
   });
 
   const winnerEl = $('results-winner');
-  if (app.solo || n <= 1 || !complete) {
+  if (n <= 1 || !complete) {
     winnerEl.textContent = ''; winnerEl.className = 'results-winner';
   } else {
     const w = winnerSeat(app.modeId, app.results, n);
@@ -581,8 +572,7 @@ function renderResults(complete) {
     else { winnerEl.textContent = `${seatName(app.room, w) || `P${w + 1}`} won`; winnerEl.className = 'results-winner loss'; }
   }
 
-  // Solo gets PLAY AGAIN instead of a rematch, and no room to leave behind.
-  $('btn-rematch').textContent = app.solo ? 'PLAY AGAIN' : 'REMATCH';
+  $('btn-rematch').textContent = soloRoom() ? 'PLAY AGAIN' : 'REMATCH';
 }
 
 // Store the final standings on the room (idempotent; most complete write wins —
@@ -617,7 +607,7 @@ function spectate(seat) {
 function dismissResults() {
   app.resultsDismissed = true;
   $('results-overlay').classList.add('hidden');
-  if (!app.solo) setStatus('Tap a player up top to compare maps.');
+  if (!soloRoom()) setStatus('Tap a player up top to compare maps.');
 }
 $('btn-results-close').addEventListener('click', dismissResults);
 $('btn-results-look').addEventListener('click', dismissResults);
@@ -637,7 +627,8 @@ function renderPlayers() {
   const strip = $('players-strip');
   const players = app.room?.players ?? [];
   strip.innerHTML = '';
-  if (app.solo) { $('spectate-hint').classList.add('hidden'); return; }
+  // A lone player's card is just noise — give the space back to the map.
+  if (players.length < 2) { $('spectate-hint').classList.add('hidden'); return; }
   players.forEach((p) => {
     const r = app.results[p.seat];
     const div = document.createElement('div');
@@ -663,16 +654,7 @@ const rematch = createRematch({
   joinRoom, enterRoom,
   onError: (msg) => setStatus(msg),
 });
-$('btn-rematch').addEventListener('click', () => {
-  if (app.solo) {
-    const keep = { ...app.cfgSel };
-    enterSolo();
-    app.cfgSel = keep;
-    renderPrestart();
-    return;
-  }
-  rematch.start();
-});
+$('btn-rematch').addEventListener('click', () => rematch.start());
 
 // ---- Zoom controls -------------------------------------------------------------------------
 
@@ -722,6 +704,18 @@ async function tryResume() {
 async function boot() {
   registerServiceWorker();
   window.LB_CONFIG.onChallengeFriend = challengeFriend;
+  // Game History rows show what was played (shared/history.js reads this).
+  window.LB_CONFIG.historyDetail = (room) => {
+    const r = room?.result || {};
+    if (!r.region && !r.mode) return '';
+    return [regionMeta(r.region)?.label || r.region, modeMeta(r.mode)?.name || r.mode]
+      .filter(Boolean).join(' · ');
+  };
+  // The layout is an app shell — the page must never scroll (Android nudges it
+  // when the keyboard opens on a focused input; snap straight back).
+  window.addEventListener('scroll', () => {
+    if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
+  });
   buildCfgButtons();
   loadCfg();
   if (!configReady()) landingError('Backend not configured.');
