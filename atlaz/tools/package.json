@@ -1,0 +1,11 @@
+{
+  "name": "atlaz-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "topojson-server": "^3.0.1",
+    "topojson-simplify": "^3.0.3"
+  }
+}
