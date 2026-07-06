@@ -1,6 +1,6 @@
 # ATLAZ — map guessing game: implementation plan
 
-**Status: planned — implementation in progress on branch `claude/map-geography-game-8j4ojm`.**
+**Status: v1 implemented on branch `claude/map-geography-game-8j4ojm` (see checklist §10).**
 This document is the handoff spec: any agent (or human) should be able to pick up the work
 from here. Update the checklist at the bottom as pieces land.
 
@@ -21,7 +21,7 @@ Two groups, one picker (two tabs / sections):
 | id | label | contents (ISO a2) |
 |----|-------|-------------------|
 | `africa` | Africa | DZ AO BJ BW BF BI CV CM CF TD KM CG CD CI DJ EG GQ ER SZ ET GA GM GH GN GW KE LS LR LY MG MW ML MR MU MA MZ NA NE NG RW ST SN SC SL SO ZA SS SD TZ TG TN UG ZM ZW (54) |
-| `europe` | Europe | AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA (45; RU clipped west of ~60°E, microstates get min-hit-area treatment) |
+| `europe` | Europe | AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK LV LI LT LU MT MD MC ME NL MK NO PL PT RO RU SM RS SK SI ES SE CH UA GB VA (46; Russia drawn but clipped at the frame edge, microstates get min-hit-area treatment) |
 | `se-asia` | South East Asia | BN KH ID LA MY MM PH SG TH TL VN (11) |
 | `w-asia` | Western Asia | AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE (19; Iran included deliberately even though UN M49 calls it Southern Asia — the map reads wrong without it) |
 | `oceania` | Australasia & Polynesia | AU NZ PG FJ SB VU WS TO KI FM MH PW NR TV (14; island micro-states rendered with a minimum marker size — see §4) |
@@ -34,7 +34,7 @@ Two groups, one picker (two tabs / sections):
 | id | label | contents |
 |----|-------|----------|
 | `usa` | USA | 50 states + DC (51). Project with `geoAlbersUsa` (built-in AK/HI insets). |
-| `britain` | Britain | England 48 ceremonial counties (dissolved from NE's ~152 LAD-level units via a hand-written mapping table) + Wales 22 principal areas + Scotland 32 council areas. GB only — no NI (Ireland is its own region). |
+| `britain` | Britain | England 47 ceremonial counties (dissolved from NE's ~152 LAD-level units via a hand-written mapping table; City of London folded into Greater London) + Wales 22 principal areas + Scotland 32 council areas = 101. GB only — no NI (Ireland is its own region). |
 | `ireland` | Ireland | 26 counties of the Republic. NE splits Dublin (4) and Cork (2) into sub-units — dissolve back to the traditional counties. (32-county island version = possible future upgrade.) |
 | `canada` | Canada | 13 provinces & territories. |
 | `brazil` | Brazil | 27 states (incl. DF). |
@@ -252,22 +252,26 @@ and append a fresh GAME 07 coming-soon card.
 
 - [x] Research data sources reachable from the dev env (amCharts/simplemaps/wikimedia blocked; Natural Earth via raw.githubusercontent + npm topojson/d3-geo chosen)
 - [x] Plan checked into main
-- [ ] `tools/build-maps.mjs` + checked-in `data/maps/*.json` for all 15 regions (incl. Britain dissolve table, Ireland dissolve, Europe Russia clip, alias baking, label anchors)
-- [ ] `js/engine.js` + `test/engine.test.mjs` green
-- [ ] `js/map.js` (pan/pinch/zoom/tap/hit-halo/labels/fill states)
-- [ ] `index.html` + css + config/net/notify/sw/manifest/icons scaffold (copied patterns)
-- [ ] Region & mode picker (solo + host prestart)
-- [ ] Mode 1 PINPOINT
-- [ ] Mode 2 LINE-UP
-- [ ] Mode 3 NAMEDROP
-- [ ] Mode 4 JIGSAW
-- [ ] Mode 5 SWEEP (timer, give up, ranking)
-- [ ] Multiplayer glue (start payload, result moves, waiting/final results, attempt review via player cards, rematch, finishRoom)
-- [ ] Help modal + first-run hints + credits
-- [ ] Landing page card (GAME 06 → ATLAZ, add GAME 07 placeholder)
-- [ ] All game tests pass (`for d in wurdz splitz scramblr atlaz; do node $d/test/engine.test.mjs; done`)
-- [ ] Playwright smoke of solo modes + a 2-player room
-- [ ] Push to `claude/map-geography-game-8j4ojm`
+- [x] `tools/build-maps.mjs` + checked-in `data/maps/*.json` for all 15 regions (incl. Britain dissolve table, Ireland dissolve, Europe Russia clip + windowSkip, projected-space clipExtent, alias baking, label anchors, microstate dots)
+- [x] `js/engine.js` + `test/engine.test.mjs` green (incl. per-region data sanity: counts, unique ids, label anchors, self-resolving names)
+- [x] `js/map.js` (pan/pinch/wheel/double-tap zoom, tap-vs-drag, nearest-centroid tap assist, constant-size labels, fill states, silhouette)
+- [x] `index.html` + css + config/net/notify/sw/manifest/icons scaffold (copied patterns)
+- [x] Region & mode picker (solo + host prestart, remembered in localStorage)
+- [x] Mode 1 PINPOINT
+- [x] Mode 2 LINE-UP
+- [x] Mode 3 NAMEDROP
+- [x] Mode 4 JIGSAW
+- [x] Mode 5 SWEEP (timer, armed give-up, completion-over-quitters ranking)
+- [x] Multiplayer glue (start payload, sparse result moves 10+seat, waiting/final results, attempt review via player cards, rematch, finishRoom)
+- [x] Help modal + credits (first-run hints folded into prompt-sub instead)
+- [x] Landing page card (GAME 06 → ATLAZ, added GAME 07 placeholder)
+- [x] All game tests pass (`for d in wurdz splitz scramblr atlaz; do node $d/test/engine.test.mjs; done`)
+- [x] Playwright smoke of all 5 solo modes + a simulated 2-player room (stubbed Supabase, injected seat-1 result, card-tap review verified)
+- [x] Push to `claude/map-geography-game-8j4ojm`
+
+Not yet done / next playtest round: on-device pinch feel, per-mode question caps for
+huge regions, Splitz-style live progress moves, solo sweep leaderboard, real
+two-device multiplayer against production Supabase.
 
 Open questions parked for playtesting (don't block v1): per-mode question caps for huge
 regions (Africa jigsaw = 54 drags — maybe cap at 20 with seeded subset?), sweep leaderboard as
