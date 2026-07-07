@@ -85,8 +85,13 @@ const COUNTRY_NAMES = {
 // windowSkip: ids exempt from the window test (clipExtent crops them instead).
 // labelAt: manual [lon, lat] label anchors for ids whose centroid misbehaves.
 // ctx: ISO list of non-playable neighbour countries drawn as cropped scenery.
+//   Rule of thumb (playtested): only include land that shares a LAND BORDER
+//   with something playable (or fills a hole inside land that's already
+//   shown). Neighbours across open sea are dropped — an island region like
+//   Japan or Australia reads fine alone, and a random sliver of disconnected
+//   coast at the frame edge looks worse than nothing.
 // ctxAdmin1: admin-1 filter (props => bool) merged into ONE scenery shape —
-//   used by the UK nations, whose neighbours are other parts of one country.
+//   used where the land neighbour is part of one country (UK nations).
 // Transcontinental countries are deliberately playable in TWO regions:
 // Türkiye (europe + w-asia) and Egypt (africa + w-asia).
 
@@ -105,64 +110,68 @@ const conic = (parallels, lon0) => geoConicConformal().parallels(parallels).rota
 const REGIONS = [
   { id: 'africa', label: 'Africa', kind: 'countries', iso: AFRICA,
     window: [-26, 64, -36, 38], proj: mercator, simplifyQ: 0.3,
-    ctx: 'ES PT IT GR MT CY TR SA YE OM AE QA BH KW JO IL PS LB SY IQ IR' },
+    // Sinai land bridge: Egypt's Asian neighbours + the peninsula they sit on.
+    ctx: 'IL PS JO SA YE OM AE QA BH KW SY IQ LB' },
   { id: 'europe', label: 'Europe', kind: 'countries', iso: EUROPE,
     window: [-25, 65, 30, 72], proj: () => conic([40, 60], 15),
     fitExclude: ['RU', 'TR'], windowSkip: ['RU'],
     labelAt: { RU: [37.6, 55.8], NO: [8.5, 61] }, simplifyQ: 0.3,
-    ctx: 'MA DZ TN LY EG SY LB IL IQ IR JO SA GE AM AZ KZ TM UZ KW' },
+    // Land neighbours of playable Russia/Türkiye only — North Africa across
+    // the Med reads fine as open sea.
+    ctx: 'GE AM AZ KZ SY IQ' },
   { id: 'se-asia', label: 'South East Asia', kind: 'countries', iso: SE_ASIA,
     window: [90, 142, -12, 29], proj: mercator, simplifyQ: 0.5,
-    ctx: 'CN TW IN BD BT NP AU PG PW' },
+    ctx: 'CN IN BD BT NP PG' },
   { id: 'w-asia', label: 'Western Asia', kind: 'countries', iso: W_ASIA,
     window: [22, 64, 11, 44], proj: mercator, simplifyQ: 0.5,
-    ctx: 'GR BG MK AL RO UA RU KZ TM UZ AF PK SD SS ER DJ ET SO LY CY' },
+    ctx: 'GR BG RU KZ TM UZ AF PK SD LY' },
   { id: 'oceania', label: 'Australasia & Polynesia', kind: 'countries', iso: OCEANIA,
     window: [110, 215, -48, 20], normLon: true, proj: () => geoMercator().rotate([-160, 0]),
-    ctx: 'ID TL PH MY BN' },
+    // Indonesia shares New Guinea with playable PNG; MY/BN/TL fill holes in
+    // the Indonesian islands that are then on show.
+    ctx: 'ID TL MY BN' },
   { id: 'c-america', label: 'Central America', kind: 'countries', iso: C_AMERICA,
     window: [-93, -77, 5.5, 18.8], proj: mercator,
-    ctx: 'MX CO CU JM' },
+    ctx: 'MX CO' },
   { id: 's-america', label: 'South America', kind: 'countries', iso: S_AMERICA,
     window: [-82, -34, -56, 13], proj: mercator, simplifyQ: 0.6,
-    ctx: 'PA CR NI TT FR FK' },
+    ctx: 'PA FR' },
   { id: 'n-america', label: 'North America & Caribbean', kind: 'countries', iso: N_AMERICA,
     window: [-170, -50, 7, 84], proj: () => conic([30, 60], -96),
     dropRing: (lon, lat) => lon < -140 && lat < 35 /* Hawaii */, simplifyQ: 0.3,
-    ctx: 'GL CO VE GY SR EC RU FR' },
+    // Central America continues Mexico's landmass to the frame edge; Greenland
+    // hugs the Canadian arctic islands closely enough that its absence reads
+    // as a mistake.
+    ctx: 'GL BZ GT SV HN NI CR PA CO VE GY' },
 
   { id: 'usa', label: 'USA', kind: 'states', admin: 'United States of America',
     proj: () => geoAlbersUsa(), simplifyQ: 0.3,
-    ctx: 'CA MX CU BS',
+    ctx: 'CA MX',
     alt: { 'district-of-columbia': ['washington dc', 'dc'] } },
   { id: 'england', label: 'England', kind: 'states', admin: 'United Kingdom', unit: 'England',
     proj: () => conic([50, 55], -1.5), simplifyQ: 0.5, dissolve: englandGroup,
     ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'England',
-    ctx: 'IE FR BE NL',
     alt: { 'greater-london': ['london'], 'county-durham': ['durham'] } },
   { id: 'scotland', label: 'Scotland', kind: 'states', admin: 'United Kingdom', unit: 'Scotland',
     window: [-8.2, 0.5, 54.5, 61.2], proj: () => conic([55, 60], -4), simplifyQ: 0.5,
     dissolve: (p) => SCOTLAND_FIX[p.name] || p.name,
     ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Scotland',
-    ctx: 'IE',
     alt: { 'outer-hebrides': ['western isles', 'na h eileanan siar', 'eilean siar'],
            'perth-and-kinross': ['perthshire and kinross'] } },
   { id: 'wales', label: 'Wales', kind: 'states', admin: 'United Kingdom', unit: 'Wales',
     proj: () => conic([51, 53.5], -3.8), simplifyQ: 0.5,
     dissolve: (p) => WALES_FIX[p.name] || p.name,
     ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Wales',
-    ctx: 'IE',
     alt: { anglesey: ['ynys mon'], 'rhondda-cynon-taf': ['rhondda cynon taff', 'rhondda'] } },
   { id: 'northern-ireland', label: 'Northern Ireland', kind: 'states', admin: 'United Kingdom', unit: 'Northern Ireland',
     proj: () => conic([54, 55.5], -6.7), simplifyQ: 0.6, dissolve: niGroup,
-    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Northern Ireland',
-    ctx: 'IE',
+    ctx: 'IE', // land border with the Republic; Scotland is across open sea
     alt: { londonderry: ['derry', 'county londonderry'], down: ['county down'],
            antrim: ['county antrim'], armagh: ['county armagh'], tyrone: ['county tyrone'],
            fermanagh: ['county fermanagh'] } },
   { id: 'ireland', label: 'Ireland', kind: 'states', admin: 'Ireland',
     proj: mercator, simplifyQ: 0.5, dissolve: irelandGroup,
-    ctxAdmin1: (p) => p.admin === 'United Kingdom' },
+    ctxAdmin1: (p) => p.geonunit === 'Northern Ireland' /* land border only */ },
   { id: 'canada', label: 'Canada', kind: 'states', admin: 'Canada',
     proj: () => conic([49, 77], -96), simplifyQ: 0.15,
     ctx: 'US GL',
@@ -170,18 +179,16 @@ const REGIONS = [
            'prince-edward-island': ['pei'], 'northwest-territories': ['nwt'] } },
   { id: 'brazil', label: 'Brazil', kind: 'states', admin: 'Brazil',
     proj: mercator, simplifyQ: 0.3,
-    ctx: 'AR BO CL CO EC GY PE PY SR UY VE FR FK',
+    ctx: 'AR BO CL CO EC GY PE PY SR UY VE FR',
     alt: { 'distrito-federal': ['federal district'] } },
   { id: 'australia', label: 'Australia', kind: 'states', admin: 'Australia',
     drop: ['Jervis Bay Territory', 'Lord Howe Island', 'Macquarie Island'],
     window: [112, 155, -44.5, -9], proj: mercator, simplifyQ: 0.4,
-    ctx: 'ID TL PG',
     alt: { 'australian-capital-territory': ['act', 'capital territory'],
            'new-south-wales': ['nsw'], 'northern-territory': ['nt'],
            'western-australia': ['wa'], 'south-australia': ['sa'] } },
   { id: 'japan', label: 'Japan', kind: 'states', admin: 'Japan',
-    window: [122, 154, 24, 46], proj: mercator, simplifyQ: 0.5,
-    ctx: 'RU KR KP CN TW' },
+    window: [122, 154, 24, 46], proj: mercator, simplifyQ: 0.5 },
 ];
 
 // ---- UK dissolve tables ------------------------------------------------------

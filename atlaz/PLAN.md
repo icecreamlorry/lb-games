@@ -14,9 +14,12 @@ reviewable by tapping their player card at the top (exactly like Splitz's end-of
 spectating). Prestart is two-stage for the host: pick map+mode → NEXT → a READY card with
 player count + share code + START, so starting is always a deliberate, separate tap.
 
-Every region file also carries two non-playable layers: **ctx** (neighbouring land from
-other regions, drawn dimmed and cropped by the frame — no Türkiye-shaped hole in Europe)
-and **lakes** (Natural Earth 50m lakes ≥ ~0.18 deg², so the Great Lakes read as water).
+Every region file also carries two non-playable layers: **ctx** (neighbouring land, drawn
+dimmed and cropped by the frame) and **lakes** (Natural Earth 50m lakes ≥ ~0.18 deg², so
+the Great Lakes read as water). ctx follows an "odd to miss" rule: only land that shares a
+LAND border with something playable (or fills holes in land already shown) is included —
+island regions like Japan and Australia get none, because a disconnected sliver of foreign
+coast at the frame edge looks worse than open sea.
 Transcontinental countries are playable in BOTH of their regions: Türkiye (europe +
 w-asia) and Egypt (africa + w-asia).
 
@@ -303,6 +306,10 @@ Phone-feedback round 1 (all landed):
 - [x] shared/history.js: theme-token restyle (was hard-coded Synth neon in every game),
       1-player rooms filtered out, per-game detail line via `LB_CONFIG.historyDetail`
       (Atlaz shows "Region · MODE").
+
+Phone-feedback round 2 (landed): ctx pruned to the odd-to-miss rule above; sweep no
+longer clears the input on an already-found match ("UK" staying put while typing
+"Ukraine"), it just shows the "already got it" status.
 
 Next playtest round candidates: on-device pinch feel, per-mode question caps for huge
 regions, Splitz-style live progress moves, sweep leaderboard, real two-device multiplayer

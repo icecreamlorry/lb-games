@@ -338,8 +338,9 @@ function sweep(ctx, signal) {
     const id = matchAnswer(index, input.value);
     if (!id) return;
     if (found.has(id)) {
+      // Don't clear the box: the text may be the start of another answer
+      // ("UK" already found while typing "Ukraine").
       ctx.onStatus(`Already got ${names.get(id)}.`);
-      input.value = '';
       return;
     }
     found.add(id);
