@@ -100,9 +100,12 @@ const EUROPE = 'AL AD AT BY BE BA BG HR CY CZ DK EE FI FR DE GR HU IS IE IT XK L
 const SE_ASIA = 'BN KH ID LA MY MM PH SG TH TL VN';
 const W_ASIA = 'AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE EG';
 const OCEANIA = 'AU NZ PG FJ SB VU WS TO KI FM MH PW NR TV';
-const C_AMERICA = 'BZ CR SV GT HN NI PA';
 const S_AMERICA = 'AR BO BR CL CO EC GY PY PE SR UY VE';
-const N_AMERICA = 'CA US MX BS CU JM HT DO KN AG DM LC VC GD BB TT';
+// Mainland chain from Canada to Panama in one map; the island states get
+// their own Caribbean map — mixing them with the continent left the islands
+// unplayably small.
+const N_AMERICA = 'CA US MX BZ CR SV GT HN NI PA';
+const CARIBBEAN = 'BS CU JM HT DO KN AG DM LC VC GD BB TT';
 
 const mercator = () => geoMercator();
 const conic = (parallels, lon0) => geoConicConformal().parallels(parallels).rotate([-lon0, 0]);
@@ -130,19 +133,21 @@ const REGIONS = [
     // Indonesia shares New Guinea with playable PNG; MY/BN/TL fill holes in
     // the Indonesian islands that are then on show.
     ctx: 'ID TL MY BN' },
-  { id: 'c-america', label: 'Central America', kind: 'countries', iso: C_AMERICA,
-    window: [-93, -77, 5.5, 18.8], proj: mercator,
-    ctx: 'MX CO' },
+
   { id: 's-america', label: 'South America', kind: 'countries', iso: S_AMERICA,
     window: [-82, -34, -56, 13], proj: mercator, simplifyQ: 0.6,
     ctx: 'PA FR' },
-  { id: 'n-america', label: 'North America & Caribbean', kind: 'countries', iso: N_AMERICA,
-    window: [-170, -50, 7, 84], proj: () => conic([30, 60], -96),
+  { id: 'n-america', label: 'North & Central America', kind: 'countries', iso: N_AMERICA,
+    window: [-170, -50, 5.5, 84], proj: () => conic([30, 60], -96),
     dropRing: (lon, lat) => lon < -140 && lat < 35 /* Hawaii */, simplifyQ: 0.3,
-    // Central America continues Mexico's landmass to the frame edge; Greenland
-    // hugs the Canadian arctic islands closely enough that its absence reads
-    // as a mistake.
-    ctx: 'GL BZ GT SV HN NI CR PA CO VE GY' },
+    // Colombia/Venezuela continue Panama's isthmus; Greenland hugs the
+    // Canadian arctic islands closely enough that its absence reads wrong.
+    ctx: 'GL CO VE' },
+  { id: 'caribbean', label: 'Caribbean', kind: 'countries', iso: CARIBBEAN,
+    window: [-85.5, -58.5, 9.7, 27.5], proj: mercator,
+    // Surrounding mainland coasts (Florida, Yucatán, Venezuela) anchor the
+    // islands' positions on any Caribbean map.
+    ctx: 'US MX VE CO' },
 
   { id: 'usa', label: 'USA', kind: 'states', admin: 'United States of America',
     proj: () => geoAlbersUsa(), simplifyQ: 0.3,

@@ -36,9 +36,9 @@ Two groups, one picker (two tabs / sections):
 | `se-asia` | South East Asia | BN KH ID LA MY MM PH SG TH TL VN (11) |
 | `w-asia` | Western Asia | AM AZ BH CY GE IL IQ IR JO KW LB OM PS QA SA SY TR AE YE EG (20; Iran included deliberately even though UN M49 calls it Southern Asia — the map reads wrong without it) |
 | `oceania` | Australasia & Polynesia | AU NZ PG FJ SB VU WS TO KI FM MH PW NR TV (14; island micro-states rendered with a minimum marker size — see §4) |
-| `c-america` | Central America | BZ CR SV GT HN NI PA (7) |
+| `n-america` | North & Central America | CA US MX BZ CR SV GT HN NI PA (10; one mainland chain from Canada to Panama) |
+| `caribbean` | Caribbean | BS CU JM HT DO KN AG DM LC VC GD BB TT (13; islands got their own map — mixed with the continent they were unplayably small) |
 | `s-america` | South America | AR BO BR CL CO EC GY PY PE SR UY VE (12) |
-| `n-america` | North America & Caribbean | CA US MX BS CU JM HT DO KN AG DM LC VC GD BB TT (16; Caribbean states included so the region isn't a 3-country map) |
 
 **States & counties** (source: Natural Earth 10m `admin_1_states_provinces`):
 

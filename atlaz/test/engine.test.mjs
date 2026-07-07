@@ -119,7 +119,7 @@ function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), `${name} â
   const dir = join(HERE, '..', 'data', 'maps');
   const expected = {
     'africa': 54, 'europe': 47, 'se-asia': 11, 'w-asia': 20, 'oceania': 14,
-    'c-america': 7, 's-america': 12, 'n-america': 16,
+    'caribbean': 13, 's-america': 12, 'n-america': 10,
     'usa': 51, 'england': 47, 'scotland': 32, 'wales': 22, 'northern-ireland': 6,
     'ireland': 26, 'canada': 13, 'brazil': 27, 'australia': 8, 'japan': 47,
   };
