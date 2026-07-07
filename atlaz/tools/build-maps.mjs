@@ -150,18 +150,20 @@ const REGIONS = [
     alt: { 'district-of-columbia': ['washington dc', 'dc'] } },
   { id: 'england', label: 'England', kind: 'states', admin: 'United Kingdom', unit: 'England',
     proj: () => conic([50, 55], -1.5), simplifyQ: 0.5, dissolve: englandGroup,
-    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'England',
+    // Land neighbours only — NI is across the Irish Sea.
+    ctxAdmin1: (p) => p.geonunit === 'Scotland' || p.geonunit === 'Wales',
     alt: { 'greater-london': ['london'], 'county-durham': ['durham'] } },
   { id: 'scotland', label: 'Scotland', kind: 'states', admin: 'United Kingdom', unit: 'Scotland',
     window: [-8.2, 0.5, 54.5, 61.2], proj: () => conic([55, 60], -4), simplifyQ: 0.5,
     dissolve: (p) => SCOTLAND_FIX[p.name] || p.name,
-    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Scotland',
+    // England is the only land neighbour — NI is across the North Channel.
+    ctxAdmin1: (p) => p.geonunit === 'England',
     alt: { 'outer-hebrides': ['western isles', 'na h eileanan siar', 'eilean siar'],
            'perth-and-kinross': ['perthshire and kinross'] } },
   { id: 'wales', label: 'Wales', kind: 'states', admin: 'United Kingdom', unit: 'Wales',
     proj: () => conic([51, 53.5], -3.8), simplifyQ: 0.5,
     dissolve: (p) => WALES_FIX[p.name] || p.name,
-    ctxAdmin1: (p) => p.admin === 'United Kingdom' && p.geonunit !== 'Wales',
+    ctxAdmin1: (p) => p.geonunit === 'England', // Wales' only land neighbour
     alt: { anglesey: ['ynys mon'], 'rhondda-cynon-taf': ['rhondda cynon taff', 'rhondda'] } },
   { id: 'northern-ireland', label: 'Northern Ireland', kind: 'states', admin: 'United Kingdom', unit: 'Northern Ireland',
     proj: () => conic([54, 55.5], -6.7), simplifyQ: 0.6, dissolve: niGroup,
