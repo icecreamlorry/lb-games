@@ -77,6 +77,11 @@ const COUNTRY_NAMES = {
   RU: { name: 'Russia', alt: ['russian federation'] },
 };
 
+// De-facto territories NE keeps separate but quiz maps show as part of their
+// claimed state — dissolved into the playable shape (keyed by NE ADM0_A3).
+// Western Sahara is NOT here on purpose: it renders as ctx scenery instead.
+const ABSORB = { SO: ['SOL'] /* Somaliland */, CY: ['CYN'] /* N. Cyprus */ };
+
 // ---- Region definitions ----------------------------------------------------
 // window: [lonMin, lonMax, latMin, latMax] — polygons whose outer-ring centroid
 // falls outside are dropped (removes overseas territories from the frame).
@@ -113,8 +118,10 @@ const conic = (parallels, lon0) => geoConicConformal().parallels(parallels).rota
 const REGIONS = [
   { id: 'africa', label: 'Africa', kind: 'countries', iso: AFRICA,
     window: [-26, 64, -36, 38], proj: mercator, simplifyQ: 0.3,
-    // Sinai land bridge: Egypt's Asian neighbours + the peninsula they sit on.
-    ctx: 'IL PS JO SA YE OM AE QA BH KW SY IQ LB' },
+    // Sinai land bridge: Egypt's Asian neighbours + the peninsula they sit
+    // on. EH = Western Sahara — disputed, so scenery rather than an answer,
+    // but without it the coast between Morocco and Mauritania is a hole.
+    ctx: 'IL PS JO SA YE OM AE QA BH KW SY IQ LB EH' },
   { id: 'europe', label: 'Europe', kind: 'countries', iso: EUROPE,
     window: [-25, 65, 30, 72], proj: () => conic([40, 60], 15),
     fitExclude: ['RU', 'TR'], windowSkip: ['RU'],
@@ -357,7 +364,7 @@ function collectFeatures(region, sources) {
       out.push({
         id: a2, name: over.name || p.NAME_EN || p.NAME, alt: over.alt || [],
         labelLonLat: region.labelAt?.[a2] || (Number.isFinite(p.LABEL_X) ? [p.LABEL_X, p.LABEL_Y] : null),
-        geometry: geom,
+        geometry: absorbGeometry(a2, geom, region, sources),
       });
       want.delete(a2);
     }
@@ -393,6 +400,21 @@ function collectFeatures(region, sources) {
     out.push({ id: slug(name), name, alt: region.alt?.[slug(name)] || [], labelLonLat: null, geometry });
   }
   return out;
+}
+
+// Dissolve NE's separate de-facto territories (Somaliland, N. Cyprus) into
+// their claimed state's playable shape — shared borders vanish via the
+// topology merge, so no seam is drawn through the dissolved land.
+function absorbGeometry(a2, geom, region, sources) {
+  const extras = (ABSORB[a2] || [])
+    .map((a3) => sources.admin0.features.find((f) => f.properties.ADM0_A3 === a3))
+    .filter(Boolean)
+    .map((f) => windowGeometry(f.geometry, region))
+    .filter(Boolean);
+  if (!extras.length) return geom;
+  const feats = [geom, ...extras].map((g) => ({ type: 'Feature', properties: {}, geometry: g }));
+  const topo = topology({ u: { type: 'FeatureCollection', features: feats } }, 1e5);
+  return merge(topo, topo.objects.u.geometries);
 }
 
 // Non-playable neighbouring land: admin0 countries (region.ctx, each its own
