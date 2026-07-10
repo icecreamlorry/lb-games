@@ -222,6 +222,8 @@ function resetGame() {
   $('prompt-line').textContent = ''; $('prompt-sub').textContent = '';
   $('results-overlay').classList.add('hidden');
   $('countdown-overlay').classList.add('hidden');
+  const cd = $('countdown-num');
+  if (cd) { cd.textContent = ''; cd.classList.remove('pop'); } // so the first digit pops too
   $('timer-chip').classList.add('hidden');
   $('mode-chip').classList.add('hidden');
   if ($('btn-rematch')) $('btn-rematch').disabled = false;
@@ -446,7 +448,18 @@ function tick() {
   const reveal = app.startAt + COUNTDOWN_MS;
   if (now < reveal) {
     setPhase('countdown');
-    $('countdown-num').textContent = String(Math.max(1, Math.ceil((reveal - now) / 1000)));
+    // Clamp to 3: startAt sits ~400ms in the future (so the start move lands
+    // first), which would otherwise flash a "4". Pop the animation ONCE per
+    // digit change — a free-running infinite animation pulses out of sync
+    // with the digits and reads as a stutter.
+    const n = String(Math.min(COUNTDOWN_MS / 1000, Math.max(1, Math.ceil((reveal - now) / 1000))));
+    const el = $('countdown-num');
+    if (el.textContent !== n) {
+      el.textContent = n;
+      el.classList.remove('pop');
+      void el.offsetWidth; // restart the animation
+      el.classList.add('pop');
+    }
     return;
   }
   if (app.phase === 'countdown' || app.phase === 'config') startPlay();
