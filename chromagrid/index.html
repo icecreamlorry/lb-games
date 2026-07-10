@@ -2418,7 +2418,17 @@
       if ($('btn-rematch')) $('btn-rematch').disabled = false;
     }
 
+    // enterRoom awaits the board intro before it assigns app.conn, so a second
+    // call landing in that window (lobby tap racing tryResume, a double tap, a
+    // re-delivered rematch move) used to leak the first call's connection —
+    // which then kept polling its room forever and, once that log contained a
+    // rematch move, re-entered rooms in a loop (start screen + 2:00 flashing,
+    // then snapping back to the synced clock, forever). Guard both ways:
+    // same-room re-entry is a no-op, and a superseded entry never finishes.
+    let enterGen = 0;
     async function enterRoom(code, seat, name, room) {
+      if (app.code === code && app.conn) { hideLobby(); return; }
+      const gen = ++enterGen;
       resetRoomState();
       app.code = code; app.seat = seat; app.name = name; app.room = room;
       hideLobby();
@@ -2426,6 +2436,7 @@
       // Seed the board deterministically from the room seed so every player
       // builds the identical starting grid (respawns stay random, like daily).
       await window.CG.prepareRoom(Number(room.seed), onRoomEnd);
+      if (gen !== enterGen) return; // a newer enterRoom took over mid-intro
 
       // In a room, RESET (which bails to the solo idle screen) is replaced by
       // LEAVE, which returns to the games list — so you can always leave a game

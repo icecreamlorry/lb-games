@@ -361,9 +361,11 @@ export class RoomConnection {
   async pollOnce() {
     if (this.closed) return;
     const moves = await fetchMoves(this.code, this.nextIndex);
+    if (this.closed) return; // closed mid-fetch — deliver nothing
     for (const m of moves) this.handlers.onMove?.(m);
     if (this.mode === 'db') {
       const room = await fetchRoom(this.code);
+      if (this.closed) return;
       this.handlers.onRoomUpdate?.(room);
     }
   }

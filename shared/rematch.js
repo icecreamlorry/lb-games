@@ -54,9 +54,11 @@ export function createRematch(opts) {
     }
   }
 
-  // Peer path: a rematch move arrived, hop into the new room.
+  // Peer path: a rematch move arrived, hop into the new room. Ignore pointers
+  // to the room we're already in (a stale connection re-delivering the move
+  // must never re-enter the current room).
   function follow(code) {
-    if (state.rematching || !code) return;
+    if (state.rematching || !code || code === state.code) return;
     state.rematching = true;
     joinRoom(code, state.name, state.userId)
       .then(({ room, playerIndex }) => enterRoom(code, playerIndex, state.name, room))
