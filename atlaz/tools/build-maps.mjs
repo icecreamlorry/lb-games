@@ -118,10 +118,11 @@ const conic = (parallels, lon0) => geoConicConformal().parallels(parallels).rota
 const REGIONS = [
   { id: 'africa', label: 'Africa', kind: 'countries', iso: AFRICA,
     window: [-26, 64, -36, 38], proj: mercator, simplifyQ: 0.3,
-    // Sinai land bridge: Egypt's Asian neighbours + the peninsula they sit
-    // on. EH = Western Sahara — disputed, so scenery rather than an answer,
-    // but without it the coast between Morocco and Mauritania is a hole.
-    ctx: 'IL PS JO SA YE OM AE QA BH KW SY IQ LB EH' },
+    // EH = Western Sahara — disputed, so scenery rather than an answer, but
+    // without it the coast between Morocco and Mauritania is a hole. The
+    // Arabian peninsula is deliberately NOT shown: the Red Sea splits it
+    // from Africa cleanly enough that greyed-out Arabia just read as clutter.
+    ctx: 'EH' },
   { id: 'europe', label: 'Europe', kind: 'countries', iso: EUROPE,
     window: [-25, 65, 30, 72], proj: () => conic([40, 60], 15),
     fitExclude: ['RU', 'TR'], windowSkip: ['RU'],
