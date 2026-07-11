@@ -165,22 +165,79 @@ button, button:hover, button:focus { box-shadow: none; }
   border-radius: var(--item-radius); padding: 6px; cursor: pointer; touch-action: manipulation;
   line-height: 0; transition: transform 0.06s, border-color 0.15s;
 }
-.flag-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; }
+.flag-tile { position: relative; }
+.flag-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; transition: opacity 0.2s; }
 .flag-tile:active { transform: scale(0.97); }
-.flag-tile.ok { border-color: #3fae72; box-shadow: 0 0 0 3px color-mix(in srgb, #3fae72 45%, transparent); }
-.flag-tile.bad { border-color: #d4586d; box-shadow: 0 0 0 3px color-mix(in srgb, #d4586d 45%, transparent); }
+/* When a round is graded, everything that isn't the answer/pick fades back. */
+.flag-grid.graded .flag-tile.dim { opacity: 0.28; }
+.flag-tile.ok {
+  border-color: #3fae72; background: color-mix(in srgb, #3fae72 22%, var(--panel));
+  box-shadow: 0 0 0 4px #3fae72, 0 0 22px 2px color-mix(in srgb, #3fae72 70%, transparent);
+  animation: flag-pop 0.4s ease-out;
+}
+.flag-tile.bad {
+  border-color: #e0455f; background: color-mix(in srgb, #e0455f 22%, var(--panel));
+  box-shadow: 0 0 0 4px #e0455f, 0 0 22px 2px color-mix(in srgb, #e0455f 70%, transparent);
+  animation: flag-shake 0.42s ease-in-out;
+}
+/* Big ✓ / ✗ badge in the corner of the highlighted flag. */
+.flag-tile.ok::after, .flag-tile.bad::after {
+  position: absolute; top: -12px; right: -12px;
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; font-weight: 700; color: #fff;
+  border: 2px solid var(--panel); box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.flag-tile.ok::after { content: '✓'; background: #3fae72; }
+.flag-tile.bad::after { content: '✗'; background: #e0455f; }
+
+@keyframes flag-pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
+@keyframes flag-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+}
 
 /* LINE-UP / NAMEDROP: one big flag */
-.big-flag-wrap { margin: auto 0; display: flex; align-items: center; justify-content: center; width: 100%; }
+.big-flag-wrap { position: relative; margin: auto 0; display: flex; align-items: center; justify-content: center; width: 100%; }
 .big-flag {
   width: min(420px, 88%); aspect-ratio: 4 / 3; object-fit: cover;
   border-radius: var(--item-radius);
-  border: 2px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+  border: 3px solid color-mix(in srgb, var(--cyan) 25%, transparent);
   box-shadow: 0 14px 34px rgba(0,0,0,0.25);
   background: var(--panel);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-.option-btn.good { border-color: #3fae72; color: #3fae72; background: color-mix(in srgb, #3fae72 14%, var(--panel)); }
-.option-btn.wrong { border-color: #d4586d; color: #d4586d; background: color-mix(in srgb, #d4586d 14%, var(--panel)); }
+.big-flag-wrap.ok .big-flag {
+  border-color: #3fae72;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #3fae72 55%, transparent), 0 0 30px 4px color-mix(in srgb, #3fae72 55%, transparent);
+  animation: flag-pop 0.4s ease-out;
+}
+.big-flag-wrap.bad .big-flag {
+  border-color: #e0455f;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #e0455f 55%, transparent), 0 0 30px 4px color-mix(in srgb, #e0455f 55%, transparent);
+  animation: flag-shake 0.42s ease-in-out;
+}
+/* A bold pill banner over the flag so right/wrong is unmissable. */
+.big-flag-wrap.graded::after {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  padding: 5px 16px; border-radius: 999px;
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.9rem;
+  color: #fff; letter-spacing: 0.02em; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  white-space: nowrap; animation: flag-pop 0.4s ease-out;
+}
+.big-flag-wrap.ok::after { content: '✓ Correct'; background: #3fae72; }
+.big-flag-wrap.bad::after { content: '✗ Wrong'; background: #e0455f; }
+
+.options-list.graded .option-btn.dim, #options-list .option-btn.dim { opacity: 0.4; }
+.option-btn.good {
+  border-color: #3fae72; color: #fff; font-weight: 700;
+  background: #3fae72; box-shadow: 0 0 0 2px color-mix(in srgb, #3fae72 55%, transparent);
+}
+.option-btn.wrong {
+  border-color: #e0455f; color: #fff; font-weight: 700;
+  background: #e0455f; box-shadow: 0 0 0 2px color-mix(in srgb, #e0455f 55%, transparent);
+}
 
 /* Ordering modes: draggable vertical list */
 .order-list { display: flex; flex-direction: column; gap: 8px; width: min(480px, 100%); margin: auto 0; padding: 6px 0; }

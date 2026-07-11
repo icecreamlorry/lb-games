@@ -76,16 +76,24 @@ function pickMode(ctx, signal) {
     st.outcomes.push({ id: round.answer, pick, ok });
     ctx.onProgress({ outcomes: st.outcomes });
 
-    // Reveal: green on the answer, red on a wrong pick.
+    // Reveal: green on the answer, red on a wrong pick. Everything not
+    // involved dims so the highlight really pops.
     if (mode === 'spotter') {
+      const grid = stage().querySelector('.flag-grid');
+      grid?.classList.add('graded');
       for (const el of stage().querySelectorAll('.flag-tile')) {
         if (el.dataset.id === round.answer) el.classList.add('ok');
         else if (el.dataset.id === pick) el.classList.add('bad');
+        else el.classList.add('dim');
       }
     } else {
+      // The big flag frames green/red too (and is the only feedback in namedrop).
+      const wrap = stage().querySelector('.big-flag-wrap');
+      wrap?.classList.add('graded', ok ? 'ok' : 'bad');
       for (const b of document.querySelectorAll('#options-list .option-btn')) {
         if (b.dataset.id === round.answer) b.classList.add('good');
         else if (b.dataset.id === pick) b.classList.add('wrong');
+        else b.classList.add('dim');
       }
     }
     ctx.onStatus(ok ? `✓ ${C[round.answer].name}` : `✗ It was ${C[round.answer].name}`);
