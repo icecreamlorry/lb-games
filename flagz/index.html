@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="maritime">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+  <title>FLAGZ // LB GAMES</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#04040f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Flagz">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js) for this game.
+    window.LB_CONFIG = { gameSlug: 'flagz', gameName: 'Flagz', history: true, defaultTheme: 'maritime' };
+  </script>
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+
+  <!-- Landing (guests): set a name, create or join a room -->
+  <section id="screen-landing" class="screen">
+    <div class="card">
+      <h1 class="logo">FLAGZ</h1>
+      <p class="tagline">// KNOW YOUR COLOURS //</p>
+
+      <div class="row">
+        <button id="btn-create" class="btn-primary">CREATE ROOM</button>
+        <button id="btn-join" class="btn-ghost">JOIN BY CODE</button>
+      </div>
+      <div id="join-box" class="row hidden">
+        <input id="code-input" class="field" type="text" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters">
+        <button id="btn-join-go" class="btn-primary">JOIN</button>
+      </div>
+      <p id="landing-error" class="status-line"></p>
+
+      <!-- Account bar markup injected by shared/lobby-ui.js -->
+      <div id="account-bar"></div>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
+
+  <!-- Game -->
+  <section id="screen-game" class="screen hidden">
+    <header class="bar game-bar">
+      <button id="room-code-chip" class="chip" title="Tap to copy">ROOM <strong id="room-code-text"></strong></button>
+      <span class="grow"></span>
+      <span id="mode-chip" class="chip mode-chip hidden"></span>
+      <span id="timer-chip" class="chip timer-chip hidden">0:00</span>
+      <button id="btn-leave" class="chip chip-icon" title="Leave" aria-label="Leave">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 2H4a1.2 1.2 0 0 0-1.2 1.2v9.6A1.2 1.2 0 0 0 4 14h2.5"/>
+          <path d="M10 5.2 13 8l-3 2.8"/>
+          <path d="M13 8H6"/>
+        </svg>
+      </button>
+    </header>
+
+    <div id="players-strip" class="players-strip"></div>
+    <div id="spectate-hint" class="spectate-hint hidden">Tap a player to see their answers</div>
+
+    <div class="prompt-bar">
+      <div id="prompt-line"></div>
+      <div id="prompt-sub"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div id="flag-stage" class="flag-stage"></div>
+
+      <!-- Prestart: region + mode + difficulty picker -->
+      <div id="prestart-overlay" class="board-overlay">
+        <div class="overlay-card config-card">
+          <div id="start-title" class="overlay-title">PICK A REGION</div>
+          <div id="cfg" class="cfg">
+            <div class="cfg-group-label">REGION</div>
+            <div id="cfg-regions" class="cfg-grid"></div>
+            <div class="cfg-group-label">GAME MODE</div>
+            <div id="cfg-modes" class="cfg-grid modes"></div>
+            <div class="cfg-group-label">DIFFICULTY</div>
+            <div id="cfg-diffs" class="cfg-grid diffs"></div>
+          </div>
+          <p id="start-info" class="muted"></p>
+          <button id="btn-start" class="btn-primary" disabled>NEXT</button>
+          <button id="btn-cfg-back" class="link-btn hidden">CHANGE SETTINGS</button>
+          <p id="start-waiting" class="muted hidden">Waiting for the host to start…</p>
+        </div>
+      </div>
+
+      <div id="countdown-overlay" class="board-overlay hidden">
+        <div id="countdown-num" class="countdown-num"></div>
+      </div>
+
+      <!-- Results -->
+      <div id="results-overlay" class="board-overlay hidden">
+        <div class="overlay-card">
+          <button id="btn-results-close" class="overlay-close" title="Look at the answers">✕</button>
+          <div id="results-title" class="overlay-title">RESULTS</div>
+          <div id="results-winner" class="results-winner"></div>
+          <ol id="results-list" class="results-list"></ol>
+          <p id="results-waiting" class="muted hidden">Waiting for the others to finish…</p>
+          <div class="row">
+            <button id="btn-rematch" class="btn-primary">REMATCH</button>
+            <button id="btn-results-look" class="btn-ghost">SEE ANSWERS</button>
+            <button id="btn-results-done" class="btn-ghost">LEAVE</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="play-foot">
+      <p id="status-line" class="status-line"></p>
+
+      <div id="panel-options" class="mode-panel hidden">
+        <div id="options-list" class="options-list"></div>
+      </div>
+
+      <div id="panel-typing" class="mode-panel hidden">
+        <div class="row input-row">
+          <input id="answer-input" class="field" type="text" placeholder="Type the country…" autocomplete="off" autocapitalize="words" enterkeyhint="done">
+          <button id="btn-answer" class="btn-primary">GO</button>
+        </div>
+      </div>
+
+      <div id="panel-confirm" class="mode-panel hidden">
+        <button id="btn-confirm-order" class="btn-primary wide-btn">CONFIRM ORDER</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-panel">
+      <button id="help-close" class="modal-close">✕</button>
+      <div class="modal-title">HOW TO PLAY</div>
+      <div class="help-body">
+        <p>Pick a <strong>region</strong>, a <strong>mode</strong> and a <strong>difficulty</strong> (how many flags or options you juggle at once), then race — solo or against up to 5 players. Everyone gets the same questions.</p>
+        <p><strong>SPOTTER</strong> — a country name is shown; tap its flag.</p>
+        <p><strong>LINE-UP</strong> — a flag is shown; pick its country from the list.</p>
+        <p><strong>NAMEDROP</strong> — a flag is shown; type the country (spelling is forgiving).</p>
+        <p><strong>A TO Z</strong> — drag the flags into alphabetical order without seeing their names, then confirm to reveal.</p>
+        <p><strong>HEADCOUNT</strong> — drag the flags into population order, smallest at the top.</p>
+        <p><strong>LANDMASS</strong> — drag the flags into area order, smallest at the top.</p>
+        <p>In multiplayer, when everyone's done, <em>tap a player's card</em> at the top to see their answers.</p>
+        <p class="credit-line">Flags: flag-icons (MIT). Population &amp; area data: Natural Earth (public domain).</p>
+      </div>
+      <button id="help-got-it" class="btn-primary">GOT IT</button>
+    </div>
+  </div>
+
+  <script type="module" src="../shared/lobby-ui.js"></script>
+  <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="../shared/devtools.js"></script>
+</body>
+</html>

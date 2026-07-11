@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#122b3d"/>
+  <!-- waving flag -->
+  <path d="M150 96v340" stroke="#c8d6e5" stroke-width="26" stroke-linecap="round"/>
+  <path d="M176 110c60-28 108 26 168 0 30-13 42-18 42-18v150s-12 5-42 18c-60 26-108-28-168 0z" fill="#f5b942"/>
+  <path d="M176 110c60-28 108 26 168 0v75c-60 26-108-28-168 0z" fill="#2e8f6b"/>
+</svg>
