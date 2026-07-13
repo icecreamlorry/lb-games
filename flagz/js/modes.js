@@ -208,45 +208,68 @@ function orderMode(ctx, signal) {
     }
   }
 
-  // Pointer-drag vertical reorder: the dragged row follows the finger, the row
-  // under the pointer makes way (live DOM reordering).
+  // Pointer-drag vertical reorder. The dragged row follows the finger, and we
+  // re-home it into the slot whose neighbours' midpoints bracket the pointer.
+  // The visual offset is recomputed from the row's CURRENT in-flow slot every
+  // move, so a DOM reorder never makes the row jump or fight itself (the old
+  // reset-transform-on-swap approach stalled on the 2nd→1st move).
   function beginDrag(e, row) {
     if (st.revealed || st.done || drag) return;
     e.preventDefault();
     row.setPointerCapture?.(e.pointerId);
-    drag = { row, startY: e.clientY, dy: 0 };
+    const rect0 = row.getBoundingClientRect();
+    drag = { row, grabOffset: e.clientY - rect0.top, lastY: e.clientY, raf: 0 };
     row.classList.add('dragging');
-    const move = (ev) => {
+    const list = stage().querySelector('.order-list');
+    const scroller = stage();
+
+    // Re-home the row into the slot bracketed by neighbour midpoints, and track
+    // the finger from that (possibly new) in-flow slot. Others are measured
+    // in-flow (transform doesn't affect layout), so their positions already
+    // account for the dragged row's own slot.
+    const place = (y) => {
       if (!drag) return;
-      drag.dy = ev.clientY - drag.startY;
-      row.style.transform = `translateY(${drag.dy}px)`;
-      const list = stage().querySelector('.order-list');
-      const rows = [...list.querySelectorAll('.order-row')].filter((r) => r !== row);
-      const y = ev.clientY;
-      for (const other of rows) {
-        const rect = other.getBoundingClientRect();
-        const mid = rect.top + rect.height / 2;
-        const rowRect = row.getBoundingClientRect();
-        if (y > mid && rowRect.top < mid && other.nextSibling !== row) {
-          other.after(row);
-          drag.startY = ev.clientY - (drag.dy - rect.height * 0);
-          row.style.transform = '';
-          drag.startY = ev.clientY;
-          drag.dy = 0;
-        } else if (y < mid && rowRect.top > mid && other.previousSibling !== row) {
-          other.before(row);
-          row.style.transform = '';
-          drag.startY = ev.clientY;
-          drag.dy = 0;
-        }
+      const others = [...list.querySelectorAll('.order-row')].filter((r) => r !== row);
+      let before = null;
+      for (const other of others) {
+        const r = other.getBoundingClientRect();
+        if (y < r.top + r.height / 2) { before = other; break; }
       }
+      if (before) {
+        if (row.nextElementSibling !== before) list.insertBefore(row, before);
+      } else if (list.lastElementChild !== row) {
+        list.appendChild(row);
+      }
+      row.style.transform = 'none';
+      const slotTop = row.getBoundingClientRect().top;
+      row.style.transform = `translateY(${y - drag.grabOffset - slotTop}px)`;
     };
+
+    // Auto-scroll when the finger nears an edge, so long lists (hard/all) that
+    // overflow the viewport can be reordered end to end.
+    const EDGE = 56, SPEED = 12;
+    const tick = () => {
+      if (!drag) return;
+      const rect = scroller.getBoundingClientRect();
+      let dv = 0;
+      if (drag.lastY < rect.top + EDGE) dv = -SPEED;
+      else if (drag.lastY > rect.bottom - EDGE) dv = SPEED;
+      if (dv) {
+        const before = scroller.scrollTop;
+        scroller.scrollTop += dv;
+        if (scroller.scrollTop !== before) place(drag.lastY);
+      }
+      drag.raf = requestAnimationFrame(tick);
+    };
+
+    const move = (ev) => { if (drag) { drag.lastY = ev.clientY; place(ev.clientY); } };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
-      if (drag) { drag.row.style.transform = ''; drag.row.classList.remove('dragging'); drag = null; }
+      if (drag) { cancelAnimationFrame(drag.raf); drag.row.style.transform = ''; drag.row.classList.remove('dragging'); drag = null; }
     };
+    drag.raf = requestAnimationFrame(tick);
     window.addEventListener('pointermove', move, { signal });
     window.addEventListener('pointerup', up, { signal });
     window.addEventListener('pointercancel', up, { signal });
@@ -303,7 +326,7 @@ function orderMode(ctx, signal) {
       if (st.idx >= rounds.length) { st.idx = rounds.length; advance(); return; }
       ask();
     },
-    destroy() { drag = null; },
+    destroy() { if (drag) cancelAnimationFrame(drag.raf); drag = null; },
   };
 }
 
