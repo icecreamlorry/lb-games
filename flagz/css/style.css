@@ -168,16 +168,24 @@ button, button:hover, button:focus { box-shadow: none; }
 .flag-tile { position: relative; }
 .flag-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; transition: opacity 0.2s; }
 .flag-tile:active { transform: scale(0.97); }
+/* Right/wrong palette — used across every Flagz mode. Correctness is conveyed
+   by THREE non-colour cues as well as hue, so it stays legible for colour-blind
+   players: a solid fill vs a dashed border, a ✓ vs ✗ glyph, and (flags) a
+   pop vs shake. Text on the fills is white + bold, which clears AA contrast. */
+:root {
+  --ok-fill: #2e8f6b; --ok-edge: #16583f;
+  --bad-fill: #c23a54; --bad-edge: #ffd0d8;
+}
 /* When a round is graded, everything that isn't the answer/pick fades back. */
 .flag-grid.graded .flag-tile.dim { opacity: 0.28; }
 .flag-tile.ok {
-  border-color: #3fae72; background: color-mix(in srgb, #3fae72 22%, var(--panel));
-  box-shadow: 0 0 0 4px #3fae72, 0 0 22px 2px color-mix(in srgb, #3fae72 70%, transparent);
+  border: 3px solid var(--ok-edge); background: var(--ok-fill); padding: 9px;
+  box-shadow: 0 0 0 4px var(--ok-fill), 0 0 22px 2px color-mix(in srgb, var(--ok-fill) 80%, transparent);
   animation: flag-pop 0.4s ease-out;
 }
 .flag-tile.bad {
-  border-color: #e0455f; background: color-mix(in srgb, #e0455f 22%, var(--panel));
-  box-shadow: 0 0 0 4px #e0455f, 0 0 22px 2px color-mix(in srgb, #e0455f 70%, transparent);
+  border: 3px dashed var(--bad-edge); background: var(--bad-fill); padding: 9px;
+  box-shadow: 0 0 0 4px var(--bad-fill), 0 0 22px 2px color-mix(in srgb, var(--bad-fill) 80%, transparent);
   animation: flag-shake 0.42s ease-in-out;
 }
 /* Big ✓ / ✗ badge in the corner of the highlighted flag. */
@@ -188,8 +196,8 @@ button, button:hover, button:focus { box-shadow: none; }
   font-size: 1.05rem; font-weight: 700; color: #fff;
   border: 2px solid var(--panel); box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
-.flag-tile.ok::after { content: '✓'; background: #3fae72; }
-.flag-tile.bad::after { content: '✗'; background: #e0455f; }
+.flag-tile.ok::after { content: '✓'; background: var(--ok-edge); }
+.flag-tile.bad::after { content: '✗'; background: var(--bad-fill); }
 
 @keyframes flag-pop { 0% { transform: scale(0.9); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
 @keyframes flag-shake {
@@ -209,13 +217,13 @@ button, button:hover, button:focus { box-shadow: none; }
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .big-flag-wrap.ok .big-flag {
-  border-color: #3fae72;
-  box-shadow: 0 0 0 4px color-mix(in srgb, #3fae72 55%, transparent), 0 0 30px 4px color-mix(in srgb, #3fae72 55%, transparent);
+  border: 5px solid var(--ok-fill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok-fill) 60%, transparent), 0 0 30px 4px color-mix(in srgb, var(--ok-fill) 60%, transparent);
   animation: flag-pop 0.4s ease-out;
 }
 .big-flag-wrap.bad .big-flag {
-  border-color: #e0455f;
-  box-shadow: 0 0 0 4px color-mix(in srgb, #e0455f 55%, transparent), 0 0 30px 4px color-mix(in srgb, #e0455f 55%, transparent);
+  border: 5px dashed var(--bad-fill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad-fill) 60%, transparent), 0 0 30px 4px color-mix(in srgb, var(--bad-fill) 60%, transparent);
   animation: flag-shake 0.42s ease-in-out;
 }
 /* A bold pill banner over the flag so right/wrong is unmissable. */
@@ -233,18 +241,20 @@ button, button:hover, button:focus { box-shadow: none; }
   55% { transform: translateX(-50%) scale(1.06); opacity: 1; }
   100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
-.big-flag-wrap.ok::after { content: '✓ Correct'; background: #3fae72; }
-.big-flag-wrap.bad::after { content: '✗ Wrong'; background: #e0455f; }
+.big-flag-wrap.ok::after { content: '✓ Correct'; background: var(--ok-fill); }
+.big-flag-wrap.bad::after { content: '✗ Wrong'; background: var(--bad-fill); }
 
-.options-list.graded .option-btn.dim, #options-list .option-btn.dim { opacity: 0.4; }
+#options-list .option-btn.dim { opacity: 0.4; }
 .option-btn.good {
-  border-color: #3fae72; color: #fff; font-weight: 700;
-  background: #3fae72; box-shadow: 0 0 0 2px color-mix(in srgb, #3fae72 55%, transparent);
+  border: 2px solid var(--ok-edge); color: #fff; font-weight: 700;
+  background: var(--ok-fill);
 }
 .option-btn.wrong {
-  border-color: #e0455f; color: #fff; font-weight: 700;
-  background: #e0455f; box-shadow: 0 0 0 2px color-mix(in srgb, #e0455f 55%, transparent);
+  border: 2px dashed var(--bad-edge); color: #fff; font-weight: 700;
+  background: var(--bad-fill);
 }
+.option-btn.good::before { content: '✓ '; }
+.option-btn.wrong::before { content: '✗ '; }
 
 /* Ordering modes: draggable vertical list */
 .order-list { display: flex; flex-direction: column; gap: 8px; width: min(480px, 100%); margin: auto 0; padding: 6px 0; }
@@ -256,15 +266,19 @@ button, button:hover, button:focus { box-shadow: none; }
   position: relative;
 }
 .order-row.dragging { z-index: 5; opacity: 0.92; box-shadow: 0 10px 24px rgba(0,0,0,0.3); cursor: grabbing; }
-.order-grip { color: color-mix(in srgb, var(--cyan) 45%, transparent); font-size: 1rem; }
+.order-grip { color: color-mix(in srgb, var(--cyan) 45%, transparent); font-size: 1rem; font-weight: 700; width: 1.1em; text-align: center; flex: 0 0 auto; }
 .order-flag { width: 72px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
 .order-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.82rem; color: var(--cyan); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .order-val { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 60%, transparent); white-space: nowrap; }
-.order-row.good { border-color: #3fae72; }
-.order-row.wrong { border-color: #d4586d; }
+/* Graded rows fill solid; wrong gets a dashed edge + ✗ (from the grip), right a
+   solid edge + ✓, so the state reads without relying on colour. */
+.order-row.good { background: var(--ok-fill); border: 2px solid var(--ok-edge); }
+.order-row.wrong { background: var(--bad-fill); border: 2px dashed var(--bad-edge); }
+.order-row.good .order-name, .order-row.good .order-val, .order-row.good .order-grip,
+.order-row.wrong .order-name, .order-row.wrong .order-val, .order-row.wrong .order-grip { color: #fff; }
 .order-want {
   font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.72rem;
-  color: #d4586d; flex: 0 0 auto;
+  color: #fff; background: rgba(0,0,0,0.28); border-radius: 999px; padding: 2px 8px; flex: 0 0 auto;
 }
 
 /* End-of-game review */
@@ -275,18 +289,16 @@ button, button:hover, button:focus { box-shadow: none; }
 }
 .review-row {
   display: flex; align-items: center; gap: 10px;
-  background: var(--panel); border: 1.5px solid color-mix(in srgb, var(--cyan) 15%, transparent);
-  border-left-width: 4px;
+  background: var(--panel); border: 2px solid color-mix(in srgb, var(--cyan) 15%, transparent);
   border-radius: var(--item-radius); padding: 6px 10px;
 }
-.review-row.good { border-left-color: #3fae72; }
-.review-row.wrong { border-left-color: #d4586d; }
+.review-row.good { background: var(--ok-fill); border: 2px solid var(--ok-edge); }
+.review-row.wrong { background: var(--bad-fill); border: 2px dashed var(--bad-edge); }
 .review-flag { width: 52px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; flex: 0 0 auto; }
 .review-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.76rem; color: var(--cyan); flex: 1 1 auto; }
-.review-pick { font-size: 0.64rem; color: #d4586d; }
-.review-mark { font-weight: 700; }
-.review-row.good .review-mark { color: #3fae72; }
-.review-row.wrong .review-mark { color: #d4586d; }
+.review-row.good .review-name, .review-row.wrong .review-name { color: #fff; }
+.review-pick { font-size: 0.64rem; color: #ffe0e6; }
+.review-mark { font-weight: 700; font-size: 1rem; color: #fff; }
 
 /* ---- Mode panels (foot) ---- */
 .play-foot { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px calc(env(safe-area-inset-bottom, 0px) + 10px); align-items: center; flex: 0 0 auto; }

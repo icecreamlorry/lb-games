@@ -186,10 +186,33 @@ function orderMode(ctx, signal) {
     return [...stage().querySelectorAll('.order-row')].map((r) => r.dataset.id);
   }
 
-  function valueLine(iso) {
-    if (mode === 'headcount') return `${fmtBig(C[iso].pop)} people`;
-    if (mode === 'landmass') return `${fmtBig(C[iso].area)} km²`;
-    return '';
+  const rawVal = (iso) => (mode === 'headcount' ? C[iso].pop : C[iso].area);
+  const unit = mode === 'headcount' ? ' people' : ' km²';
+  const compact = (n, dp) => {
+    if (n >= 1e9) return `${(n / 1e9).toFixed(dp)}B`;
+    if (n >= 1e6) return `${(n / 1e6).toFixed(dp)}M`;
+    if (n >= 1e3) return `${(n / 1e3).toFixed(dp)}k`;
+    return String(n);
+  };
+  // Per-round display map. Use the fewest decimals that still tell every
+  // DISTINCT value apart (so two countries never look identical when they
+  // aren't); fall back to exact figures if even 3 decimals collide. Equal
+  // values keep the same string and stay interchangeable when grading.
+  function roundDisplay(ids) {
+    for (const dp of [1, 2, 3]) {
+      const m = {};
+      for (const iso of ids) m[iso] = compact(rawVal(iso), dp) + unit;
+      let clash = false;
+      for (let i = 0; i < ids.length && !clash; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          if (rawVal(ids[i]) !== rawVal(ids[j]) && m[ids[i]] === m[ids[j]]) { clash = true; break; }
+        }
+      }
+      if (!clash) return m;
+    }
+    const m = {};
+    for (const iso of ids) m[iso] = rawVal(iso).toLocaleString() + unit;
+    return m;
   }
 
   function ask() {
@@ -282,11 +305,14 @@ function orderMode(ctx, signal) {
     ctx.onProgress({ outcomes: st.outcomes });
     st.revealed = true;
     const rows = stage().querySelectorAll('.order-row');
+    const disp = mode === 'atoz' ? null : roundDisplay(placed);
     placed.forEach((iso, i) => {
       const row = rows[i];
       row.classList.add(ok[i] ? 'good' : 'wrong');
+      // The grip becomes a ✓/✗ so right/wrong reads without relying on colour.
+      row.querySelector('.order-grip').textContent = ok[i] ? '✓' : '✗';
       row.querySelector('.order-name').textContent = C[iso].name;
-      row.querySelector('.order-val').textContent = valueLine(iso);
+      row.querySelector('.order-val').textContent = disp ? disp[iso] : '';
     });
     const got = ok.filter(Boolean).length;
     // Show where each flag should have gone when the round went poorly.
