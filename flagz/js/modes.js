@@ -125,7 +125,10 @@ function pickMode(ctx, signal) {
         setPrompt('Whose flag is this?', progress);
         const list = $('options-list');
         list.innerHTML = '';
-        for (const iso of round.options) {
+        // Show the name choices alphabetically so they're easy to scan (the
+        // seeded order only needs to decide WHICH names appear, not their order).
+        const names = round.options.slice().sort((a, b) => C[a].name.localeCompare(C[b].name));
+        for (const iso of names) {
           const b = document.createElement('button');
           b.className = 'option-btn';
           b.dataset.id = iso;
