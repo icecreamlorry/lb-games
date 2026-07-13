@@ -33,8 +33,9 @@ function setPrompt(main, sub = '') {
 
 function stage() { return $('flag-stage'); }
 
-function flagImg(iso, cls = '') {
-  return `<img class="${cls}" src="${flagUrl(iso)}" alt="" draggable="false">`;
+// `square` (Switzerland, Vatican) renders the 1:1 flag un-stretched via .sq.
+function flagImg(iso, cls = '', square = false) {
+  return `<img class="${cls}${square ? ' sq' : ''}" src="${flagUrl(iso)}" alt="" draggable="false">`;
 }
 
 export function createMode(modeId, ctx) {
@@ -112,13 +113,13 @@ function pickMode(ctx, signal) {
       hidePanels();
       setPrompt(C[round.answer].name, `Tap its flag · ${progress}`);
       stage().innerHTML = `<div class="flag-grid n${Math.min(round.options.length, 12)}">`
-        + round.options.map((iso) => `<button class="flag-tile" data-id="${iso}">${flagImg(iso)}</button>`).join('')
+        + round.options.map((iso) => `<button class="flag-tile" data-id="${iso}">${flagImg(iso, '', C[iso].square)}</button>`).join('')
         + '</div>';
       for (const b of stage().querySelectorAll('.flag-tile')) {
         b.addEventListener('click', () => { if (!st.grading) grade(b.dataset.id); }, { signal });
       }
     } else {
-      stage().innerHTML = `<div class="big-flag-wrap">${flagImg(round.answer, 'big-flag')}</div>`;
+      stage().innerHTML = `<div class="big-flag-wrap">${flagImg(round.answer, 'big-flag', C[round.answer].square)}</div>`;
       if (mode === 'lineup') {
         showPanel('panel-options');
         setPrompt('Whose flag is this?', progress);
@@ -224,7 +225,7 @@ function orderMode(ctx, signal) {
     btn.disabled = false;
     stage().innerHTML = `<div class="order-list">`
       + round.ids.map((iso) => `<div class="order-row" data-id="${iso}">`
-        + `<span class="order-grip">⠿</span>${flagImg(iso, 'order-flag')}<span class="order-name"></span><span class="order-val"></span></div>`).join('')
+        + `<span class="order-grip">⠿</span>${flagImg(iso, 'order-flag', C[iso].square)}<span class="order-name"></span><span class="order-val"></span></div>`).join('')
       + '</div>';
     for (const row of stage().querySelectorAll('.order-row')) {
       row.addEventListener('pointerdown', (e) => beginDrag(e, row), { signal });
@@ -370,7 +371,7 @@ export function renderReview(data, mode, result) {
   if (!isOrderMode(mode)) {
     el.innerHTML = '<div class="review-list">' + (result.outcomes || []).map((o) => {
       const pickName = o.ok ? '' : `<span class="review-pick">you: ${esc(o.pick && C[o.pick] ? C[o.pick].name : '—')}</span>`;
-      return `<div class="review-row ${o.ok ? 'good' : 'wrong'}">${flagImg(o.id, 'review-flag')}`
+      return `<div class="review-row ${o.ok ? 'good' : 'wrong'}">${flagImg(o.id, 'review-flag', C[o.id]?.square)}`
         + `<span class="review-name">${esc(C[o.id]?.name || o.id)}</span>${pickName}`
         + `<span class="review-mark">${o.ok ? '✓' : '✗'}</span></div>`;
     }).join('') + '</div>';
@@ -379,7 +380,7 @@ export function renderReview(data, mode, result) {
 
   el.innerHTML = '<div class="review-list">' + (result.outcomes || []).map((o, r) => {
     const rows = (o.ids || []).map((iso, i) => `<div class="review-row ${o.ok?.[i] ? 'good' : 'wrong'}">`
-      + `${flagImg(iso, 'review-flag')}<span class="review-name">${esc(C[iso]?.name || iso)}</span>`
+      + `${flagImg(iso, 'review-flag', C[iso]?.square)}<span class="review-name">${esc(C[iso]?.name || iso)}</span>`
       + `<span class="review-mark">${o.ok?.[i] ? '✓' : '✗'}</span></div>`).join('');
     return `<div class="review-round"><div class="review-round-label">Round ${r + 1}</div>${rows}</div>`;
   }).join('') + '</div>';

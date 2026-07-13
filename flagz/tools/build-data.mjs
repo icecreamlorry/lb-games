@@ -110,6 +110,11 @@ function loadNE() {
 // the Atlaz maps (Somaliland → Somalia, N. Cyprus → Cyprus).
 const ABSORB = { SO: ['SOL'], CY: ['CYN'] };
 
+// The two square national flags. flag-icons' 4x3 renders stretch them into a
+// rectangle, so we ship the true 1:1 art and mark them square (the game shows
+// them un-stretched — see .sq in flagz/css/style.css).
+const SQUARE = new Set(['CH', 'VA']);
+
 const EARTH_R_KM = 6371.0088;
 function areaKm2(geom) {
   // geoArea returns steradians for GeoJSON objects (spherical polygons).
@@ -169,9 +174,12 @@ for (const a2 of world) {
     area: Math.round(area),
   };
   if (over.alt?.length) entry.alt = over.alt;
+  if (SQUARE.has(a2)) entry.square = true;
   countries[a2] = entry;
 
-  const src = join(flagSrc, `${a2.toLowerCase()}.svg`);
+  // Square flags come from the 1x1 art (a sibling of the 4x3 folder).
+  const dir = SQUARE.has(a2) ? join(flagSrc, '..', '1x1') : flagSrc;
+  const src = join(dir, `${a2.toLowerCase()}.svg`);
   if (existsSync(src)) copyFileSync(src, join(DATA, 'flags', `${a2.toLowerCase()}.svg`));
   else missingFlags.push(a2);
 }

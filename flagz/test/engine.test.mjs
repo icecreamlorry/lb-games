@@ -152,6 +152,9 @@ const REGION = 'AA BB CC DD EE FF GG HH II JJ KK LL MM NN OO PP'.split(' ');
   ok(data.countries.CN.pop > data.countries.DE.pop, 'China outpopulates Germany');
   ok(data.countries.RU.area > data.countries.FR.area, 'Russia larger than France');
   ok(data.countries.VA.area <= 2, 'Vatican tiny');
+  // The two square flags are flagged so the UI renders them un-stretched.
+  ok(data.countries.CH.square === true, 'Switzerland marked square');
+  ok(data.countries.VA.square === true, 'Vatican marked square');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

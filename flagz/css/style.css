@@ -167,6 +167,9 @@ button, button:hover, button:focus { box-shadow: none; }
 }
 .flag-tile { position: relative; }
 .flag-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; transition: opacity 0.2s; }
+/* Square flags (Switzerland, Vatican) are shown un-stretched — contained in the
+   same slot so layout stays even, with the tile/row colour showing at the sides. */
+.flag-tile img.sq { object-fit: contain; }
 .flag-tile:active { transform: scale(0.97); }
 /* Right/wrong palette — used across every Flagz mode. Correctness is conveyed
    by THREE non-colour cues as well as hue, so it stays legible for colour-blind
@@ -216,6 +219,8 @@ button, button:hover, button:focus { box-shadow: none; }
   background: var(--panel);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
+/* A square flag shown large: a true 1:1 square rather than a 4:3 letterbox. */
+.big-flag.sq { width: min(320px, 74%); aspect-ratio: 1 / 1; object-fit: contain; }
 .big-flag-wrap.ok .big-flag {
   border: 5px solid var(--ok-fill);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok-fill) 60%, transparent), 0 0 30px 4px color-mix(in srgb, var(--ok-fill) 60%, transparent);
@@ -268,6 +273,7 @@ button, button:hover, button:focus { box-shadow: none; }
 .order-row.dragging { z-index: 5; opacity: 0.92; box-shadow: 0 10px 24px rgba(0,0,0,0.3); cursor: grabbing; }
 .order-grip { color: color-mix(in srgb, var(--cyan) 45%, transparent); font-size: 1rem; font-weight: 700; width: 1.1em; text-align: center; flex: 0 0 auto; }
 .order-flag { width: 72px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
+.order-flag.sq { object-fit: contain; }
 .order-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.82rem; color: var(--cyan); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .order-val { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 60%, transparent); white-space: nowrap; }
 /* Graded rows fill solid; wrong gets a dashed edge + ✗ (from the grip), right a
@@ -295,6 +301,7 @@ button, button:hover, button:focus { box-shadow: none; }
 .review-row.good { background: var(--ok-fill); border: 2px solid var(--ok-edge); }
 .review-row.wrong { background: var(--bad-fill); border: 2px dashed var(--bad-edge); }
 .review-flag { width: 52px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 3px; flex: 0 0 auto; }
+.review-flag.sq { object-fit: contain; }
 .review-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.76rem; color: var(--cyan); flex: 1 1 auto; }
 .review-row.good .review-name, .review-row.wrong .review-name { color: #fff; }
 .review-pick { font-size: 0.64rem; color: #ffe0e6; }
