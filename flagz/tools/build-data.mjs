@@ -91,6 +91,10 @@ const COUNTRY_NAMES = {
   KG: { name: 'Kyrgyzstan', alt: ['kyrgyz republic'] },
   MV: { name: 'Maldives', alt: [] },
   LK: { name: 'Sri Lanka', alt: ['ceylon'] },
+  // Shorten the formal titles Natural Earth uses to the everyday names.
+  CN: { name: 'China', alt: ['peoples republic of china', 'prc'] },
+  BS: { name: 'Bahamas', alt: ['the bahamas'] },
+  GM: { name: 'Gambia', alt: ['the gambia'] },
 };
 
 // ---- Load Natural Earth -------------------------------------------------------

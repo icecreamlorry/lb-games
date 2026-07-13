@@ -89,6 +89,7 @@ const REGION = 'AA BB CC DD EE FF GG HH II JJ KK LL MM NN OO PP'.split(' ');
 
 {
   eq(normalizeAnswer("Côte d'Ivoire!"), 'cote divoire', 'normalization');
+  eq(normalizeAnswer('The Bahamas'), 'bahamas', 'leading The dropped');
   const idx = buildAnswerIndex([
     { id: 'US', name: 'United States', alt: ['usa'] },
     { id: 'KP', name: 'North Korea', alt: ['dprk'] },

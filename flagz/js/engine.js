@@ -123,6 +123,7 @@ export function normalizeAnswer(s) {
     .replace(/[^a-z0-9]+/g, ' ')
     .trim().replace(/\s+/g, ' ');
   t = t.replace(/^st /, 'saint ').replace(/ st /g, ' saint ');
+  t = t.replace(/^the /, ''); // "the bahamas" == "bahamas"
   return t;
 }
 
