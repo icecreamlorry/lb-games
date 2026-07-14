@@ -267,8 +267,10 @@ button, button:hover, button:focus { box-shadow: none; }
 .order-list { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: min(480px, 100%); margin: auto 0; padding: 6px 0; }
 .order-row { width: calc(100% - 56px); }
 /* Once graded the results are fixed — no more dragging — so the row reclaims
-   the scroll gutter and spans the full width to give long names all the room. */
-.order-row.good, .order-row.wrong { width: 100%; }
+   the scroll gutter and spans the full width to give long names all the room,
+   and touch-action goes back to auto so grabbing a row scrolls the (now full-
+   width) list rather than being swallowed by the drag handler. */
+.order-row.good, .order-row.wrong { width: 100%; touch-action: auto; cursor: default; }
 .order-row {
   display: flex; align-items: center; gap: 10px;
   background: var(--panel); border: 2px solid color-mix(in srgb, var(--cyan) 22%, transparent);
