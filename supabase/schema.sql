@@ -135,7 +135,16 @@ create policy "players can remove push subs" on push_subscriptions
 
 grant select, insert, update on table rooms to anon, authenticated;
 grant select, insert on table moves to anon, authenticated;
+-- Deliberately NO full select for players on push_subscriptions: rows hold
+-- other devices' push auth keys. Consequences:
+--   • clients cannot UPSERT here (Postgres runs upsert as INSERT … ON
+--     CONFLICT DO UPDATE, which needs SELECT on every column referenced via
+--     EXCLUDED) — savePushSubscription in shared/rooms.js does
+--     delete-then-insert instead;
+--   • the endpoint COLUMN alone is select-granted, because any
+--     DELETE/UPDATE … WHERE endpoint = … must read that column.
 grant insert, update, delete on table push_subscriptions to anon, authenticated;
+grant select (endpoint) on table push_subscriptions to anon, authenticated;
 
 -- The notify Edge Function runs as the service role. service_role has
 -- BYPASSRLS but that does NOT bypass table privileges, and tables created via

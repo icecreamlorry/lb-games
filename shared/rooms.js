@@ -224,9 +224,19 @@ export async function savePushSubscription(subscription, { userId = null, roomCo
   const row = userId
     ? { user_id: userId, room_code: null, player: null, game, endpoint: subscription.endpoint, subscription }
     : { user_id: null, room_code: roomCode, player, game, endpoint: subscription.endpoint, subscription };
-  const { error } = await supabase()
-    .from('push_subscriptions')
-    .upsert(row, { onConflict: 'endpoint', returning: 'minimal' });
+  // NOT an upsert: Postgres runs upsert as INSERT … ON CONFLICT DO UPDATE,
+  // which needs SELECT privilege to read the conflicting row — and this table
+  // deliberately grants anon/authenticated no SELECT (rows hold other devices'
+  // push auth keys), so re-subscribing a device that already had a row failed
+  // with "permission denied". Delete any previous row for this device, then
+  // insert the fresh one; both are covered by the existing grants/policies.
+  const db = supabase();
+  const del = await db.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+  if (del.error) {
+    logError('savePushSubscription failed (clearing old row):', del.error.message || del.error);
+    throw del.error;
+  }
+  const { error } = await db.from('push_subscriptions').insert(row);
   if (error) {
     logError('savePushSubscription failed:', error.message || error);
     throw error;
