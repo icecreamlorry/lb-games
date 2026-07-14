@@ -10,7 +10,7 @@ import {
 import { createRematch } from '../../shared/rematch.js';
 import { openHistory } from '../../shared/history.js';
 import {
-  currentUser, onAuthChange, displayName, signOut,
+  cachedUser, onAuthChange, displayName, signOut,
 } from '../../shared/auth.js';
 import { TWO_LETTER_WORDS } from './words2.js';
 import { loadDictionary, checkWords } from './dictionary.js';
@@ -1471,11 +1471,15 @@ async function boot() {
     landingError('Setup needed: paste your Supabase anon key into js/config.js (see README).');
     $('btn-create').disabled = true;
     $('btn-join').disabled = true;
+    window.LBBoot?.done();
     return;
   }
 
-  // Restore any existing login before deciding which screen to show.
-  app.user = await currentUser();
+  // The locally cached session (synchronous, no network round trip) decides
+  // which screen to show; onAuthChange delivers the authoritative session.
+  // The boot veil stays up until the route — including a room resume — is
+  // settled, so nothing flashes and reconfigures.
+  app.user = cachedUser();
   app.userId = app.user?.id ?? null;
   if (app.user) app.name = displayName(app.user);
   applyAuthToUI();
@@ -1486,6 +1490,7 @@ async function boot() {
 
   // React to later sign-in/out, including magic-link return.
   onAuthChange(handleAuthChange);
+  window.LBBoot?.done();
 }
 
 boot();

@@ -7,6 +7,22 @@
   <link rel="icon" type="image/svg+xml" href="../favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="../shared/shared.css">
+  <script>
+    // Configures the shared account layer (account-ui.js) for this game.
+    // Lives in <head> (like every other game) so theme-boot.js and boot.js
+    // can read it before first paint.
+    window.LB_CONFIG = {
+      gameSlug:      'chromagrid',
+      gameName:      'Chromagrid',
+      gameoverEvent: 'chromagrid:gameover',
+      nameKey:       'chromagrid.name',
+      guestIdKey:    'chromagrid.guestId',
+      history:       true,
+      daily:         true,
+      defaultTheme:  'synth',
+    };
+  </script>
+  <script src="../shared/theme-boot.js"></script>
   <style>
     body {
       background-color: var(--dark);
@@ -811,6 +827,9 @@
 </head>
 <body>
 
+  <!-- Boot veil + pre-paint auth hint (lifted by the boot code via LBBoot.done()) -->
+  <script src="../shared/boot.js"></script>
+
   <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
   <section id="screen-lobby" class="screen hidden"></section>
 
@@ -1008,18 +1027,7 @@
     </div>
   </div>
 
-  <script>
-    window.LB_CONFIG = {
-      gameSlug:      'chromagrid',
-      gameName:      'Chromagrid',
-      gameoverEvent: 'chromagrid:gameover',
-      nameKey:       'chromagrid.name',
-      guestIdKey:    'chromagrid.guestId',
-      history:       true,
-      daily:         true,
-      defaultTheme:  'synth',
-    };
-  </script>
+  <!-- window.LB_CONFIG is defined in <head> so pre-paint scripts can use it. -->
   <script type="module" src="../shared/lobby-ui.js"></script>
   <script type="module" src="../shared/account-ui.js"></script>
 
@@ -2286,7 +2294,7 @@
     } from './js/net.js';
     import { GAME_SLUG, configReady } from './js/config.js';
     import { createRematch } from '../shared/rematch.js';
-    import { currentUser, onAuthChange, displayName } from '../shared/auth.js';
+    import { cachedUser, onAuthChange, displayName } from '../shared/auth.js';
     import { openHistory } from '../shared/history.js';
     import { filterDismissed, dismissGame, makeDismissControl } from '../shared/dismissed-games.js';
     import { getGuestName } from '../shared/guest-name.js';
@@ -2752,24 +2760,28 @@
 
     async function tryResume() {
       const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) return;
+      if (!raw) return false;
       try {
         const { code, name } = JSON.parse(raw);
         const { room, playerIndex } = await joinRoom(code, name, app.userId);
         await enterRoom(code, playerIndex, name, room);
-      } catch { sessionStorage.removeItem(SESSION_KEY); }
+        return true;
+      } catch { sessionStorage.removeItem(SESSION_KEY); return false; }
     }
 
     async function boot() {
       window.LB_CONFIG.onChallengeFriend = challengeFriend;
-      if (!configReady()) return; // Supabase key missing — solo play still works.
-      try { app.user = await currentUser(); } catch {}
+      if (!configReady()) { window.LBBoot?.done(); return; } // Supabase key missing — solo play still works.
+      // Cached session (sync, no network) decides the initial screen; the
+      // boot veil stays up until the route — including a resume — is settled.
+      app.user = cachedUser();
       app.userId = app.user?.id ?? null;
       app.name = playerName();
       $('btn-go-lobby')?.classList.toggle('hidden', !app.user);
-      if (app.user) showLobby();
       onAuthChange(onAuth);
-      tryResume();
+      const resumed = await tryResume();
+      if (!resumed && app.user) showLobby();
+      window.LBBoot?.done();
     }
 
     // Expose a couple of helpers for headless verification.

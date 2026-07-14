@@ -14,7 +14,7 @@ import {
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
-import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
+import { cachedUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { openHistory } from '../../shared/history.js';
 import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
@@ -903,13 +903,16 @@ async function boot() {
   // Feed the game-specific challenge action into the shared friends dialog.
   window.LB_CONFIG.onChallengeFriend = challengeFriend;
   if (!configReady()) { landingError('Backend not configured.'); }
-  try { app.user = await currentUser(); } catch {}
+  // Cached session (sync, no network) decides the initial screen; the boot
+  // veil stays up until the route — including a room resume — is settled.
+  app.user = cachedUser();
   app.userId = app.user?.id ?? null;
   app.name = playerName();
   onAuthChange(onAuth);
 
   const resumed = await tryResume();
   if (!resumed) onAuth(app.user);
+  window.LBBoot?.done();
 }
 
 boot();

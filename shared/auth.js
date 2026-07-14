@@ -15,6 +15,25 @@ export async function currentUser() {
   return data?.user ?? null;
 }
 
+// Synchronous read of the locally cached session's user — no client init, no
+// network — so pages can paint the right signed-in/out layout immediately
+// instead of flashing the guest UI and reconfiguring. Optimistic: if the
+// cached token turns out to be unrefreshable, onAuthChange fires with null
+// and the UI corrects itself. (shared/boot.js does this same read in
+// classic-script form for pre-paint work; keep the two in sync.)
+export function cachedUser() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^sb-.+-auth-token$/.test(k)) {
+        const s = JSON.parse(localStorage.getItem(k));
+        return s?.user ?? s?.currentSession?.user ?? null;
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export async function currentSession() {
   const { data } = await supabase().auth.getSession();
   return data?.session ?? null;

@@ -7,7 +7,7 @@
 // under /lb-games/.
 
 import {
-  currentSession, onAuthChange, displayName,
+  cachedUser, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut,
 } from './auth.js';
 import { configReady } from './supabase-config.js';
@@ -118,14 +118,14 @@ function wire() {
 }
 
 async function init() {
-  // Markup is already in the page (no injection, so nothing pops in late).
+  // Markup is already in the page, and an inline script has already swapped
+  // the bar to the right variant pre-paint (via boot.js's data-auth stamp).
+  // Seed from the same cached session so our first render agrees with it;
+  // the authoritative session arrives via onAuthChange (INITIAL_SESSION).
+  user = cachedUser();
   wire();
   render();
   if (!configReady()) return;
-  // Read the cached session (local, no network round-trip) so a signed-in
-  // visitor's bar resolves immediately rather than flipping from guest.
-  try { user = (await currentSession())?.user ?? null; } catch {}
-  render();
   onAuthChange(u => { user = u; render(); });
 }
 

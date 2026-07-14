@@ -58,7 +58,12 @@ async function newPage(browser, base, { signedIn }) {
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await ctx.addInitScript(([user, rooms]) => {
     localStorage.setItem('lbgames.name', 'Alice');
-    if (user) { globalThis.__TEST_USER = user; globalThis.__TEST_MYROOMS = rooms; }
+    if (user) {
+      globalThis.__TEST_USER = user; globalThis.__TEST_MYROOMS = rooms;
+      // The real supabase-js persists the session here (persistSession: true);
+      // shared/boot.js + auth.cachedUser() read it to route before paint.
+      localStorage.setItem('sb-test-auth-token', JSON.stringify({ access_token: 'tok', user }));
+    }
   }, [signedIn ? USER : null, SEED_ROOMS]);
   const page = await ctx.newPage();
   const errs = [];

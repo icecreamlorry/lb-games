@@ -13,6 +13,13 @@
 //                                 is { code, status, players: [{seat,name,userId}],
 //                                      invited_user_id, … }
 //
+// Signed-in tests must ALSO seed the persisted-session key the real
+// supabase-js writes (shared/boot.js + auth.cachedUser() read it to route
+// before first paint):
+//
+//   localStorage.setItem('sb-test-auth-token',
+//     JSON.stringify({ access_token: 'tok', user: <same as __TEST_USER> }));
+//
 // Leave them unset for the anonymous-guest flow (getUser → null, my_rooms → []).
 
 const DB = (globalThis.__DB = globalThis.__DB || { rooms: new Map(), moves: [] });
@@ -87,7 +94,11 @@ export function createClient() {
         return { data: { session: user ? { user } : null }, error: null };
       },
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
-      signOut: async () => { globalThis.__TEST_USER = null; return { error: null }; },
+      signOut: async () => {
+        globalThis.__TEST_USER = null;
+        try { localStorage.removeItem('sb-test-auth-token'); } catch {}
+        return { error: null };
+      },
     },
     from: (t) => builder(t),
     rpc: async (name) => (name === 'my_rooms'

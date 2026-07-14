@@ -188,6 +188,10 @@
 </head>
 <body>
 
+  <!-- Stamps <html data-auth> from the cached session before paint (no veil
+       here — the landing has no game data to load, only the account bar). -->
+  <script src="shared/boot.js"></script>
+
   <header class="site-header">
     <div class="site-title">LB GAMES</div>
     <div class="site-sub">// SELECT GAME //</div>
@@ -207,6 +211,20 @@
       Log in to play across devices, add friends and keep your scores — or just pick a guest name to get going.
     </p>
   </div>
+  <script>
+    // Pre-paint: swap the account bar to its signed-in variant using the
+    // cached session boot.js read above, so a logged-in visitor never sees
+    // the guest bar flash in. landing-account.js takes over from here.
+    (function () {
+      if (document.documentElement.dataset.auth !== 'in') return;
+      document.getElementById('lb-acct-guest').classList.add('hidden');
+      document.getElementById('lb-acct-hint').classList.add('hidden');
+      document.getElementById('lb-acct-user').classList.remove('hidden');
+      var u = (window.LBBoot || {}).user || {};
+      var n = (u.user_metadata && u.user_metadata.display_name) || (u.email || '').split('@')[0];
+      if (n) document.getElementById('lb-acct-name').textContent = n;
+    })();
+  </script>
 
   <div id="lb-theme" class="lb-theme"></div>
 

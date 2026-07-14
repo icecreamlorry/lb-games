@@ -16,7 +16,7 @@ import {
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
-import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
+import { cachedUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { openHistory } from '../../shared/history.js';
 import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
@@ -699,17 +699,22 @@ async function boot() {
   window.addEventListener('scroll', () => {
     if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
   });
-  try { app.data = await loadData(); } catch (e) { landingError(`Could not load country data (${e.message}).`); return; }
+  try { app.data = await loadData(); } catch (e) { landingError(`Could not load country data (${e.message}).`); window.LBBoot?.done(); return; }
   buildCfgButtons();
   loadCfg();
   if (!configReady()) landingError('Backend not configured.');
-  try { app.user = await currentUser(); } catch {}
+  // The locally cached session (synchronous — no network round trip) decides
+  // the initial screen; onAuthChange delivers the authoritative session and
+  // corrects the rare stale cache. The boot veil stays up until the route —
+  // including a room resume — is settled, so nothing flashes and reconfigures.
+  app.user = cachedUser();
   app.userId = app.user?.id ?? null;
   app.name = playerName();
   onAuthChange(onAuth);
 
   const resumed = await tryResume();
   if (!resumed) onAuth(app.user);
+  window.LBBoot?.done();
 }
 
 $('help-modal')?.addEventListener('click', (e) => { if (e.target === $('help-modal')) $('help-modal').classList.add('hidden'); });

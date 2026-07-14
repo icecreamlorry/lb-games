@@ -23,7 +23,7 @@
 // All of those are accessed with null-guards so future games can omit them.
 
 import {
-  currentUser, onAuthChange, displayName,
+  cachedUser, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut, setDisplayName,
   resetPasswordForEmail, updatePassword, onPasswordRecovery,
 } from './auth.js';
@@ -784,16 +784,16 @@ async function init() {
       'One account works across ' + cfg().gameName + ' and every other LB Games title — no separate sign-up.';
   }
 
+  // Seed from the locally cached session (synchronous, no network) so the
+  // very first render already shows the right signed-in/out state instead of
+  // flashing "Playing as a guest" and reconfiguring. The authoritative
+  // session arrives via onAuthChange (Supabase fires INITIAL_SESSION once the
+  // client has initialised), where onUser also loads the profile + badge.
+  app.user = cachedUser();
+  if (app.user) app.name = displayName(app.user);
+
   wire();
   renderAccount();
-
-  try { app.user = await currentUser(); } catch {}
-  renderAccount();
-
-  if (app.user) {
-    try { app.profile = await ensureProfile(displayName(app.user)); } catch {}
-    refreshRequestBadge();
-  }
 
   onAuthChange(onUser);
   onPasswordRecovery(() => { closeAllModals(); openAuth('newpassword'); });

@@ -13,7 +13,7 @@ import {
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { configReady, GAME_SLUG } from './config.js';
-import { currentUser, onAuthChange, displayName } from '../../shared/auth.js';
+import { cachedUser, onAuthChange, displayName } from '../../shared/auth.js';
 import { openHistory } from '../../shared/history.js';
 import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
@@ -963,26 +963,33 @@ function winnerSeat(scores) {
 
 async function tryResume() {
   const raw = sessionStorage.getItem(SESSION_KEY);
-  if (!raw) return;
+  if (!raw) return false;
   try {
     const { code, name } = JSON.parse(raw);
     const { room, playerIndex } = await joinRoom(code, name, app.userId);
     await enterRoom(code, playerIndex, name, room);
-  } catch { sessionStorage.removeItem(SESSION_KEY); }
+    return true;
+  } catch { sessionStorage.removeItem(SESSION_KEY); return false; }
 }
 
 async function boot() {
   registerServiceWorker();
   // Feed the game-specific challenge action into the shared friends dialog.
   window.LB_CONFIG.onChallengeFriend = challengeFriend;
-  if (!configReady()) { landingError('Setup needed: Supabase key missing.'); return; }
-  try { app.user = await currentUser(); } catch {}
+  if (!configReady()) { landingError('Setup needed: Supabase key missing.'); window.LBBoot?.done(); return; }
+  // Cached session (sync, no network) decides the initial screen; the boot
+  // veil stays up until the route — including a room resume — is settled,
+  // so the page never shows the lobby and then jumps into a resumed game.
+  app.user = cachedUser();
   app.userId = app.user?.id ?? null;
   app.name = playerName();
   $('btn-go-lobby').classList.toggle('hidden', !app.user);
-  if (app.user) { showScreen('lobby'); renderLobby(); } else showScreen('landing');
   onAuthChange(onAuth);
-  tryResume();
+  const resumed = await tryResume();
+  if (!resumed) {
+    if (app.user) { showScreen('lobby'); renderLobby(); } else showScreen('landing');
+  }
+  window.LBBoot?.done();
 }
 
 // Close the help modal on backdrop / close button (account-ui wires its own
