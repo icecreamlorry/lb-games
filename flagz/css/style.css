@@ -266,6 +266,9 @@ button, button:hover, button:focus { box-shadow: none; }
    you can touch to scroll the list without accidentally grabbing a row. */
 .order-list { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: min(480px, 100%); margin: auto 0; padding: 6px 0; }
 .order-row { width: calc(100% - 56px); }
+/* Once graded the results are fixed — no more dragging — so the row reclaims
+   the scroll gutter and spans the full width to give long names all the room. */
+.order-row.good, .order-row.wrong { width: 100%; }
 .order-row {
   display: flex; align-items: center; gap: 10px;
   background: var(--panel); border: 2px solid color-mix(in srgb, var(--cyan) 22%, transparent);
@@ -277,7 +280,11 @@ button, button:hover, button:focus { box-shadow: none; }
 .order-grip { color: color-mix(in srgb, var(--cyan) 45%, transparent); font-size: 1rem; font-weight: 700; width: 1.1em; text-align: center; flex: 0 0 auto; }
 .order-flag { width: 72px; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
 .order-flag.sq { object-fit: contain; }
-.order-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.82rem; color: var(--cyan); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Name + value stack in a column that takes all the slack; the name wraps
+   freely (never truncates — reading it is the whole game) and the figure sits
+   beneath it. */
+.order-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.order-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.82rem; line-height: 1.15; color: var(--cyan); overflow-wrap: break-word; }
 .order-val { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 60%, transparent); white-space: nowrap; }
 /* Graded rows fill solid; wrong gets a dashed edge + ✗ (from the grip), right a
    solid edge + ✓, so the state reads without relying on colour. */

@@ -228,7 +228,8 @@ function orderMode(ctx, signal) {
     btn.disabled = false;
     stage().innerHTML = `<div class="order-list">`
       + round.ids.map((iso) => `<div class="order-row" data-id="${iso}">`
-        + `<span class="order-grip">⠿</span>${flagImg(iso, 'order-flag', C[iso].square)}<span class="order-name"></span><span class="order-val"></span></div>`).join('')
+        + `<span class="order-grip">⠿</span>${flagImg(iso, 'order-flag', C[iso].square)}`
+        + `<span class="order-text"><span class="order-name"></span><span class="order-val"></span></span></div>`).join('')
       + '</div>';
     for (const row of stage().querySelectorAll('.order-row')) {
       row.addEventListener('pointerdown', (e) => beginDrag(e, row), { signal });
