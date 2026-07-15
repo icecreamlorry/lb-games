@@ -52,6 +52,27 @@ export class AtlazMap {
       this.pathLayer.appendChild(p);
     }
 
+    // Inset shelves (USA: Alaska & Hawaii): a divider under the mainland plus a
+    // box around each relocated territory, so it's obvious they're drawn out of
+    // place. Purely decorative — no pointer events (see CSS).
+    if (region.insets?.length) {
+      if (region.insetTop != null) {
+        const line = document.createElementNS(SVGNS, 'line');
+        line.setAttribute('x1', 0); line.setAttribute('x2', region.w);
+        line.setAttribute('y1', region.insetTop); line.setAttribute('y2', region.insetTop);
+        line.classList.add('inset-divider');
+        this.pathLayer.appendChild(line);
+      }
+      for (const inset of region.insets) {
+        const [x, y, w, h] = inset.box;
+        const r = document.createElementNS(SVGNS, 'rect');
+        r.setAttribute('x', x); r.setAttribute('y', y);
+        r.setAttribute('width', w); r.setAttribute('height', h);
+        r.classList.add('inset-frame');
+        this.pathLayer.appendChild(r);
+      }
+    }
+
     this.paths = new Map();
     this.labels = new Map();
     for (const it of region.items) {

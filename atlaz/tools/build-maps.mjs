@@ -160,6 +160,11 @@ const REGIONS = [
   { id: 'usa', label: 'USA', kind: 'states', admin: 'United States of America',
     proj: () => geoAlbersUsa(), simplifyQ: 0.3,
     ctx: 'CA MX',
+    // geoAlbersUsa drops Alaska & Hawaii into the bottom-left ocean corner —
+    // which is exactly where the greyed-out Mexico sits on our map, so they
+    // overlapped it. Lift them out onto a boxed shelf below the mainland
+    // (see placeInsets) so they read clearly as out-of-place insets.
+    insets: ['alaska', 'hawaii'],
     alt: { 'district-of-columbia': ['washington dc', 'dc'] } },
   { id: 'england', label: 'England', kind: 'states', admin: 'United Kingdom', unit: 'England',
     proj: () => conic([50, 55], -1.5), simplifyQ: 0.5, dissolve: englandGroup,
@@ -495,6 +500,59 @@ function dotPath(cx, cy, r = DOT_R) {
   return `M${f(cx - r)},${f(cy)}a${r},${r} 0 1,0 ${r * 2},0a${r},${r} 0 1,0 ${-r * 2},0Z`;
 }
 
+// Apply a coordinate transform to every point of an absolute polygon path
+// (geoPath emits only M/L/Z, so matching "<cmd>x,y" pairs is sufficient).
+function transformPath(d, map) {
+  return d.replace(/([ML])(-?[\d.]+),(-?[\d.]+)/g, (_, cmd, x, y) => {
+    const [nx, ny] = map(Number(x), Number(y));
+    return `${cmd}${nx},${ny}`;
+  });
+}
+
+// Relocate named inset territories (e.g. Alaska, Hawaii) out of the map body
+// onto a boxed shelf across the bottom, right-aligned so they clear the
+// greyed-out neighbour land the composite projection would otherwise drop them
+// on top of. Mutates the matching `out` entries in place (d/bbox/cx/cy, in
+// projected space) and returns the grown frame height, the box rects to
+// outline, and the shelf's top edge.
+function placeInsets(out, ids, mapH) {
+  const PAD_TOP = 22;   // gap between the mainland and the shelf
+  const FRAME = 12;     // padding between an inset shape and its box border
+  const GAP = 26;       // gap between adjacent boxes
+  const RIGHT = 28;     // margin from the frame's right edge
+  const BOTTOM = 18;    // padding below the boxes
+  const round1 = (n) => Math.round(n * 10) / 10;
+
+  const boxes = ids
+    .map((id) => out.find((o) => o.id === id))
+    .filter(Boolean)
+    .map((it) => {
+      const [x0, y0, x1, y1] = it.bbox;
+      return { it, x0, y0, w: (x1 - x0) + 2 * FRAME, h: (y1 - y0) + 2 * FRAME };
+    });
+  if (!boxes.length) return { h: mapH, insets: null, insetTop: null };
+
+  const totalW = boxes.reduce((s, b) => s + b.w, 0) + GAP * (boxes.length - 1);
+  const bandTop = mapH + PAD_TOP;
+  let cursor = W - RIGHT - totalW;
+  let maxH = 0;
+  const insets = [];
+  for (const b of boxes) {
+    // Move the shape's top-left to just inside the box's top-left corner.
+    const tx = cursor + FRAME - b.x0, ty = bandTop + FRAME - b.y0;
+    const map = (x, y) => [round1(x + tx), round1(y + ty)];
+    b.it.d = transformPath(b.it.d, map);
+    const [bx0, by0] = map(b.it.bbox[0], b.it.bbox[1]);
+    const [bx1, by1] = map(b.it.bbox[2], b.it.bbox[3]);
+    b.it.bbox = [bx0, by0, bx1, by1];
+    [b.it.cx, b.it.cy] = map(b.it.cx, b.it.cy);
+    insets.push({ id: b.it.id, box: [round1(cursor), round1(bandTop), round1(b.w), round1(b.h)] });
+    cursor += b.w + GAP;
+    maxH = Math.max(maxH, b.h);
+  }
+  return { h: Math.ceil(bandTop + maxH + BOTTOM), insets, insetTop: mapH };
+}
+
 // Label anchor: centroid of the largest projected polygon that lands inside
 // the viewBox (multipolygon mean puts France's label in the sea).
 function labelAnchor(item, path, w, h) {
@@ -536,7 +594,7 @@ function buildRegion(region, sources) {
   const t = projection.translate();
   projection.translate([t[0] - b[0][0], t[1] - b[0][1]]);
   path = makePath(projection);
-  const h = Math.ceil(path.bounds(fitFC)[1][1]) + 1;
+  let h = Math.ceil(path.bounds(fitFC)[1][1]) + 1;
   // Clip to the frame in projected space (composite geoAlbersUsa lacks
   // clipExtent — it clips to the US insets by construction). Crops windowSkip
   // geometry (Russia's far east), all context land, and lakes to the frame.
@@ -571,6 +629,8 @@ function buildRegion(region, sources) {
   out.sort((a, b) => a.name.localeCompare(b.name));
 
   // Context + lakes render as bare path strings (no interaction, no names).
+  // Framed against the mainland height (before any inset shelf grows h), so
+  // neighbour land can't bleed down into the shelf band.
   const inFrame = (bb) => bb[0][0] < W && bb[1][0] > 0 && bb[0][1] < h && bb[1][1] > 0;
   const layer = (feats) => feats
     .map((it) => {
@@ -579,13 +639,20 @@ function buildRegion(region, sources) {
       return d && inFrame(path.bounds(f)) ? d : null;
     })
     .filter(Boolean);
+  const ctxLayer = layer(ctx);
+  const lakesLayer = layer(lakes);
+
+  // Lift declared insets (Alaska, Hawaii) onto a boxed shelf under the map.
+  let insets = null, insetTop = null;
+  if (region.insets?.length) ({ h, insets, insetTop } = placeInsets(out, region.insets, h));
 
   const json = {
     id: region.id, label: region.label, kind: region.kind, w: W, h,
     credit: 'Map data: Natural Earth (public domain)',
     items: out,
-    ctx: layer(ctx),
-    lakes: layer(lakes),
+    ctx: ctxLayer,
+    lakes: lakesLayer,
+    ...(insets ? { insets, insetTop } : {}),
   };
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, `${region.id}.json`), JSON.stringify(json));

@@ -165,6 +165,20 @@ button, button:hover, button:focus { box-shadow: none; }
   pointer-events: none;
 }
 
+/* Inset shelf (USA: Alaska & Hawaii lifted out of place). The divider marks
+   where the real map ends; the boxes flag each territory as out of position. */
+.inset-divider {
+  stroke: color-mix(in srgb, var(--cyan) 22%, transparent);
+  stroke-width: 1; stroke-dasharray: 5 5;
+  vector-effect: non-scaling-stroke; pointer-events: none;
+}
+.inset-frame {
+  fill: none;
+  stroke: color-mix(in srgb, var(--cyan) 40%, transparent);
+  stroke-width: 1.2; stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke; pointer-events: none;
+}
+
 .territory {
   fill: color-mix(in srgb, var(--cyan) 26%, var(--panel));
   stroke: color-mix(in srgb, var(--dark) 55%, var(--cyan) 12%);
