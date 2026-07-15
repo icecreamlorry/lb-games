@@ -22,7 +22,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { geoMercator, geoConicConformal, geoAlbersUsa, geoPath } from 'd3-geo';
+import { geoMercator, geoConicConformal, geoAlbers, geoAlbersUsa, geoPath } from 'd3-geo';
 import { topology } from 'topojson-server';
 import { feature, merge } from 'topojson-client';
 import { presimplify, quantile, simplify } from 'topojson-simplify';
@@ -160,6 +160,16 @@ const REGIONS = [
   { id: 'usa', label: 'USA', kind: 'states', admin: 'United States of America',
     proj: () => geoAlbersUsa(), simplifyQ: 0.3,
     ctx: 'CA MX',
+    // Draw Canada/Mexico with a plain Albers matching albersUsa's lower-48 but
+    // WITHOUT its rectangular clip, which otherwise sliced Canada off short of
+    // the border and left a wedge-shaped gap. The states (drawn on top) cover
+    // the overlap; Mexico's overhang is cut at the shelf line by the renderer.
+    ctxAlbers: true,
+    // Backdrop: the admin0 US outline (mainland only) under the states. It
+    // shares its border arcs with admin0 Canada/Mexico, so there's no gap
+    // there, and it fills any sliver the independently-simplified admin1 state
+    // edges would otherwise leave against the neighbours.
+    ctxBackdrop: 'US',
     // geoAlbersUsa drops Alaska & Hawaii into the bottom-left ocean corner —
     // which is exactly where the greyed-out Mexico sits on our map, so they
     // overlapped it. Lift them out onto a boxed shelf below the mainland
@@ -444,6 +454,14 @@ function collectContext(region, sources) {
       out.push({ geometry: merge(topo, topo.objects.u.geometries) });
     }
   }
+  if (region.ctxBackdrop) {
+    const bf = sources.admin0.features.find((x) => x.properties.ISO_A2_EH === region.ctxBackdrop);
+    // Keep the mainland only (drop Alaska/Hawaii/Aleutians, which the composite
+    // lays out as insets — their true-position admin0 rings would splash across
+    // the ocean). Prepend so it sits beneath the other neighbour land.
+    const g = bf && windowGeometry(bf.geometry, { window: [-128, -66, 24, 52] });
+    if (g) out.unshift({ geometry: g });
+  }
   return out;
 }
 
@@ -628,18 +646,30 @@ function buildRegion(region, sources) {
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
 
+  // Context land for the composite USA projection is reprojected with a plain
+  // Albers matching albersUsa's lower-48 (same scale/translate). albersUsa's
+  // own rectangular clip sliced Canada off short of the border (wedge gap); a
+  // plain Albers has no such clip, so the land extends fully and underlaps the
+  // states. We give it our OWN clip extent instead: bottom exactly at the map
+  // height, so Mexico is cut flush with the inset-shelf divider rather than
+  // spilling past it, and a little margin elsewhere to trim off-frame arctic.
+  const ctxPath = region.ctxAlbers
+    ? makePath(geoAlbers().scale(projection.scale()).translate(projection.translate())
+        .clipExtent([[-40, -40], [W + 40, h]]))
+    : path;
+
   // Context + lakes render as bare path strings (no interaction, no names).
   // Framed against the mainland height (before any inset shelf grows h), so
   // neighbour land can't bleed down into the shelf band.
   const inFrame = (bb) => bb[0][0] < W && bb[1][0] > 0 && bb[0][1] < h && bb[1][1] > 0;
-  const layer = (feats) => feats
+  const layer = (feats, p = path) => feats
     .map((it) => {
       const f = { type: 'Feature', properties: {}, geometry: it.geometry };
-      const d = path(f);
-      return d && inFrame(path.bounds(f)) ? d : null;
+      const d = p(f);
+      return d && inFrame(p.bounds(f)) ? d : null;
     })
     .filter(Boolean);
-  const ctxLayer = layer(ctx);
+  const ctxLayer = layer(ctx, ctxPath);
   const lakesLayer = layer(lakes);
 
   // Lift declared insets (Alaska, Hawaii) onto a boxed shelf under the map.
