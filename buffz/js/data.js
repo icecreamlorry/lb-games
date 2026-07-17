@@ -1,0 +1,44 @@
+// Title data loader + the filter model. There is no fixed "set" list — the
+// host narrows the pool with three dropdowns (type / decade / genre), and the
+// playable pool is derived here, identically on every seat.
+
+let cache = null;
+
+export async function loadData() {
+  if (!cache) {
+    cache = fetch(new URL('../data/titles.json', import.meta.url))
+      .then((r) => { if (!r.ok) throw new Error(`Could not load title data (${r.status})`); return r.json(); })
+      .catch((e) => { cache = null; throw e; });
+  }
+  return cache;
+}
+
+// filters: { type: 'all'|'m'|'v', decade: 'all'|'1990s'…, genre: 'all'|name }.
+// Returned ids are SORTED — buildRounds relies on a stable pool order before
+// its seeded shuffle (the determinism contract).
+export function filterIds(data, { type = 'all', decade = 'all', genre = 'all' } = {}) {
+  return Object.keys(data.items).filter((id) => {
+    const it = data.items[id];
+    if (type !== 'all' && it.t !== type) return false;
+    if (decade !== 'all' && it.decade !== decade) return false;
+    if (genre !== 'all' && !it.genres.includes(genre)) return false;
+    return true;
+  }).sort();
+}
+
+// Dropdown option lists, derived from the data so they never drift from it.
+export function decadeList(data) {
+  return [...new Set(Object.values(data.items).map((it) => it.decade))].sort();
+}
+export function genreList(data) {
+  return data.genres || [];
+}
+
+export const TYPE_LABELS = { all: 'Movies & TV', m: 'Movies', v: 'TV shows' };
+
+export function filterLabel(f) {
+  const bits = [TYPE_LABELS[f?.type] || 'Movies & TV'];
+  if (f?.decade && f.decade !== 'all') bits.push(f.decade);
+  if (f?.genre && f.genre !== 'all') bits.push(f.genre);
+  return bits.join(' · ');
+}

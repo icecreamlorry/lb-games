@@ -1,0 +1,415 @@
+/* Buffz — movie & TV trivia. Shares the family look: maritime by default but
+   fully theme-var driven. Reuses shared.css for :root vars, .modal*, .hidden.
+   Correct/incorrect greens/reds are fixed on purpose — semantic, not theme. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background-color: var(--dark);
+  background-image: radial-gradient(color-mix(in srgb, var(--cyan) 12%, transparent) 1.4px, transparent 1.4px);
+  background-size: 22px 22px;
+  color: color-mix(in srgb, var(--cyan) 80%, #000 12%);
+  font-family: 'Fredoka', system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  overflow: hidden;
+}
+.muted { color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.hidden { display: none !important; }
+
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; }
+#screen-landing, #screen-lobby { align-items: center; justify-content: center; padding: 20px; overflow-y: auto; overflow-x: hidden; }
+
+/* ---- Cards (landing / lobby) ---- */
+.card {
+  width: min(420px, 94vw);
+  max-width: 100%;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-radius: var(--panel-radius);
+  padding: 26px 24px 22px;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.10), 0 2px 0 color-mix(in srgb, var(--cyan) 10%, transparent);
+  display: flex; flex-direction: column; gap: 14px;
+  text-align: center;
+}
+.logo {
+  font-family: 'Fredoka', sans-serif; font-weight: 700; letter-spacing: 0.04em;
+  font-size: 2.4rem; margin: 0; color: var(--cyan);
+}
+.logo.small { font-size: 1.15rem; }
+.tagline { margin: 0; font-size: 0.7rem; letter-spacing: 0.16em; color: var(--magenta); font-weight: 500; }
+.card-title { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1rem; letter-spacing: 0.02em; margin: 6px 0 0; }
+.hint { font-size: 0.66rem; color: color-mix(in srgb, var(--cyan) 50%, transparent); line-height: 1.5; margin: 4px 0 0; }
+
+/* ---- Buttons (soft, rounded, no glow — clears shared.css neon) ---- */
+button, button:hover, button:focus, button:active { text-shadow: none; }
+button, button:hover, button:focus { box-shadow: none; }
+.btn-primary, .btn-ghost {
+  font-family: var(--font-ui); font-weight: 600; letter-spacing: var(--ui-tracking);
+  border-radius: var(--ui-radius); padding: 9px 18px; cursor: pointer; touch-action: manipulation;
+  font-size: 0.78rem; text-transform: var(--ui-transform); text-shadow: none; transition: transform 0.06s, box-shadow 0.15s, background 0.15s;
+}
+.btn-primary {
+  background: var(--cyan); color: var(--panel); border: none;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12);
+}
+.btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 4px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 6px 16px rgba(0,0,0,0.12); }
+.btn-primary:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 color-mix(in srgb, var(--cyan) 55%, #000 25%), 0 3px 10px rgba(0,0,0,0.12); }
+.btn-ghost {
+  background: color-mix(in srgb, var(--cyan) 8%, transparent);
+  color: var(--cyan); border: 1.5px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+}
+.btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--cyan) 16%, transparent); }
+.btn-ghost.armed { color: var(--magenta); border-color: var(--magenta); background: color-mix(in srgb, var(--magenta) 14%, transparent); }
+.btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+.wide-btn { width: min(340px, 80vw); }
+
+#account-bar { border-top: 1px solid color-mix(in srgb, var(--cyan) 14%, transparent); padding-top: 12px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+#account-line { font-size: 0.74rem; color: color-mix(in srgb, var(--cyan) 70%, transparent); }
+#account-line strong { color: var(--cyan); }
+.account-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ---- Top bars ---- */
+.game-bar { padding: calc(env(safe-area-inset-top, 0px) + 8px) 64px 8px 12px; display: flex; align-items: center; gap: 8px; }
+.game-bar, .players-strip { max-width: 640px; margin-inline: auto; width: 100%; }
+@media (min-width: 561px) {
+  #screen-game:not(.hidden) ~ #btn-menu,
+  #screen-game:not(.hidden) ~ #app-menu {
+    right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 320px + 6px));
+  }
+}
+.chip {
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
+  color: color-mix(in srgb, var(--cyan) 85%, transparent); border-radius: var(--ui-radius); padding: 6px 13px;
+  font-family: var(--font-ui); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.02em;
+  cursor: pointer; touch-action: manipulation; white-space: nowrap;
+}
+.chip strong { color: var(--cyan); font-weight: 700; }
+.mode-chip { cursor: default; }
+.timer-chip { font-variant-numeric: tabular-nums; }
+.mode-chip { overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+.grow { flex: 1 1 auto; }
+
+/* ---- Lobby list ---- */
+.lobby-game {
+  position: relative; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px;
+  text-align: left; width: 100%; background: color-mix(in srgb, var(--cyan) 7%, var(--panel));
+  border: 1.5px solid transparent; border-radius: var(--item-radius); padding: 12px 14px;
+  color: var(--cyan); cursor: pointer; font-family: var(--font-ui);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+}
+.lobby-game:hover { border-color: color-mix(in srgb, var(--cyan) 35%, transparent); }
+.lobby-game.live { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.lobby-opp { font-weight: 600; }
+.lobby-status { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.lobby-game.live .lobby-status { color: var(--cyan); }
+.lobby-score { grid-row: 1 / 3; align-self: center; font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; }
+.lobby-game:has(.lobby-dismiss) { padding-right: 44px; }
+.lobby-dismiss {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; line-height: 1;
+  color: color-mix(in srgb, var(--cyan) 50%, transparent); font-size: 18px; cursor: pointer;
+  border: 1.5px solid transparent;
+}
+.lobby-dismiss:hover { color: var(--magenta); border-color: color-mix(in srgb, var(--magenta) 40%, transparent); background: color-mix(in srgb, var(--magenta) 10%, transparent); }
+.lobby-empty { text-align: center; color: color-mix(in srgb, var(--cyan) 45%, transparent); line-height: 1.6; padding: 10px; }
+
+/* ---- Players strip ---- */
+.players-strip { display: flex; gap: 8px; padding: 6px 12px; overflow-x: auto; flex: 0 0 auto; }
+.players-strip:empty { display: none; }
+.pchip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--panel); border: 1.5px solid color-mix(in srgb, var(--cyan) 18%, transparent);
+  border-radius: var(--item-radius); padding: 5px 12px; min-width: 60px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+.pchip.me { border-color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.pchip.viewing { border-color: var(--cyan); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 30%, transparent); }
+.pchip.done .pscore { color: #3fae72; }
+.pchip .pname { font-size: 0.64rem; color: color-mix(in srgb, var(--cyan) 75%, transparent); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pchip .pscore { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.95rem; color: var(--cyan); }
+.pchip .pdot { width: 7px; height: 7px; border-radius: 50%; background: #5ec98a; }
+.pchip .pdot.off { background: color-mix(in srgb, var(--cyan) 25%, transparent); }
+
+.spectate-hint {
+  flex: 0 0 auto; text-align: center; font-size: 0.66rem; font-weight: 500;
+  color: color-mix(in srgb, var(--cyan) 55%, transparent); padding: 0 12px 4px;
+}
+
+/* ---- Prompt bar ---- */
+.prompt-bar { flex: 0 0 auto; text-align: center; padding: 2px 12px; min-height: 44px; }
+#prompt-line { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.15rem; color: var(--cyan); }
+#prompt-sub { font-size: 0.66rem; color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+
+/* ---- The question stage ---- */
+.board-wrap { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.q-stage {
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+
+/* Right/wrong palette — used across every Buffz mode. Correctness is conveyed
+   by non-colour cues as well as hue (solid vs dashed border, ✓ vs ✗ glyph), so
+   it stays legible for colour-blind players. */
+:root {
+  --ok-fill: #2e8f6b; --ok-edge: #16583f;
+  --bad-fill: #c23a54; --bad-edge: #ffd0d8;
+}
+
+/* The question card: a tagline/plot quote, or the question itself. */
+.q-card {
+  position: relative; margin: auto 0;
+  width: min(520px, 100%);
+  background: var(--panel);
+  border: 3px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+  border-radius: var(--panel-radius);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.25);
+  padding: 30px 26px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 34%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.q-text {
+  font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1.25rem;
+  line-height: 1.45; color: var(--cyan); text-align: center; overflow-wrap: break-word;
+  max-width: 100%;
+}
+/* Quotes (taglines/plots) read as quotes. */
+.q-card.quote .q-text { font-style: italic; font-weight: 500; }
+.q-card.quote::before, .q-card.quote::after {
+  font-family: Georgia, serif; font-size: 2.6rem; line-height: 1;
+  color: color-mix(in srgb, var(--magenta) 70%, transparent); position: absolute;
+}
+.q-card.quote::before { content: '“'; top: 8px; left: 14px; }
+.q-card.quote::after { content: '”'; bottom: -6px; right: 14px; }
+.q-card.graded.ok {
+  border: 4px solid var(--ok-fill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok-fill) 60%, transparent), 0 0 30px 4px color-mix(in srgb, var(--ok-fill) 60%, transparent);
+  animation: card-pop 0.4s ease-out;
+}
+.q-card.graded.bad {
+  border: 4px dashed var(--bad-fill);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad-fill) 60%, transparent), 0 0 30px 4px color-mix(in srgb, var(--bad-fill) 60%, transparent);
+  animation: card-shake 0.42s ease-in-out;
+}
+@keyframes card-pop { 0% { transform: scale(0.96); } 55% { transform: scale(1.03); } 100% { transform: scale(1); } }
+@keyframes card-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(3px); }
+}
+
+#options-list .option-btn.dim { opacity: 0.4; }
+.option-btn.good {
+  border: 2px solid var(--ok-edge); color: #fff; font-weight: 700;
+  background: var(--ok-fill);
+}
+.option-btn.wrong {
+  border: 2px dashed var(--bad-edge); color: #fff; font-weight: 700;
+  background: var(--bad-fill);
+}
+.option-btn.good::before { content: '✓ '; }
+.option-btn.wrong::before { content: '✗ '; }
+
+/* ---- TIMELINE / RANKED: draggable vertical list ---- */
+/* Rows are left-aligned and stop short of the right edge, leaving a gutter
+   (touch-action stays auto there) you can touch to scroll the list without
+   accidentally grabbing a row. */
+.order-list { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; width: min(480px, 100%); margin: auto 0; padding: 6px 0; }
+.order-row { width: calc(100% - 56px); }
+/* Once graded the results are fixed — no more dragging — so the row reclaims
+   the scroll gutter and spans the full width to give long titles all the room,
+   and touch-action goes back to auto so grabbing a row scrolls the (now full-
+   width) list rather than being swallowed by the drag handler. */
+.order-row.good, .order-row.wrong { width: 100%; touch-action: auto; cursor: default; }
+.order-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel); border: 2px solid color-mix(in srgb, var(--cyan) 22%, transparent);
+  border-radius: var(--item-radius); padding: 10px 12px;
+  cursor: grab; touch-action: none; user-select: none;
+  position: relative;
+}
+.order-row.dragging { z-index: 5; opacity: 0.92; box-shadow: 0 10px 24px rgba(0,0,0,0.3); cursor: grabbing; }
+.order-grip { color: color-mix(in srgb, var(--cyan) 45%, transparent); font-size: 1rem; font-weight: 700; width: 1.1em; text-align: center; flex: 0 0 auto; }
+/* Title + value stack in a column that takes all the slack; the title wraps
+   freely (never truncates — reading it is the whole game) and the figure sits
+   beneath it after the reveal. */
+.order-text { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-width: 0; }
+.order-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.86rem; line-height: 1.2; color: var(--cyan); overflow-wrap: break-word; }
+.order-val { font-size: 0.68rem; color: color-mix(in srgb, var(--cyan) 60%, transparent); white-space: nowrap; }
+.order-val:empty { display: none; }
+/* Graded rows fill solid; wrong gets a dashed edge + ✗ (from the grip), right a
+   solid edge + ✓, so the state reads without relying on colour. */
+.order-row.good { background: var(--ok-fill); border: 2px solid var(--ok-edge); }
+.order-row.wrong { background: var(--bad-fill); border: 2px dashed var(--bad-edge); }
+.order-row.good .order-name, .order-row.good .order-val, .order-row.good .order-grip,
+.order-row.wrong .order-name, .order-row.wrong .order-val, .order-row.wrong .order-grip { color: #fff; }
+.order-want {
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 0.72rem;
+  color: #fff; background: rgba(0,0,0,0.28); border-radius: 999px; padding: 2px 8px; flex: 0 0 auto;
+}
+
+/* End-of-game review */
+.review-list { display: flex; flex-direction: column; gap: 6px; width: min(480px, 100%); padding-bottom: 10px; }
+.review-round-label {
+  font-size: 0.64rem; font-weight: 600; letter-spacing: 0.18em; margin: 10px 0 4px;
+  color: var(--magenta);
+}
+.review-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel); border: 2px solid color-mix(in srgb, var(--cyan) 15%, transparent);
+  border-radius: var(--item-radius); padding: 8px 12px;
+}
+.review-row.good { background: var(--ok-fill); border: 2px solid var(--ok-edge); }
+.review-row.wrong { background: var(--bad-fill); border: 2px dashed var(--bad-edge); }
+.review-body { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.review-q { font-size: 0.66rem; line-height: 1.35; color: color-mix(in srgb, var(--cyan) 60%, transparent); overflow-wrap: break-word; }
+.review-name { font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.8rem; color: var(--cyan); overflow-wrap: break-word; }
+.review-row.good .review-name, .review-row.wrong .review-name { color: #fff; }
+.review-row.good .review-q, .review-row.wrong .review-q { color: rgba(255,255,255,0.75); }
+.review-pick { font-size: 0.66rem; color: #ffe0e6; }
+.review-row.good .review-pick { color: rgba(255,255,255,0.8); }
+.review-mark { font-weight: 700; font-size: 1rem; color: #fff; flex: 0 0 auto; }
+
+/* ---- Mode panels (foot) ---- */
+.play-foot { display: flex; flex-direction: column; gap: 6px; padding: 4px 12px calc(env(safe-area-inset-bottom, 0px) + 10px); align-items: center; flex: 0 0 auto; }
+.mode-panel { width: min(560px, 96vw); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+.options-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 6px;
+  width: 100%; max-height: 30vh; overflow-y: auto; padding: 4px;
+}
+.option-btn {
+  font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 0.74rem;
+  background: color-mix(in srgb, var(--cyan) 8%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
+  color: var(--cyan); border-radius: var(--item-radius); padding: 4px 8px; cursor: pointer;
+  touch-action: manipulation;
+  /* Flex-centred with a real min-height: Android's Fredoka line box otherwise
+     sits low and clips descenders against the padding box. Titles wrap. */
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px; line-height: 1.25; text-align: center; overflow-wrap: anywhere;
+}
+.option-btn:hover { background: color-mix(in srgb, var(--cyan) 18%, var(--panel)); }
+
+/* ---- Overlays over the board ---- */
+.board-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--dark) 78%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.overlay-card {
+  position: relative;
+  background: var(--panel); border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent); border-radius: var(--panel-radius);
+  padding: 26px 28px; text-align: center; max-width: min(480px, 92%);
+  display: flex; flex-direction: column; gap: 14px; align-items: center;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.16);
+}
+.overlay-close {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: none; padding: 0; line-height: 1;
+  font-size: 1.1rem; cursor: pointer; color: color-mix(in srgb, var(--cyan) 55%, transparent);
+}
+.overlay-close:hover { color: var(--magenta); }
+.overlay-title { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.4rem; letter-spacing: 0.02em; color: var(--cyan); }
+
+/* ---- Prestart config picker ---- */
+.config-card { max-height: 92%; overflow-y: auto; width: min(480px, 92%); }
+.cfg { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.cfg-group-label {
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.22em;
+  color: var(--magenta); margin-top: 4px;
+}
+/* The three pool dropdowns. */
+.cfg-filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.f-label {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  font-family: var(--font-ui); font-size: 0.56rem; font-weight: 600; letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--cyan) 55%, transparent);
+}
+.f-select {
+  width: 100%; min-width: 0; padding: 8px 6px; cursor: pointer;
+  font-family: 'Fredoka', sans-serif; font-size: 0.72rem; font-weight: 500;
+  background: color-mix(in srgb, var(--cyan) 7%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 22%, transparent);
+  border-radius: var(--item-radius); color: var(--cyan);
+  appearance: auto;
+}
+.f-select:disabled { opacity: 0.6; cursor: default; }
+.f-select option { background: var(--panel); color: var(--cyan); }
+.pool-count {
+  font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 0.76rem;
+  color: var(--cyan); text-align: center; padding: 2px 0;
+}
+.pool-count.short { color: var(--magenta); }
+@media (max-width: 420px) { .cfg-filters { grid-template-columns: 1fr; } }
+
+.cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; }
+.cfg-grid.modes { grid-template-columns: 1fr 1fr; }
+.cfg-grid.diffs { grid-template-columns: repeat(4, 1fr); }
+.cfg-btn {
+  font-family: 'Fredoka', sans-serif; font-weight: 500; font-size: 0.68rem;
+  background: color-mix(in srgb, var(--cyan) 7%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 20%, transparent);
+  color: var(--cyan); border-radius: var(--item-radius); padding: 8px 6px; cursor: pointer;
+  touch-action: manipulation; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center;
+}
+.cfg-btn small { font-size: 0.56rem; font-weight: 400; color: color-mix(in srgb, var(--cyan) 55%, transparent); }
+.cfg-btn span { font-weight: 700; }
+.cfg-btn:hover { background: color-mix(in srgb, var(--cyan) 15%, var(--panel)); }
+.cfg-btn.on {
+  border-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 22%, var(--panel));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 25%, transparent);
+}
+
+/* ---- Countdown ---- */
+#btn-cfg-back {
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-ui); font-size: 0.66rem; letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--cyan) 60%, transparent);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+#btn-cfg-back:hover { color: var(--cyan); }
+.start-note { font-size: 0.64rem; color: color-mix(in srgb, var(--cyan) 45%, transparent); }
+
+.countdown-num {
+  font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 6rem;
+  color: var(--cyan); text-shadow: 0 6px 30px rgba(0,0,0,0.35);
+}
+/* One pop per digit — main.js re-adds the class when the number changes. */
+.countdown-num.pop { animation: count-pop 0.9s ease-out; }
+@keyframes count-pop { 0% { transform: scale(0.6); opacity: 0; } 30% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+/* ---- Results ---- */
+.results-winner { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--cyan); min-height: 1.2em; }
+.results-winner.loss { color: color-mix(in srgb, var(--cyan) 60%, transparent); }
+.results-list { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
+.results-list li {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center;
+  background: color-mix(in srgb, var(--cyan) 6%, var(--panel));
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 15%, transparent);
+  border-radius: var(--item-radius); padding: 8px 12px; cursor: pointer; text-align: left;
+}
+.results-list li.me { border-color: color-mix(in srgb, var(--cyan) 50%, transparent); }
+.results-list li:hover { border-color: var(--cyan); }
+.r-rank { font-weight: 700; color: color-mix(in srgb, var(--cyan) 60%, transparent); }
+.r-name { font-weight: 600; color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.r-score { font-size: 0.72rem; font-weight: 600; color: color-mix(in srgb, var(--cyan) 75%, transparent); }
+.left-tag { font-size: 0.6rem; color: var(--magenta); font-weight: 500; }
+
+.status-line { margin: 0; font-size: 0.74rem; text-align: center; min-height: 1.4em; line-height: 1.4; color: var(--magenta); font-weight: 500; }
+
+.help-body em { color: var(--magenta); font-style: normal; font-weight: 600; }
+.credit-line { font-size: 0.62rem; color: color-mix(in srgb, var(--cyan) 45%, transparent); }
+
+@media (max-width: 420px) {
+  .logo { font-size: 1.9rem; }
+  #prompt-line { font-size: 1rem; }
+  .q-text { font-size: 1.05rem; }
+  .options-list { grid-template-columns: 1fr 1fr; }
+}
