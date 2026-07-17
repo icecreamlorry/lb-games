@@ -116,8 +116,10 @@ atomyx/
   js/engine.js       ← PURE: seeded buildRounds (pick + order + sweep), orderKey/
                        expectedOrder/gradeOrder, normalize/aliases, ranking
   js/data.js         ← elements.json loader, set helpers, fmtMass
-  js/table.js        ← the periodic-table grid component (CSS grid, container-query
-                       sized, cell mark/reveal API used by every spatial mode)
+  js/table.js        ← the periodic-table component: SVG with Atlaz's pan/pinch/
+                       wheel/double-tap interaction + zoom buttons, roomy tiles
+                       (number top-left, symbol centred), arithmetic hit testing,
+                       cell mark/reveal API used by every spatial mode
   js/modes.js        ← tableMode (pinpoint/build) + tileMode (lineup/namedrop) +
                        orderMode (mass) + sweepMode + renderReview
   js/main.js         ← rooms/prestart/countdown/results glue — Flagz main.js adapted
@@ -139,6 +141,11 @@ Multiplayer protocol identical to Atlaz/Flagz: host `start` move (index 0) carri
   Don't regress this.
 - The table never truncates: symbols are 1–3 chars by nature; names appear in the
   prompt/status/review rows which wrap, never ellipsize (the Flagz rule).
+- The table pans/zooms like the Atlaz map (same gesture code, adapted): tiles are
+  drawn at a comfortable natural size with atomic numbers always visible, the view
+  starts fitted, and zooming in is how phones read the fine print. Blank BUILD/
+  SWEEP cells hide the number as well as the symbol — number → element is 1:1, so
+  a visible number would give the answer away.
 - MASS shows the element names while dragging (the quiz is knowing masses, not
   identifying blind tiles — unlike Flagz A-TO-Z where hiding names IS the quiz).
 - SWEEP accepts symbols as well as names on purpose: symbol recall is legitimate

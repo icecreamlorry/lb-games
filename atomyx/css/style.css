@@ -162,61 +162,48 @@ button, button:hover, button:focus { box-shadow: none; }
   --bad-fill: #c23a54; --bad-edge: #ffd0d8;
 }
 
-/* ---- The periodic table grid (PINPOINT / BUILD / SWEEP) ---- */
-/* 18 columns; rows 1-7 the main table, row 8 a slim spacer, rows 9/10 the
-   lanthanide/actinide shelf. Cell type sizes use container-query units so the
-   table scales from a 360px phone to the 680px cap without media-query
-   guesswork. */
-.pt-wrap { width: min(680px, 100%); margin: auto 0; container-type: inline-size; }
-.pt-grid {
-  display: grid;
-  grid-template-columns: repeat(18, 1fr);
-  grid-template-rows: repeat(7, auto) 8px auto auto;
-  gap: 2px;
+/* ---- The periodic table (PINPOINT / BUILD / SWEEP) ---- */
+/* SVG with Atlaz's pan/pinch/wheel/double-tap interaction (see js/table.js).
+   Tiles are drawn at a comfortable natural size — number top-left, symbol
+   centred — and the view starts fitted; zooming in is how phones read the
+   fine print. All state classes live on the <g class="el-cell"> wrapper. */
+.pt-host { position: absolute; inset: 0; }
+.pt-svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.pt-svg:active { cursor: grabbing; }
+.pt-svg text {
+  font-family: 'Fredoka', system-ui, sans-serif; user-select: none; pointer-events: none;
 }
-.el-cell {
-  position: relative; aspect-ratio: 1; padding: 0; min-width: 0;
-  background: color-mix(in srgb, var(--cyan) 10%, var(--panel));
-  border: 1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
-  border-radius: 3px; cursor: pointer; touch-action: manipulation;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.12s, border-color 0.12s;
+.el-cell rect {
+  fill: color-mix(in srgb, var(--cyan) 10%, var(--panel));
+  stroke: color-mix(in srgb, var(--cyan) 32%, transparent); stroke-width: 1;
+  transition: fill 0.12s, stroke 0.12s;
 }
-.el-sym {
-  font-family: 'Fredoka', sans-serif; font-weight: 600; line-height: 1;
-  font-size: clamp(6.5px, 3.4cqw, 15px); color: var(--cyan);
-}
-.el-num {
-  position: absolute; top: 1px; left: 2px; line-height: 1;
-  font-size: clamp(4px, 1.7cqw, 8px); color: color-mix(in srgb, var(--cyan) 55%, transparent);
-}
-/* Atomic numbers only earn their pixels on wider tables. */
-@container (max-width: 479px) { .el-num { display: none; } }
-.el-cell:hover:not(.ctx) { border-color: var(--cyan); }
+.el-sym { font-size: 17px; font-weight: 600; text-anchor: middle; fill: var(--cyan); }
+.el-num { font-size: 9.5px; font-weight: 500; fill: color-mix(in srgb, var(--cyan) 60%, transparent); }
 /* Context cells: the rest of the table, dimmed, not tappable — the spatial
    anchor that makes small sets still read as "the periodic table". */
-.el-cell.ctx { cursor: default; pointer-events: none; background: color-mix(in srgb, var(--cyan) 3%, var(--panel)); border-color: color-mix(in srgb, var(--cyan) 10%, transparent); }
-.el-cell.ctx .el-sym { color: color-mix(in srgb, var(--cyan) 28%, transparent); }
-.el-cell.ctx .el-num { color: color-mix(in srgb, var(--cyan) 18%, transparent); }
-/* Blank cells (BUILD / SWEEP): position visible, identity hidden. */
-.el-cell.blank .el-sym, .el-cell.blank .el-num { visibility: hidden; }
+.el-cell.ctx rect { fill: color-mix(in srgb, var(--cyan) 3%, var(--panel)); stroke: color-mix(in srgb, var(--cyan) 11%, transparent); }
+.el-cell.ctx .el-sym { fill: color-mix(in srgb, var(--cyan) 28%, transparent); }
+.el-cell.ctx .el-num { fill: color-mix(in srgb, var(--cyan) 18%, transparent); }
+/* Blank cells (BUILD / SWEEP): position visible, identity hidden — the atomic
+   number is hidden too, since number → element is a giveaway. */
+.el-cell.blank text { display: none; }
 /* Pending pick. */
-.el-cell.sel { border: 2px solid var(--cyan); background: color-mix(in srgb, var(--cyan) 30%, var(--panel)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 35%, transparent); z-index: 1; }
-/* Graded cells persist for the rest of the run. */
-.el-cell.ok { background: var(--ok-fill); border: 1px solid var(--ok-edge); animation: cell-pop 0.4s ease-out; }
-.el-cell.bad { background: var(--bad-fill); border: 1px dashed var(--bad-edge); animation: cell-shake 0.42s ease-in-out; }
-.el-cell.found { background: var(--ok-fill); border: 1px solid var(--ok-edge); animation: cell-pop 0.3s ease-out; }
-.el-cell.ok .el-sym, .el-cell.bad .el-sym, .el-cell.found .el-sym { color: #fff; }
-.el-cell.ok .el-num, .el-cell.bad .el-num, .el-cell.found .el-num { color: rgba(255,255,255,0.75); }
-.el-cell.ok, .el-cell.bad { pointer-events: none; }
+.el-cell.sel rect { stroke: var(--cyan); stroke-width: 2.5; fill: color-mix(in srgb, var(--cyan) 30%, var(--panel)); }
+/* Graded cells persist for the rest of the run. Pop/shake animate the <g>
+   around its own tile centre (transform-box makes SVG behave like HTML). */
+.el-cell.ok rect { fill: var(--ok-fill); stroke: var(--ok-edge); }
+.el-cell.bad rect { fill: var(--bad-fill); stroke: var(--bad-edge); stroke-dasharray: 4 3; }
+.el-cell.found rect { fill: var(--ok-fill); stroke: var(--ok-edge); }
+.el-cell.ok, .el-cell.bad, .el-cell.found { transform-box: fill-box; transform-origin: center; }
+.el-cell.ok, .el-cell.found { animation: cell-pop 0.4s ease-out; }
+.el-cell.bad { animation: cell-shake 0.42s ease-in-out; }
+.el-cell.ok text, .el-cell.bad text, .el-cell.found text { fill: #fff; }
+.el-cell.ok .el-num, .el-cell.bad .el-num, .el-cell.found .el-num { fill: rgba(255,255,255,0.78); }
 /* Your wrong tap flashes so you see where you went (clears after a beat). */
-.el-cell.miss { border: 2px dashed var(--bad-fill); background: color-mix(in srgb, var(--bad-fill) 30%, var(--panel)); z-index: 1; }
-.el-marker {
-  display: flex; align-items: center; justify-content: center;
-  font-size: clamp(3.5px, 1.6cqw, 8px); letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--cyan) 30%, transparent);
-  border: 1px dashed color-mix(in srgb, var(--cyan) 14%, transparent); border-radius: 3px;
-}
+.el-cell.miss rect { stroke: var(--bad-fill); stroke-width: 2.5; stroke-dasharray: 4 3; fill: color-mix(in srgb, var(--bad-fill) 30%, var(--panel)); }
+.el-marker rect { fill: none; stroke: color-mix(in srgb, var(--cyan) 15%, transparent); stroke-width: 1; stroke-dasharray: 4 3; }
+.el-marker text { font-size: 8.5px; text-anchor: middle; fill: color-mix(in srgb, var(--cyan) 32%, transparent); }
 
 @keyframes cell-pop { 0% { transform: scale(0.7); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
 @keyframes cell-shake {
@@ -224,6 +211,23 @@ button, button:hover, button:focus { box-shadow: none; }
   20% { transform: translateX(-3px); } 40% { transform: translateX(3px); }
   60% { transform: translateX(-2px); } 80% { transform: translateX(2px); }
 }
+
+/* ---- Zoom controls (Atlaz's) ---- */
+.zoom-controls {
+  position: absolute; right: 10px; bottom: 12px; z-index: 4;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.zoom-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+  color: var(--cyan); font-size: 1.1rem; font-weight: 700; line-height: 1;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  font-family: system-ui, sans-serif; /* consistent glyph metrics for + − ⌖ */
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.14);
+}
+.zoom-btn:active { transform: translateY(1px); }
 
 /* ---- LINE-UP / NAMEDROP: one big element tile ---- */
 .big-el-wrap { position: relative; margin: auto 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; width: 100%; }
