@@ -7,7 +7,7 @@
 // { region, mode, diff, startAt }; everyone races identical seeded rounds;
 // each seat submits ONE sparse `result` move (index 10+seat).
 
-import { MODES, modeMeta, DIFFS, diffMeta, buildRounds, rankSeats, winnerSeat, scoreOf } from './engine.js';
+import { MODES, modeMeta, DIFFS, diffMeta, buildRounds, roundsFor, isOrderMode, rankSeats, winnerSeat, scoreOf } from './engine.js';
 import { loadData, regionMetaOf, regionIso } from './data.js';
 import { createMode, renderReview, hidePanels } from './modes.js';
 import {
@@ -346,7 +346,9 @@ function buildCfgButtons() {
   };
   mk($('cfg-regions'), app.data.regions.map((r) => ({ id: r.id, label: `${r.label} · ${r.iso.split(' ').length}` })), 'region');
   mk($('cfg-modes'), MODES, 'mode');
-  mk($('cfg-diffs'), DIFFS.map((d) => ({ id: d.id, label: d.n ? `${d.name} · ${d.n}` : d.name })), 'diff');
+  // No numeric suffix on difficulty: the number means options for most modes but
+  // question count for namedrop, so the effect is spelled out below instead.
+  mk($('cfg-diffs'), DIFFS, 'diff');
 }
 
 function cfgSummary() {
@@ -355,6 +357,24 @@ function cfgSummary() {
   const d = diffMeta(app.cfgSel.diff);
   if (!r || !m || !d) return '';
   return `${esc(r.label)} — ${esc(m.name)} — ${esc(d.name)}`;
+}
+
+// Spell out what the chosen difficulty does for the chosen mode, so the dial is
+// never silently inert (namedrop's difficulty used to do nothing at all).
+function diffEffect() {
+  const r = regionMetaOf(app.data, app.cfgSel.region);
+  const m = modeMeta(app.cfgSel.mode);
+  const d = diffMeta(app.cfgSel.diff);
+  if (!r || !m || !d) return '';
+  const len = r.iso.split(' ').length;
+  const rounds = roundsFor(m.id, d, len);
+  if (isOrderMode(m.id)) {
+    const flags = d.n ? Math.min(d.n, len) : len;
+    return `Sort ${flags} at a time · ${rounds} round${rounds === 1 ? '' : 's'}`;
+  }
+  if (m.id === 'namedrop') return `${rounds} question${rounds === 1 ? '' : 's'}`;
+  const opts = d.n && d.n < len ? d.n : len;
+  return `${rounds} questions · ${opts} ${m.id === 'spotter' ? 'flags' : 'options'} each`;
 }
 
 function renderPrestart() {
@@ -377,9 +397,13 @@ function renderPrestart() {
   if (!host) {
     $('start-info').innerHTML = `${n} player${n === 1 ? '' : 's'} in · code <strong>${esc(app.code)}</strong>`;
   } else if (picking) {
-    $('start-info').innerHTML = cfgSummary() || 'Pick a region, a mode and a difficulty.';
+    const eff = diffEffect();
+    $('start-info').innerHTML = cfgSummary()
+      ? `${cfgSummary()}${eff ? `<br><span class="start-note">${esc(eff)}</span>` : ''}`
+      : 'Pick a region, a mode and a difficulty.';
   } else {
-    $('start-info').innerHTML = `${cfgSummary()}<br>${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`
+    $('start-info').innerHTML = `${cfgSummary()}${diffEffect() ? `<br><span class="start-note">${esc(diffEffect())}</span>` : ''}`
+      + `<br>${n} player${n === 1 ? '' : 's'} in · share code <strong>${esc(app.code)}</strong>`
       + `<br><span class="start-note">${n > 1 ? 'Everyone in the room plays.' : 'Friends can join until you start — or race solo.'}</span>`;
   }
   $('btn-start').classList.toggle('hidden', !host);
@@ -427,7 +451,7 @@ function beginGame(regionId, modeId, diffId, startAt) {
   app.regionId = regionId; app.modeId = modeId; app.diffId = diffId; app.startAt = startAt;
   setStatus('');
   const iso = regionIso(app.data, regionId);
-  app.rounds = buildRounds(modeId, diffMeta(diffId).n, iso, Number(app.room?.seed) >>> 0);
+  app.rounds = buildRounds(modeId, diffMeta(diffId), iso, Number(app.room?.seed) >>> 0);
 
   $('mode-chip').textContent = `${regionMetaOf(app.data, regionId).label} · ${modeMeta(modeId).name}`;
   $('mode-chip').classList.remove('hidden');

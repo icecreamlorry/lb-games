@@ -10,8 +10,13 @@ powered by population/area data.
 ## 1. What the game is
 
 Pick a **region**, a **mode** and a **difficulty**, then race up to **5 players** in a room
-(1-player room = solo; no separate solo mode). Difficulty sets how many flags/options you
-juggle at once: EASY 3 · MEDIUM 6 · HARD 9 · ALL (whole region).
+(1-player room = solo; no separate solo mode). Difficulty scales the challenge to fit each
+mode via two knobs per tier (`{ n, q }`): `n` = flags/options juggled at once (EASY 3 ·
+MEDIUM 6 · HARD 9 · ALL whole region) for Spotter/Line-up and the sorting modes; `q` = the
+question count (EASY 5 · MEDIUM 10 · HARD 15 · ALL whole region) for **Namedrop**, the one
+mode with nothing to juggle, so its difficulty scales the run length instead. Spotter/Line-up
+keep a fixed 10 questions. The prestart spells out the concrete effect (`engine.roundsFor()`)
+so the dial is never silently inert.
 
 ### Regions (countries only; ~25–35 each, plus the whole world)
 
@@ -24,7 +29,8 @@ Transcontinentals (TR, CY, EG…) appear in every region they border.
 
 1. **SPOTTER** — a country name + N flags; tap the right flag. 10 rounds.
 2. **LINE-UP** — one flag + N country names; pick the right name. 10 rounds.
-3. **NAMEDROP** — one flag; type the country (forgiving matching + aliases). 10 rounds.
+3. **NAMEDROP** — one flag; type the country (forgiving matching + aliases). Difficulty sets
+   the number of questions: EASY 5 · MEDIUM 10 · HARD 15 · ALL the region.
 4. **A TO Z** — N flags, names hidden; drag into alphabetical order, CONFIRM, then names +
    results reveal. 5 rounds (1 round of everything on ALL).
 5. **HEADCOUNT** — same, but order by population (smallest at the top).

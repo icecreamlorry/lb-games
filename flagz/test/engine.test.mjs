@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  MODES, modeMeta, DIFFS, diffMeta, isOrderMode, PICK_ROUNDS, ORDER_ROUNDS,
+  MODES, modeMeta, DIFFS, diffMeta, isOrderMode, PICK_ROUNDS, ORDER_ROUNDS, roundsFor,
   mulberry32, shuffleWith, buildRounds,
   orderKey, expectedOrder, gradeOrder,
   normalizeAnswer, buildAnswerIndex, matchAnswer,
@@ -22,16 +22,17 @@ function ok(cond, name) {
 function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), `${name} — got ${JSON.stringify(a)}, want ${JSON.stringify(b)}`); }
 
 const REGION = 'AA BB CC DD EE FF GG HH II JJ KK LL MM NN OO PP'.split(' ');
+const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard'), ALL = diffMeta('all');
 
 // ---- seeded round building ---------------------------------------------------
 
 {
-  const a = buildRounds('spotter', 6, REGION, 42);
-  const b = buildRounds('spotter', 6, REGION, 42);
-  const c = buildRounds('spotter', 6, REGION, 43);
+  const a = buildRounds('spotter', MED, REGION, 42);
+  const b = buildRounds('spotter', MED, REGION, 42);
+  const c = buildRounds('spotter', MED, REGION, 43);
   eq(a, b, 'same seed → same rounds');
   ok(JSON.stringify(a) !== JSON.stringify(c), 'different seed → different rounds');
-  eq(a.length, PICK_ROUNDS, 'pick modes run 10 rounds');
+  eq(a.length, PICK_ROUNDS, 'spotter/lineup run a fixed 10 rounds');
   for (const r of a) {
     eq(r.options.length, 6, 'medium → 6 options');
     ok(r.options.includes(r.answer), 'answer among options');
@@ -40,30 +41,63 @@ const REGION = 'AA BB CC DD EE FF GG HH II JJ KK LL MM NN OO PP'.split(' ');
   const answers = a.map((r) => r.answer);
   eq([...new Set(answers)].length, answers.length, 'no repeated questions');
 
-  const all = buildRounds('lineup', 0, REGION, 7);
+  // Spotter/lineup length stays fixed at 10 across every tier (difficulty
+  // scales their OPTIONS, not their length — unchanged behaviour).
+  for (const d of [EASY, MED, HARD, ALL]) {
+    eq(buildRounds('spotter', d, REGION, 1).length, PICK_ROUNDS, `spotter ${d.id}: still 10 rounds`);
+    eq(buildRounds('lineup', d, REGION, 1).length, PICK_ROUNDS, `lineup ${d.id}: still 10 rounds`);
+  }
+  eq(buildRounds('spotter', EASY, REGION, 1)[0].options.length, 3, 'spotter easy → 3 options');
+  eq(buildRounds('spotter', HARD, REGION, 1)[0].options.length, 9, 'spotter hard → 9 options');
+
+  const all = buildRounds('lineup', ALL, REGION, 7);
   for (const r of all) eq(r.options.length, REGION.length, 'ALL difficulty → whole region as options');
 
-  const nd = buildRounds('namedrop', 6, REGION, 7);
+  // Namedrop now scales its QUESTION count with difficulty (the fix).
+  eq(buildRounds('namedrop', EASY, REGION, 7).length, 5, 'namedrop easy → 5 questions');
+  eq(buildRounds('namedrop', MED, REGION, 7).length, 10, 'namedrop medium → 10 questions');
+  eq(buildRounds('namedrop', HARD, REGION, 7).length, 15, 'namedrop hard → 15 questions');
+  eq(buildRounds('namedrop', ALL, REGION, 7).length, REGION.length, 'namedrop ALL → whole region');
+  const nd = buildRounds('namedrop', MED, REGION, 7);
   for (const r of nd) eq(r.options.length, 0, 'namedrop has no options');
+  eq([...new Set(nd.map((r) => r.answer))].length, nd.length, 'namedrop: no repeated questions');
 
-  const small = buildRounds('spotter', 9, 'AA BB CC'.split(' '), 5);
+  const small = buildRounds('spotter', HARD, 'AA BB CC'.split(' '), 5);
   eq(small.length, 3, 'rounds capped at region size');
   for (const r of small) eq(r.options.length, 3, 'options capped at region size');
+  eq(buildRounds('namedrop', HARD, 'AA BB CC'.split(' '), 5).length, 3, 'namedrop questions capped at region size');
 }
 
 {
-  const rounds = buildRounds('headcount', 3, REGION, 42);
+  const rounds = buildRounds('headcount', EASY, REGION, 42);
   eq(rounds.length, ORDER_ROUNDS, 'order modes run 5 rounds');
   const seen = new Set();
   for (const r of rounds) {
     eq(r.ids.length, 3, 'easy → 3 flags per round');
     for (const id of r.ids) { ok(!seen.has(id), 'no flag repeats across rounds'); seen.add(id); }
   }
-  const allRounds = buildRounds('atoz', 0, REGION, 42);
+  eq(buildRounds('headcount', HARD, REGION, 42)[0].ids.length, 9, 'hard → 9 flags per round');
+  const allRounds = buildRounds('atoz', ALL, REGION, 42);
   eq(allRounds.length, 1, 'ALL difficulty → one big round');
   eq(allRounds[0].ids.length, REGION.length, '…containing the whole region');
-  const tiny = buildRounds('landmass', 9, 'AA BB CC DD'.split(' '), 3);
+  const tiny = buildRounds('landmass', HARD, 'AA BB CC DD'.split(' '), 3);
   ok(tiny.length >= 1 && tiny[0].ids.length === 4, 'small region → single round of everything');
+}
+
+// ---- roundsFor (what the UI advertises) --------------------------------------
+
+{
+  eq(roundsFor('spotter', EASY, 30), 10, 'roundsFor spotter = fixed 10');
+  eq(roundsFor('lineup', ALL, 30), 10, 'roundsFor lineup = fixed 10 even on ALL');
+  eq(roundsFor('namedrop', EASY, 30), 5, 'roundsFor namedrop easy');
+  eq(roundsFor('namedrop', HARD, 12), 12, 'roundsFor namedrop caps at region size');
+  eq(roundsFor('namedrop', ALL, 30), 30, 'roundsFor namedrop ALL = whole region');
+  eq(roundsFor('headcount', HARD, 30), 3, 'roundsFor order mode hard = 30/9 groups');
+  eq(roundsFor('atoz', ALL, 30), 1, 'roundsFor order mode ALL = one round');
+  // roundsFor agrees with the real builder for every mode × tier.
+  for (const mode of MODES.map((m) => m.id))
+    for (const d of DIFFS)
+      eq(buildRounds(mode, d, REGION, 1).length, roundsFor(mode, d, REGION.length), `roundsFor matches builder: ${mode}/${d.id}`);
 }
 
 // ---- ordering keys + grading ----------------------------------------------------
@@ -116,7 +150,8 @@ const REGION = 'AA BB CC DD EE FF GG HH II JJ KK LL MM NN OO PP'.split(' ');
   eq(MODES.length, 6, 'six modes');
   ok(MODES.every((m) => modeMeta(m.id) === m), 'modeMeta finds every mode');
   ok(isOrderMode('atoz') && isOrderMode('headcount') && isOrderMode('landmass') && !isOrderMode('spotter'), 'order-mode split');
-  eq(DIFFS.map((d) => d.n), [3, 6, 9, 0], 'difficulty option counts');
+  eq(DIFFS.map((d) => d.n), [3, 6, 9, 0], 'difficulty juggle counts');
+  eq(DIFFS.map((d) => d.q), [5, 10, 15, 0], 'difficulty question counts');
   ok(DIFFS.every((d) => diffMeta(d.id) === d), 'diffMeta finds every difficulty');
 }
 
