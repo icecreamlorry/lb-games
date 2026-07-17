@@ -18,19 +18,31 @@ export function isOrderMode(id) { return id === 'mass'; }
 export function isTableMode(id) { return id === 'pinpoint' || id === 'build'; }
 
 // ---- Difficulty ---------------------------------------------------------------
-// n = name options (lineup) / cards per sorting round (mass). 0 = the whole set.
-// Pinpoint, namedrop, sweep and build ignore it (same as Flagz namedrop).
+// Two knobs per tier so difficulty means something in EVERY mode:
+//   q = number of questions (pinpoint/lineup/namedrop/build); 0 = whole set once.
+//   n = juggle count — name options (lineup) / cards per sorting round (mass);
+//       0 = the whole set.
+// SWEEP is inherently the whole set, so difficulty doesn't apply there.
 
 export const DIFFS = [
-  { id: 'easy', name: 'EASY', n: 3 },
-  { id: 'medium', name: 'MEDIUM', n: 6 },
-  { id: 'hard', name: 'HARD', n: 9 },
-  { id: 'all', name: 'ALL', n: 0 },
+  { id: 'easy', name: 'EASY', n: 3, q: 5 },
+  { id: 'medium', name: 'MEDIUM', n: 6, q: 10 },
+  { id: 'hard', name: 'HARD', n: 9, q: 15 },
+  { id: 'all', name: 'ALL', n: 0, q: 0 },
 ];
 export function diffMeta(id) { return DIFFS.find((d) => d.id === id) || null; }
 
-export const PICK_ROUNDS = 10;  // questions per game in pinpoint/lineup/namedrop/build
-export const ORDER_ROUNDS = 5;  // sorting rounds (1 when difficulty = all)
+export const PICK_ROUNDS = 10;  // medium question count (kept for reference/tests)
+export const ORDER_ROUNDS = 5;  // fallback sorting rounds cap (1 when difficulty = all)
+
+// How many questions/rounds a mode+difficulty actually produces for a given set
+// size — used by the UI to tell the player what a difficulty will do.
+export function roundsFor(mode, diff, setLen) {
+  const { n = 0, q = 0 } = diff || {};
+  if (mode === 'sweep') return 1;
+  if (isOrderMode(mode)) return n ? Math.min(q || ORDER_ROUNDS, Math.floor(setLen / Math.min(n, setLen)) || 1) : 1;
+  return q ? Math.min(q, setLen) : setLen;
+}
 
 // ---- Seeded RNG ----------------------------------------------------------------
 
@@ -54,37 +66,40 @@ export function shuffleWith(rand, array) {
 }
 
 // ---- Round builders --------------------------------------------------------------
-// pick modes → [{ answer, options }] (options shuffled, contain answer; only
-//   lineup gets options — n = 0 means every set element is an option).
+// diff = a DIFFS entry { n, q } (see above).
+// pick modes → [{ answer, options }] — q questions (0 = whole set once), no
+//   repeats; only lineup gets options (n = 0 → every set element is an option).
 // mass → [{ ids }] (display order, already shuffled). n = 0 → one round with
-//   the whole set.
+//   the whole set; otherwise q sorting rounds of n, capped by how many
+//   non-overlapping groups the set yields.
 // sweep → [{ ids }] — one round carrying the whole set (order irrelevant).
 
-export function buildRounds(mode, diffN, setIds, seed) {
+export function buildRounds(mode, diff, setIds, seed) {
   const rand = mulberry32(seed);
   const pool = shuffleWith(rand, setIds);
+  const { n = 0, q = 0 } = diff || {};
 
   if (mode === 'sweep') return [{ ids: pool.slice() }];
 
   if (isOrderMode(mode)) {
-    if (!diffN) return [{ ids: pool.slice() }];
-    const n = Math.min(diffN, pool.length);
-    const count = Math.min(ORDER_ROUNDS, Math.floor(pool.length / n) || 1);
+    if (!n) return [{ ids: pool.slice() }];
+    const size = Math.min(n, pool.length);
+    const count = Math.min(q || ORDER_ROUNDS, Math.floor(pool.length / size) || 1);
     const rounds = [];
-    for (let r = 0; r < count; r++) rounds.push({ ids: pool.slice(r * n, r * n + n) });
+    for (let r = 0; r < count; r++) rounds.push({ ids: pool.slice(r * size, r * size + size) });
     return rounds;
   }
 
-  const count = Math.min(PICK_ROUNDS, pool.length);
+  const count = q ? Math.min(q, pool.length) : pool.length;
   const rounds = [];
   for (let r = 0; r < count; r++) {
     const answer = pool[r];
     if (mode !== 'lineup') { rounds.push({ answer, options: [] }); continue; }
     let options;
-    if (!diffN || diffN >= setIds.length) {
+    if (!n || n >= setIds.length) {
       options = shuffleWith(rand, setIds);
     } else {
-      const distractors = shuffleWith(rand, setIds.filter((c) => c !== answer)).slice(0, diffN - 1);
+      const distractors = shuffleWith(rand, setIds.filter((c) => c !== answer)).slice(0, n - 1);
       options = shuffleWith(rand, [answer, ...distractors]);
     }
     rounds.push({ answer, options });

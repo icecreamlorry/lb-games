@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  MODES, modeMeta, DIFFS, diffMeta, isOrderMode, isTableMode, PICK_ROUNDS, ORDER_ROUNDS,
+  MODES, modeMeta, DIFFS, diffMeta, isOrderMode, isTableMode, PICK_ROUNDS, ORDER_ROUNDS, roundsFor,
   mulberry32, shuffleWith, buildRounds,
   orderKey, expectedOrder, gradeOrder,
   normalizeAnswer, buildAnswerIndex, matchAnswer, matchSymbol,
@@ -22,16 +22,17 @@ function ok(cond, name) {
 function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), `${name} — got ${JSON.stringify(a)}, want ${JSON.stringify(b)}`); }
 
 const SET = 'aa bb cc dd ee ff gg hh ii jj kk ll mm nn oo pp'.split(' ');
+const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard'), ALL = diffMeta('all');
 
 // ---- seeded round building ---------------------------------------------------
 
 {
-  const a = buildRounds('lineup', 6, SET, 42);
-  const b = buildRounds('lineup', 6, SET, 42);
-  const c = buildRounds('lineup', 6, SET, 43);
+  const a = buildRounds('lineup', MED, SET, 42);
+  const b = buildRounds('lineup', MED, SET, 42);
+  const c = buildRounds('lineup', MED, SET, 43);
   eq(a, b, 'same seed → same rounds');
   ok(JSON.stringify(a) !== JSON.stringify(c), 'different seed → different rounds');
-  eq(a.length, PICK_ROUNDS, 'pick modes run 10 rounds');
+  eq(a.length, 10, 'lineup medium → 10 questions');
   for (const r of a) {
     eq(r.options.length, 6, 'medium → 6 options');
     ok(r.options.includes(r.answer), 'answer among options');
@@ -40,36 +41,62 @@ const SET = 'aa bb cc dd ee ff gg hh ii jj kk ll mm nn oo pp'.split(' ');
   const answers = a.map((r) => r.answer);
   eq([...new Set(answers)].length, answers.length, 'no repeated questions');
 
-  const all = buildRounds('lineup', 0, SET, 7);
+  const all = buildRounds('lineup', ALL, SET, 7);
+  eq(all.length, SET.length, 'lineup ALL → a question for every element');
   for (const r of all) eq(r.options.length, SET.length, 'ALL difficulty → whole set as options');
 
+  // Difficulty now drives the QUESTION count in the modes that used to ignore it.
   for (const mode of ['pinpoint', 'namedrop', 'build']) {
-    const rounds = buildRounds(mode, 6, SET, 7);
-    eq(rounds.length, PICK_ROUNDS, `${mode} runs 10 rounds`);
-    for (const r of rounds) eq(r.options.length, 0, `${mode} has no options`);
+    eq(buildRounds(mode, EASY, SET, 7).length, 5, `${mode} easy → 5 questions`);
+    eq(buildRounds(mode, MED, SET, 7).length, 10, `${mode} medium → 10 questions`);
+    eq(buildRounds(mode, HARD, SET, 7).length, 15, `${mode} hard → 15 questions`);
+    eq(buildRounds(mode, ALL, SET, 7).length, SET.length, `${mode} ALL → every element once`);
+    for (const r of buildRounds(mode, MED, SET, 7)) eq(r.options.length, 0, `${mode} has no options`);
+    // Never a repeated question.
+    const ans = buildRounds(mode, HARD, SET, 7).map((r) => r.answer);
+    eq([...new Set(ans)].length, ans.length, `${mode}: no repeated questions`);
   }
 
-  const small = buildRounds('pinpoint', 9, ['aa', 'bb', 'cc'], 5);
-  eq(small.length, 3, 'rounds capped at set size');
+  // Question count is capped at the set size (HARD wants 15, set has only 3).
+  const small = buildRounds('pinpoint', HARD, ['aa', 'bb', 'cc'], 5);
+  eq(small.length, 3, 'questions capped at set size');
 
-  const sweep = buildRounds('sweep', 6, SET, 9);
+  const sweep = buildRounds('sweep', MED, SET, 9);
   eq(sweep.length, 1, 'sweep is one round');
   eq([...sweep[0].ids].sort(), [...SET].sort(), '…carrying the whole set');
 }
 
 {
-  const rounds = buildRounds('mass', 3, SET, 42);
-  eq(rounds.length, ORDER_ROUNDS, 'mass runs 5 rounds');
+  const rounds = buildRounds('mass', EASY, SET, 42);
+  eq(rounds.length, ORDER_ROUNDS, 'mass easy → 5 rounds (16 elements / 3 cards, capped)');
   const seen = new Set();
   for (const r of rounds) {
     eq(r.ids.length, 3, 'easy → 3 cards per round');
     for (const id of r.ids) { ok(!seen.has(id), 'no element repeats across rounds'); seen.add(id); }
   }
-  const allRounds = buildRounds('mass', 0, SET, 42);
+  eq(buildRounds('mass', MED, SET, 42).every((r) => r.ids.length === 6), true, 'medium → 6 cards per round');
+  eq(buildRounds('mass', HARD, SET, 42)[0].ids.length, 9, 'hard → 9 cards per round');
+  const allRounds = buildRounds('mass', ALL, SET, 42);
   eq(allRounds.length, 1, 'ALL difficulty → one big round');
   eq(allRounds[0].ids.length, SET.length, '…containing the whole set');
-  const tiny = buildRounds('mass', 9, ['aa', 'bb', 'cc', 'dd'], 3);
+  const tiny = buildRounds('mass', HARD, ['aa', 'bb', 'cc', 'dd'], 3);
   ok(tiny.length >= 1 && tiny[0].ids.length === 4, 'small set → single round of everything');
+}
+
+// ---- roundsFor (what the UI advertises) --------------------------------------
+
+{
+  eq(roundsFor('pinpoint', EASY, 20), 5, 'roundsFor pinpoint easy');
+  eq(roundsFor('pinpoint', HARD, 12), 12, 'roundsFor caps at set size');
+  eq(roundsFor('pinpoint', ALL, 30), 30, 'roundsFor ALL = whole set');
+  eq(roundsFor('lineup', MED, 30), 10, 'roundsFor lineup medium');
+  eq(roundsFor('mass', HARD, 30), 3, 'roundsFor mass hard = 30/9 groups');
+  eq(roundsFor('mass', ALL, 30), 1, 'roundsFor mass ALL = one round');
+  eq(roundsFor('sweep', HARD, 30), 1, 'roundsFor sweep = one round');
+  // roundsFor agrees with the real builder.
+  for (const mode of ['pinpoint', 'lineup', 'namedrop', 'build', 'mass'])
+    for (const d of DIFFS)
+      eq(buildRounds(mode, d, SET, 1).length, roundsFor(mode, d, SET.length), `roundsFor matches builder: ${mode}/${d.id}`);
 }
 
 // ---- ordering keys + grading ----------------------------------------------------
@@ -125,7 +152,8 @@ const SET = 'aa bb cc dd ee ff gg hh ii jj kk ll mm nn oo pp'.split(' ');
   ok(MODES.every((m) => modeMeta(m.id) === m), 'modeMeta finds every mode');
   ok(isOrderMode('mass') && !isOrderMode('pinpoint') && !isOrderMode('sweep'), 'order-mode split');
   ok(isTableMode('pinpoint') && isTableMode('build') && !isTableMode('lineup'), 'table-mode split');
-  eq(DIFFS.map((d) => d.n), [3, 6, 9, 0], 'difficulty option counts');
+  eq(DIFFS.map((d) => d.n), [3, 6, 9, 0], 'difficulty juggle counts');
+  eq(DIFFS.map((d) => d.q), [5, 10, 15, 0], 'difficulty question counts');
   ok(DIFFS.every((d) => diffMeta(d.id) === d), 'diffMeta finds every difficulty');
 }
 

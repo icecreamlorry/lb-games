@@ -62,10 +62,28 @@ everything else dimmed context (`ctx`), so the spatial learning keeps its anchor
    jigsaw analog, cheaper than Atlaz's because every element has exactly one cell.
    10 rounds.
 
-### Difficulty (Flagz's dimension, same ids)
+### Difficulty (one dial, mode-appropriate effect)
 
-EASY 3 · MEDIUM 6 · HARD 9 · ALL — number of name options (LINE-UP) / cards per sorting
-round (MASS). Ignored by the other modes (same as Flagz NAMEDROP ignoring it).
+Two knobs per tier (`{ n, q }`) so difficulty means something in **every** mode:
+
+| tier | q (questions) | n (juggle) |
+|------|---------------|------------|
+| EASY | 5 | 3 |
+| MEDIUM | 10 | 6 |
+| HARD | 15 | 9 |
+| ALL | whole set | whole set |
+
+- **PINPOINT / NAMEDROP / BUILD** — `q` questions (ALL = every element in the set once).
+- **LINE-UP** — `q` questions, each with `n` name options.
+- **MASS** — `n` cards per sorting round (rounds = `q`, capped by how many
+  non-overlapping groups the set yields).
+- **SWEEP** — inherently the whole set; the difficulty picker shows "difficulty
+  doesn't apply" rather than pretending otherwise.
+
+The prestart picker spells out the concrete effect for the chosen set+mode+tier
+(e.g. "10 questions · 6 options each", "Sort 6 at a time · 3 rounds") via
+`engine.roundsFor()`, so the dial is never silently inert — that was the original
+sin of the first cut, where it did nothing in four of six modes.
 
 ### Scoring / results
 
