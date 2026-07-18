@@ -30,8 +30,12 @@ the Flagz/Atomyx drag list (scroll fixes included).
 2. **PLOTLINES** — taglines & one-line plots → pick the title. Plot text masks any
    occurrence of the title ("___") so it never gives itself away.
 3. **CASTING** — people: who directed X / which film did Y direct / who stars in X /
-   which film stars Y / who created X (TV). Reverse lookups exclude distractor titles
-   that also feature the person.
+   which film stars Y / who created X (TV). Cross-reference questions too: which of
+   these films by/with a person came out first / most recently (distinct years, so the
+   extremum is unambiguous), and which film directed by X *also* stars Y (options all
+   share the director; only one shares the star) plus its reverse (options all share the
+   star; only one shares the director). Reverse lookups exclude distractor titles that
+   also feature the person.
 4. **DETAILS** — release year, runtime, genre tags, studio/network, country (non-US
    titles only — "which country is Avengers from" is not a question), original title
    (foreign titles only), seasons (TV), highest-rated pick, biggest-box-office pick.

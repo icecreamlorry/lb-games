@@ -128,6 +128,56 @@ function fromTitles(ctx, ids, answerId, prompt, quote, fact) {
   };
 }
 
+// Who-appears-in-what across the pool, so the cross-referencing casting
+// categories ("also stars", "came out first") can look up a person's whole
+// filmography. Built once per buildRounds from the sorted pool, so it's
+// deterministic; downstream builders re-shuffle with the seeded RNG.
+function buildPersonIndex(poolIds, items) {
+  const byDirector = new Map();
+  const byStar = new Map();
+  const add = (map, key, id) => { if (!key) return; const a = map.get(key); if (a) a.push(id); else map.set(key, [id]); };
+  for (const id of poolIds.slice().sort()) {
+    const it = items[id];
+    add(byDirector, it.director, id);
+    for (const c of it.cast || []) add(byStar, c, id);
+  }
+  return { byDirector, byStar };
+}
+
+// "Which of these films by/with PERSON came out first / most recently?" —
+// pick n of a person's titles with DISTINCT years, so the earliest/latest is
+// unambiguous (no coin flip on a tied year).
+function personTimeline(it, ctx, role) {
+  const { rand, n, index, items } = ctx;
+  const person = role === 'director' ? it.director : pickFrom(rand, it.cast || []);
+  if (!person) return null;
+  const map = role === 'director' ? index.byDirector : index.byStar;
+  const ids = [];
+  const years = new Set();
+  const titles = new Set();
+  for (const id of shuffleWith(rand, map.get(person) || [])) {
+    if (ids.length >= n) break;
+    const o = items[id];
+    if (years.has(o.year) || titles.has(o.title)) continue;
+    years.add(o.year); titles.add(o.title); ids.push(id);
+  }
+  if (ids.length < 3) return null; // fewer than 3 isn't a satisfying superlative
+  const recent = rand() < 0.5;
+  let best = ids[0];
+  for (const id of ids) {
+    const y = items[id].year;
+    if (recent ? y > items[best].year : y < items[best].year) best = id;
+  }
+  const order = shuffleWith(rand, ids);
+  const what = role === 'director' ? `films directed by ${person}` : `titles starring ${person}`;
+  return {
+    prompt: `Which of these ${what} came out ${recent ? 'most recently' : 'first'}?`,
+    options: order.map((id) => items[id].title),
+    answer: order.indexOf(best),
+    fact: `${items[best].title} — ${items[best].year}`,
+  };
+}
+
 export const CATEGORIES = [
   {
     id: 'tagline',
@@ -213,6 +263,75 @@ export const CATEGORIES = [
       const star = pickFrom(ctx.rand, it.cast);
       const ids = titleOptions(ctx, ctx.id, (o) => !(o.cast || []).includes(star));
       return fromTitles(ctx, ids, ctx.id, `Which ${noun(it)} stars ${star}?`, null, `${it.title} — ${factOf(it)}`);
+    },
+  },
+  {
+    id: 'dirtimeline',
+    ok: (it) => !!it.director,
+    build(it, ctx) { return personTimeline(it, ctx, 'director'); },
+  },
+  {
+    id: 'startimeline',
+    ok: (it) => it.cast?.length >= 1,
+    build(it, ctx) { return personTimeline(it, ctx, 'star'); },
+  },
+  {
+    id: 'dircast',
+    ok: (it) => !!it.director && it.cast?.length >= 1,
+    build(it, ctx) {
+      // Options are ALL directed by `dir`; only `it` also stars `star`, so the
+      // question has one answer. Distractors are the director's other films that
+      // do NOT feature the star.
+      const { rand, n, index, items } = ctx;
+      const dir = it.director;
+      const star = pickFrom(rand, it.cast);
+      const ids = [ctx.id];
+      const titles = new Set([it.title]);
+      for (const id of shuffleWith(rand, index.byDirector.get(dir) || [])) {
+        if (ids.length >= n) break;
+        if (id === ctx.id) continue;
+        const o = items[id];
+        if (titles.has(o.title) || (o.cast || []).includes(star)) continue;
+        titles.add(o.title); ids.push(id);
+      }
+      if (ids.length < Math.min(n, 3)) return null;
+      const order = shuffleWith(rand, ids);
+      return {
+        prompt: `Which film directed by ${dir} also stars ${star}?`,
+        options: order.map((id) => items[id].title),
+        answer: order.indexOf(ctx.id),
+        fact: `${it.title} — dir. ${dir}, starring ${star}`,
+      };
+    },
+  },
+  {
+    id: 'castdir',
+    ok: (it) => !!it.director && it.cast?.length >= 1,
+    build(it, ctx) {
+      // The reverse: options ALL star `star`; only `it` is directed by `dir`.
+      // Distractors are other films with the star made by a KNOWN different
+      // director (movies only — the prompt says "film", and it's the director
+      // we're testing on).
+      const { rand, n, index, items } = ctx;
+      const dir = it.director;
+      const star = pickFrom(rand, it.cast);
+      const ids = [ctx.id];
+      const titles = new Set([it.title]);
+      for (const id of shuffleWith(rand, index.byStar.get(star) || [])) {
+        if (ids.length >= n) break;
+        if (id === ctx.id) continue;
+        const o = items[id];
+        if (!isMovie(o) || !o.director || o.director === dir || titles.has(o.title)) continue;
+        titles.add(o.title); ids.push(id);
+      }
+      if (ids.length < Math.min(n, 3)) return null;
+      const order = shuffleWith(rand, ids);
+      return {
+        prompt: `Which film starring ${star} was directed by ${dir}?`,
+        options: order.map((id) => items[id].title),
+        answer: order.indexOf(ctx.id),
+        fact: `${it.title} — dir. ${dir}, starring ${star}`,
+      };
     },
   },
   {
@@ -367,7 +486,7 @@ export function fmtMoney(n) {
 export const MODE_CATS = {
   mixed: CATEGORIES.map((c) => c.id),
   plotlines: ['tagline', 'plot'],
-  casting: ['director', 'revdirector', 'creator', 'star', 'revstar'],
+  casting: ['director', 'revdirector', 'creator', 'star', 'revstar', 'dirtimeline', 'startimeline', 'dircast', 'castdir'],
   details: ['year', 'runtime', 'genre', 'studio', 'country', 'origtitle', 'seasons', 'ratingpick', 'revenuepick'],
 };
 
@@ -415,6 +534,8 @@ export function buildRounds(mode, diff, poolIds, seed, items) {
 
   const catIds = MODE_CATS[mode] || MODE_CATS.mixed;
   const cats = CATEGORIES.filter((c) => catIds.includes(c.id));
+  // Person→filmography index for the cross-referencing casting categories.
+  const index = buildPersonIndex(poolIds, items);
   const rounds = [];
   for (const id of pool) {
     if (rounds.length >= q) break;
@@ -424,7 +545,7 @@ export function buildRounds(mode, diff, poolIds, seed, items) {
     // Try seeded-shuffled categories until one builds a valid question for
     // this title (some need distractors the pool can't always provide).
     for (const cat of shuffleWith(rand, usable)) {
-      const question = cat.build(it, { id, rand, n, pool, items });
+      const question = cat.build(it, { id, rand, n, pool, items, index });
       if (question) { rounds.push({ cat: cat.id, id, ...question }); break; }
     }
   }

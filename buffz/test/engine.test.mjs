@@ -173,6 +173,42 @@ for (const f of FILTERS) {
           ok(other.director !== who, `revdirector: ${other.title} not also by ${who}`);
         }
       }
+      if (r.cat === 'dircast') {
+        // Every option is directed by the named director; only the answer also
+        // stars the named star.
+        const m = r.prompt.match(/directed by (.+?) also stars (.+)\?$/);
+        ok(!!m, `dircast: prompt parses (${it.title})`);
+        const [, dir, star] = m || [];
+        eq(correct, it.title, `dircast: correct option is the title (${it.title})`);
+        for (let i = 0; i < r.options.length; i++) {
+          const o = Object.values(items).find((x) => x.title === r.options[i]);
+          ok(o.director === dir, `dircast: ${o.title} is directed by ${dir}`);
+          if (i === r.answer) ok((o.cast || []).includes(star), `dircast: answer ${o.title} stars ${star}`);
+          else ok(!(o.cast || []).includes(star), `dircast: distractor ${o.title} does not star ${star}`);
+        }
+      }
+      if (r.cat === 'castdir') {
+        // Every option stars the named star; only the answer is by the director.
+        const m = r.prompt.match(/starring (.+?) was directed by (.+)\?$/);
+        ok(!!m, `castdir: prompt parses (${it.title})`);
+        const [, star, dir] = m || [];
+        eq(correct, it.title, `castdir: correct option is the title (${it.title})`);
+        for (let i = 0; i < r.options.length; i++) {
+          const o = Object.values(items).find((x) => x.title === r.options[i]);
+          ok((o.cast || []).includes(star), `castdir: ${o.title} stars ${star}`);
+          if (i === r.answer) ok(o.director === dir, `castdir: answer ${o.title} is by ${dir}`);
+          else ok(o.director !== dir, `castdir: distractor ${o.title} not by ${dir}`);
+        }
+      }
+      if (r.cat === 'dirtimeline' || r.cat === 'startimeline') {
+        // The answer is the earliest/latest, and all option years are distinct
+        // so the extremum is unambiguous.
+        const recent = /most recently\?$/.test(r.prompt);
+        const years = r.options.map((t) => Object.values(items).find((x) => x.title === t).year);
+        const extremum = recent ? Math.max(...years) : Math.min(...years);
+        eq(years[r.answer], extremum, `${r.cat}: answer is the ${recent ? 'latest' : 'earliest'} (${it.title})`);
+        eq(years.length, new Set(years).size, `${r.cat}: option years are distinct (${it.title})`);
+      }
     }
   }
   ok(checked >= 500, `category checks covered ${checked} generated questions`);
