@@ -43,6 +43,16 @@ const FIRST_DECADE = 1930;  // decades below this are grouped into one "Pre-1930
 const PRE1930_QUOTA = 24;   // silent-era classics grouped as "Pre-1930" (own bucket)
 const GOAL = 100;           // report buckets that fall short of this
 
+// Deepen the filmographies of directors ALREADY in the pool, so the casting
+// cross-reference questions ("which film directed by X also stars Y", "which
+// came out first") — which need 3+ films by one director — have more to draw
+// on. Knobs (tune from the "deepened" line the report prints):
+const DEEPEN_TRIGGER = 2;    // only deepen directors with at least this many pool films
+const DEEPEN_CAP = 8;        // bring each such director up to at most this many films
+const DEEPEN_MIN_VOTES = 400;// notability floor for an ADDED film — a famous director's
+                             //   whole catalogue clears it; a one-hit director's doesn't,
+                             //   so we don't pad the pool with obscure titles
+
 const PAGE = 20; // TMDb page size (fixed)
 
 // TMDb TV genres use combined names — normalize onto the movie vocabulary so
@@ -157,6 +167,40 @@ export async function collectMovieIds(tmdb, genres, { today = new Date() } = {})
   }
 
   return { ids: [...ids], coverage };
+}
+
+// Given the directors already in the pool ({ id, name, have } — `have` = films
+// they already have), pull each one's full directing filmography and return the
+// ids of extra films worth adding. Fairness/quality rules:
+//   - only directors with >= `trigger` pool films (they're vetted as notable);
+//   - only their `job === 'Director'` credits (not writing/producing);
+//   - only films clearing `minVotes` (the obscurity gate);
+//   - at most `cap` films per director total, taking their highest-voted first;
+//   - never re-add a film already in `seen`.
+export async function collectDirectorFilms(tmdb, directors, {
+  seen = new Set(), minVotes = DEEPEN_MIN_VOTES, cap = DEEPEN_CAP, trigger = DEEPEN_TRIGGER,
+} = {}) {
+  const add = new Set();
+  const coverage = {};
+  // Deepest-first, so the cap budget favours directors we already lean on.
+  for (const dir of directors.slice().sort((a, b) => b.have - a.have)) {
+    if (dir.have < trigger) continue;
+    let credits;
+    try { credits = await tmdb(`/person/${dir.id}/movie_credits`); }
+    catch { continue; }
+    const directed = (credits.crew || [])
+      .filter((c) => c.job === 'Director' && (c.vote_count || 0) >= minVotes && c.release_date)
+      .sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
+    let room = Math.max(0, cap - dir.have);
+    let added = 0;
+    for (const c of directed) {
+      if (room <= 0) break;
+      if (seen.has(c.id) || add.has(c.id)) continue;
+      add.add(c.id); room--; added++;
+    }
+    if (added) coverage[dir.name] = { have: dir.have, added };
+  }
+  return { ids: [...add], coverage };
 }
 
 // ---- Detail fetch (concurrency pool) -----------------------------------------
@@ -309,11 +353,31 @@ async function main() {
   });
 
   console.log('fetching details…');
-  const movies = await mapPool(movieIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).then(buildMovie).catch(() => null));
+  const rawMovies = await mapPool(movieIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).catch(() => null));
+  const movies = rawMovies.map((d) => (d ? buildMovie(d) : null));
   const shows = await mapPool(tvIds, 8, (id) => tmdb(`/tv/${id}`, { append_to_response: 'credits' }).then(buildTv).catch(() => null));
+
+  // Deepen the directors we already have, so the casting cross-reference
+  // questions have fuller filmographies to draw on. Capture each director's
+  // TMDb person-id from the details we just fetched, count their pool films,
+  // pull their catalogue and fold in extra notable films.
+  const dirMap = new Map(); // personId -> { id, name, have }
+  movieIds.forEach((mid, i) => {
+    const d = rawMovies[i], m = movies[i];
+    if (!d || !m || !m.director) return;
+    const crew = (d.credits?.crew || []).find((c) => c.job === 'Director');
+    if (!crew?.id) return;
+    const e = dirMap.get(crew.id) || { id: crew.id, name: m.director, have: 0 };
+    e.have++; dirMap.set(crew.id, e);
+  });
+  console.log(`deepening ${[...dirMap.values()].filter((d) => d.have >= DEEPEN_TRIGGER).length} directors (>=${DEEPEN_TRIGGER} films, up to ${DEEPEN_CAP} each, >=${DEEPEN_MIN_VOTES} votes)…`);
+  const { ids: extraIds, coverage: deepened } = await collectDirectorFilms(tmdb, [...dirMap.values()], { seen: new Set(movieIds) });
+  const rawExtra = await mapPool(extraIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).catch(() => null));
+  const extra = rawExtra.map((d) => (d ? buildMovie(d) : null));
 
   const items = {};
   movieIds.forEach((id, i) => { if (movies[i]) items[`m${id}`] = movies[i]; });
+  extraIds.forEach((id, i) => { if (extra[i]) items[`m${id}`] = extra[i]; });
   tvIds.forEach((id, i) => { if (shows[i]) items[`v${id}`] = shows[i]; });
   disambiguate(items); // remakes get a year suffix; exact dups dropped
 
@@ -336,6 +400,9 @@ async function main() {
       if (it.t === 'm') movieGenre[g] = (movieGenre[g] || 0) + 1;
     }
   }
+  const deepenedDirs = Object.keys(deepened).length;
+  const deepenedFilms = extra.filter(Boolean).length;
+  console.log(`\ndeepened: +${deepenedFilms} films across ${deepenedDirs} directors (${extraIds.length} fetched)`);
   console.log(`\nitems: ${all.length} (${all.filter((i) => i.t === 'm').length} movies, ${all.filter((i) => i.t === 'v').length} tv)`);
   console.log('\nmovies per decade (bucket fetched → in final data):');
   for (const [d, got] of Object.entries(coverage.decades).sort()) {

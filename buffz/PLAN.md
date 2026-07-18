@@ -117,6 +117,19 @@ can't fill to 100 (the 1930s genuinely doesn't have 100 films most people know).
 Tunable trade-off: filling old/niche buckets pulls in less-famous titles, so the
 unfiltered pool skews a little deeper — turn the QUOTA constants down to tighten it.
 
+**Deepen existing directors (for the casting cross-reference questions).** The
+"which film directed by X also stars Y" / "which of X's films came out first"
+questions need 3+ films by one director in play. After the first details pass (which
+yields each film's director + TMDb person-id), `collectDirectorFilms()` pulls the full
+directing catalogue of every director already holding `DEEPEN_TRIGGER` (2) pool films
+and folds in their other movies — but only ones clearing `DEEPEN_MIN_VOTES` (400) votes,
+up to `DEEPEN_CAP` (8) films each. The vote floor is the obscurity gate: a famous
+director's whole catalogue clears it (so almost all their well-known films come in),
+while a one-hit director's deep cuts don't, so the pool isn't padded with unknowns. The
+report prints a "deepened: +N films across M directors" line — dial the floor up (fewer,
+more famous additions) or the trigger/cap around from there. This only deepens directors
+already vetted by the stratified pull; it never introduces new people.
+
 Then per title: one `append_to_response=credits` details call (~1,500 requests ≈ a
 minute at TMDb's free ~50 req/s; the tier costs nothing, attribution required — shown
 in the help modal). It normalizes TV genres, trims casts to 3, keeps overviews to

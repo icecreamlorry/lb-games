@@ -5,7 +5,7 @@
 //   node buffz/tools/build-data.test.mjs
 
 import {
-  discoverBucket, collectMovieIds, decadeOf, firstSentence, buildMovie, genreDropdown,
+  discoverBucket, collectMovieIds, collectDirectorFilms, decadeOf, firstSentence, buildMovie, genreDropdown,
 } from './build-data.mjs';
 
 let passed = 0, failed = 0;
@@ -114,6 +114,44 @@ eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here'
   const { coverage } = await collectMovieIds(fakeTmdb(universe, GENRES), GENRES, { today: new Date('2029-06-01') });
   eq(coverage.decades['1930s'], 12, 'starved decade reports its true (short) count');
   ok(coverage.decades['2010s'] >= 115, '2010s still fills');
+}
+
+// ---- collectDirectorFilms: deepen existing directors, gated by trigger/cap/floor ----
+{
+  // Alice is well-represented (3 pool films) with a deep catalogue; Bob has
+  // only 1 pool film so sits below the trigger and is left alone.
+  const catalogue = {
+    10: [
+      { id: 101, job: 'Director', vote_count: 5000, release_date: '2001-01-01' }, // already in pool
+      { id: 102, job: 'Director', vote_count: 4000, release_date: '2005-01-01' },
+      { id: 103, job: 'Director', vote_count: 900, release_date: '2010-01-01' },
+      { id: 104, job: 'Director', vote_count: 50, release_date: '2012-01-01' },   // obscure → excluded
+      { id: 105, job: 'Writer', vote_count: 9999, release_date: '2013-01-01' },   // not directed → excluded
+      { id: 106, job: 'Director', vote_count: 3000, release_date: '' },           // no release date → excluded
+    ],
+    20: [{ id: 201, job: 'Director', vote_count: 8000, release_date: '2000-01-01' }],
+  };
+  const tmdb = async (path) => {
+    const m = path.match(/^\/person\/(\d+)\/movie_credits$/);
+    if (m) return { crew: catalogue[m[1]] || [] };
+    throw new Error(`unexpected path ${path}`);
+  };
+  const directors = [{ id: 10, name: 'Alice', have: 3 }, { id: 20, name: 'Bob', have: 1 }];
+  const { ids, coverage } = await collectDirectorFilms(tmdb, directors, { seen: new Set([101]), trigger: 2, cap: 8, minVotes: 100 });
+  ok(!ids.includes(101), 'collectDirectorFilms skips films already in the pool');
+  ok(ids.includes(102) && ids.includes(103), 'collectDirectorFilms adds a director\'s notable films');
+  ok(!ids.includes(104), 'collectDirectorFilms excludes sub-threshold (obscure) films');
+  ok(!ids.includes(105), 'collectDirectorFilms counts only Director credits');
+  ok(!ids.includes(106), 'collectDirectorFilms excludes undated films');
+  ok(!ids.includes(201), 'collectDirectorFilms leaves below-trigger directors alone');
+  eq(coverage.Alice, { have: 3, added: 2 }, 'collectDirectorFilms reports per-director depth added');
+}
+{
+  // Cap: a director with 6 pool films tops out at 8, so only the 2 best extras.
+  const many = Array.from({ length: 10 }, (_, i) => ({ id: 300 + i, job: 'Director', vote_count: 1000 - i, release_date: '2000-01-01' }));
+  const tmdb = async () => ({ crew: many });
+  const { ids } = await collectDirectorFilms(tmdb, [{ id: 30, name: 'Cap', have: 6 }], { seen: new Set(), trigger: 2, cap: 8, minVotes: 100 });
+  eq(ids, [300, 301], 'collectDirectorFilms fills only up to the cap, highest-voted first');
 }
 
 // ---- genreDropdown threshold ----
