@@ -122,13 +122,14 @@ unfiltered pool skews a little deeper — turn the QUOTA constants down to tight
 questions need 3+ films by one director in play. After the first details pass (which
 yields each film's director + TMDb person-id), `collectDirectorFilms()` pulls the full
 directing catalogue of every director already holding `DEEPEN_TRIGGER` (2) pool films
-and folds in their other movies — but only ones clearing `DEEPEN_MIN_VOTES` (400) votes,
-up to `DEEPEN_CAP` (8) films each. The vote floor is the obscurity gate: a famous
-director's whole catalogue clears it (so almost all their well-known films come in),
-while a one-hit director's deep cuts don't, so the pool isn't padded with unknowns. The
-report prints a "deepened: +N films across M directors" line — dial the floor up (fewer,
-more famous additions) or the trigger/cap around from there. This only deepens directors
-already vetted by the stratified pull; it never introduces new people.
+and folds in every other movie clearing `DEEPEN_MIN_VOTES` (400) votes — however many
+that is. The vote floor is the only gate: a famous director's whole catalogue clears it
+(so all of their well-known films come in), while a one-hit director's deep cuts don't,
+so the pool isn't padded with unknowns. The report prints a "deepened: +N films across M
+directors" line — dial the floor up (fewer, more famous additions) or down (broader) from
+there. This only deepens directors already vetted by the stratified pull; it never
+introduces new people. The passes are meant to grow the pool, not just reshuffle it — at
+~2,500 entries it still loads instantly.
 
 Then per title: one `append_to_response=credits` details call (~1,500 requests ≈ a
 minute at TMDb's free ~50 req/s; the tier costs nothing, attribution required — shown

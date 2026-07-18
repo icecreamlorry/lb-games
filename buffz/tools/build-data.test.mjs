@@ -147,11 +147,13 @@ eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here'
   eq(coverage.Alice, { have: 3, added: 2 }, 'collectDirectorFilms reports per-director depth added');
 }
 {
-  // Cap: a director with 6 pool films tops out at 8, so only the 2 best extras.
-  const many = Array.from({ length: 10 }, (_, i) => ({ id: 300 + i, job: 'Director', vote_count: 1000 - i, release_date: '2000-01-01' }));
+  // No cap: every qualifying film comes in, however prolific the director. Here
+  // 8 of 10 clear the 100-vote floor, so all 8 join (the 2 sub-floor excluded).
+  const many = Array.from({ length: 10 }, (_, i) => ({ id: 300 + i, job: 'Director', vote_count: i < 8 ? 500 : 50, release_date: '2000-01-01' }));
   const tmdb = async () => ({ crew: many });
-  const { ids } = await collectDirectorFilms(tmdb, [{ id: 30, name: 'Cap', have: 6 }], { seen: new Set(), trigger: 2, cap: 8, minVotes: 100 });
-  eq(ids, [300, 301], 'collectDirectorFilms fills only up to the cap, highest-voted first');
+  const { ids } = await collectDirectorFilms(tmdb, [{ id: 30, name: 'Prolific', have: 6 }], { seen: new Set(), trigger: 2, minVotes: 100 });
+  eq(ids.length, 8, 'collectDirectorFilms adds every film clearing the vote floor — no arbitrary cap');
+  ok(!ids.includes(308) && !ids.includes(309), 'collectDirectorFilms still excludes sub-floor films');
 }
 
 // ---- genreDropdown threshold ----

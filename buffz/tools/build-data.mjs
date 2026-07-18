@@ -48,10 +48,11 @@ const GOAL = 100;           // report buckets that fall short of this
 // came out first") — which need 3+ films by one director — have more to draw
 // on. Knobs (tune from the "deepened" line the report prints):
 const DEEPEN_TRIGGER = 2;    // only deepen directors with at least this many pool films
-const DEEPEN_CAP = 8;        // bring each such director up to at most this many films
 const DEEPEN_MIN_VOTES = 400;// notability floor for an ADDED film — a famous director's
-                             //   whole catalogue clears it; a one-hit director's doesn't,
-                             //   so we don't pad the pool with obscure titles
+                             //   whole catalogue clears it (and all of it comes in); a
+                             //   one-hit director's deep cuts don't, so the pool isn't
+                             //   padded with obscure titles. This floor is the ONLY gate
+                             //   on how many of a director's films join — no arbitrary cap
 
 const PAGE = 20; // TMDb page size (fixed)
 
@@ -174,29 +175,25 @@ export async function collectMovieIds(tmdb, genres, { today = new Date() } = {})
 // ids of extra films worth adding. Fairness/quality rules:
 //   - only directors with >= `trigger` pool films (they're vetted as notable);
 //   - only their `job === 'Director'` credits (not writing/producing);
-//   - only films clearing `minVotes` (the obscurity gate);
-//   - at most `cap` films per director total, taking their highest-voted first;
+//   - only films clearing `minVotes` (the obscurity gate) — but ALL such films,
+//     however many, so a famous director's whole catalogue comes in;
 //   - never re-add a film already in `seen`.
 export async function collectDirectorFilms(tmdb, directors, {
-  seen = new Set(), minVotes = DEEPEN_MIN_VOTES, cap = DEEPEN_CAP, trigger = DEEPEN_TRIGGER,
+  seen = new Set(), minVotes = DEEPEN_MIN_VOTES, trigger = DEEPEN_TRIGGER,
 } = {}) {
   const add = new Set();
   const coverage = {};
-  // Deepest-first, so the cap budget favours directors we already lean on.
-  for (const dir of directors.slice().sort((a, b) => b.have - a.have)) {
+  for (const dir of directors) {
     if (dir.have < trigger) continue;
     let credits;
     try { credits = await tmdb(`/person/${dir.id}/movie_credits`); }
     catch { continue; }
     const directed = (credits.crew || [])
-      .filter((c) => c.job === 'Director' && (c.vote_count || 0) >= minVotes && c.release_date)
-      .sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0));
-    let room = Math.max(0, cap - dir.have);
+      .filter((c) => c.job === 'Director' && (c.vote_count || 0) >= minVotes && c.release_date);
     let added = 0;
     for (const c of directed) {
-      if (room <= 0) break;
       if (seen.has(c.id) || add.has(c.id)) continue;
-      add.add(c.id); room--; added++;
+      add.add(c.id); added++;
     }
     if (added) coverage[dir.name] = { have: dir.have, added };
   }
@@ -370,7 +367,7 @@ async function main() {
     const e = dirMap.get(crew.id) || { id: crew.id, name: m.director, have: 0 };
     e.have++; dirMap.set(crew.id, e);
   });
-  console.log(`deepening ${[...dirMap.values()].filter((d) => d.have >= DEEPEN_TRIGGER).length} directors (>=${DEEPEN_TRIGGER} films, up to ${DEEPEN_CAP} each, >=${DEEPEN_MIN_VOTES} votes)…`);
+  console.log(`deepening ${[...dirMap.values()].filter((d) => d.have >= DEEPEN_TRIGGER).length} directors (>=${DEEPEN_TRIGGER} pool films; adding all their films >=${DEEPEN_MIN_VOTES} votes)…`);
   const { ids: extraIds, coverage: deepened } = await collectDirectorFilms(tmdb, [...dirMap.values()], { seen: new Set(movieIds) });
   const rawExtra = await mapPool(extraIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).catch(() => null));
   const extra = rawExtra.map((d) => (d ? buildMovie(d) : null));
