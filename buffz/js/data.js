@@ -2,6 +2,8 @@
 // host narrows the pool with three dropdowns (type / decade / genre), and the
 // playable pool is derived here, identically on every seat.
 
+import { MIN_POOL } from './engine.js';
+
 let cache = null;
 
 export async function loadData() {
@@ -27,8 +29,13 @@ export function filterIds(data, { type = 'all', decade = 'all', genre = 'all' } 
 }
 
 // Dropdown option lists, derived from the data so they never drift from it.
+// Only decades with enough titles to actually start a game are offered — the
+// stratified pull sweeps in a handful of pre-1930 classics (the 1895 Lumière
+// short, etc.) that shouldn't appear as unplayable "1890s · 1" dropdown rows.
 export function decadeList(data) {
-  return [...new Set(Object.values(data.items).map((it) => it.decade))].sort();
+  const counts = {};
+  for (const it of Object.values(data.items)) counts[it.decade] = (counts[it.decade] || 0) + 1;
+  return Object.keys(counts).filter((d) => counts[d] >= MIN_POOL).sort();
 }
 export function genreList(data) {
   return data.genres || [];

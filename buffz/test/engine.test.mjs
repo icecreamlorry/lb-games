@@ -35,7 +35,7 @@ const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard')
   for (const [id, it] of Object.entries(items)) {
     ok(it.t === 'm' || it.t === 'v', `${id}: type is m|v`);
     ok(typeof it.title === 'string' && it.title.length > 0, `${id}: has a title`);
-    ok(Number.isFinite(it.year) && it.year > 1900, `${id}: has a year`);
+    ok(Number.isFinite(it.year) && it.year >= 1870, `${id}: has a plausible film-era year`);
     eq(it.decade, `${Math.floor(it.year / 10) * 10}s`, `${id}: decade matches year`);
     ok(Array.isArray(it.genres) && it.genres.length >= 1, `${id}: has genres`);
     // Cast/creator/director are OPTIONAL in real TMDb data (obscure or
