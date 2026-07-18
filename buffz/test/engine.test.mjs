@@ -38,10 +38,13 @@ const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard')
     ok(Number.isFinite(it.year) && it.year > 1900, `${id}: has a year`);
     eq(it.decade, `${Math.floor(it.year / 10) * 10}s`, `${id}: decade matches year`);
     ok(Array.isArray(it.genres) && it.genres.length >= 1, `${id}: has genres`);
-    ok(Array.isArray(it.cast) && it.cast.length >= 1 && it.cast.length <= 3, `${id}: 1-3 cast`);
-    ok(it.rating > 0 && it.rating <= 10, `${id}: rating in range`);
-    if (it.t === 'm') ok(!!it.director && !it.creator && !it.seasons, `${id}: movie fields`);
-    if (it.t === 'v') ok(!!it.creator && !it.director && !it.revenue, `${id}: tv fields`);
+    // Cast/creator/director are OPTIONAL in real TMDb data (obscure or
+    // international titles can lack credits) — the generator gates those
+    // question categories per-item, so absence is fine, not a bug.
+    ok(Array.isArray(it.cast) && it.cast.length <= 3, `${id}: up to 3 cast`);
+    ok(it.rating >= 0 && it.rating <= 10, `${id}: rating in range`);
+    if (it.t === 'm') ok(!it.creator && !it.seasons, `${id}: no tv-only fields on a movie`);
+    if (it.t === 'v') ok(!it.director && !it.revenue, `${id}: no movie-only fields on a show`);
     if (it.orig) ok(it.orig !== it.title, `${id}: orig differs from title`);
   }
   // country only present for non-US titles by design (question fairness).

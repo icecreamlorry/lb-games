@@ -84,24 +84,44 @@ each item is:
   seasons? }              // tv
 ```
 
-**⚠ The checked-in file is currently a ~60-title HAND-WRITTEN SAMPLE** (marked
-`"sample": true`, which puts a "sample data" note in the prestart). Facts are from
-memory — fine for development, not for shipping. To build the real dataset:
+The `sample` flag (when present) puts a "sample data" note in the prestart; the real
+dataset built by the pipeline omits it. To (re)build:
 
-1. Get a free TMDb API key (themoviedb.org → Settings → API).
+1. Get a free TMDb API key (themoviedb.org → Settings → API — v3 key or v4 token).
 2. On a machine with normal internet (api.themoviedb.org is blocked from the dev
    sandbox — verified, proxy 403):
    `TMDB_API_KEY=xxx node buffz/tools/build-data.mjs`
-3. Commit the regenerated `buffz/data/titles.json` (the `sample` flag disappears).
+3. Commit the regenerated `buffz/data/titles.json`.
 
-The pipeline pulls the **top ~750 movies + ~350 TV shows by vote count** (the best
-"everyone knows this" proxy — popularity is trend-of-the-week, top-rated is
-critically-acclaimed-obscure) via `/discover` pages, then one
-`append_to_response=credits` details call per title (~1,150 requests ≈ a minute at
-TMDb's free ~50 req/s; the tier costs nothing, attribution required — shown in the
-help modal). It normalizes TV genres, trims casts to 3, keeps overviews to their first
-sentence, masks nothing (the engine masks titles at question-build time), and drops
-`country` for US titles and `orig` when it matches the display title.
+**Stratified pull (why the pipeline isn't one query).** A single `vote_count.desc`
+pull is recency-biased — vote count tracks how many *current* TMDb users rated a
+title — so old decades and niche genres starve (the first real pull had 1 film in the
+1930s and 3 documentaries). Instead the builder runs a **separate `vote_count.desc`
+query per decade and per genre**, takes the top ~QUOTA of each (`DECADE_QUOTA` 115,
+`GENRE_QUOTA` 130), and unions them with a `GLOBAL_MOVIES` (600) popularity backbone.
+The top-100-by-votes *within the 1970s* is that decade's best-known set even though
+those films trail a modern blockbuster globally — so every decade and genre clears
+~100 movies. TV stays a single 350 pull (the coverage ask was about movies). The
+builder prints a per-decade / per-genre coverage table and flags any bucket that TMDb
+can't fill to 100 (the 1930s genuinely doesn't have 100 films most people know).
+Tunable trade-off: filling old/niche buckets pulls in less-famous titles, so the
+unfiltered pool skews a little deeper — turn the QUOTA constants down to tighten it.
+
+Then per title: one `append_to_response=credits` details call (~1,500 requests ≈ a
+minute at TMDb's free ~50 req/s; the tier costs nothing, attribution required — shown
+in the help modal). It normalizes TV genres, trims casts to 3, keeps overviews to
+their first sentence, drops `country` for US titles and `orig` when it matches the
+display title, and **drops titles with no quiz-worthy genre** (pure Reality/News/Talk
+shows, or movies left with only "TV Movie").
+
+**Title disambiguation.** Same-title remakes ("The Lion King" 1994 vs 2019, "The
+Mummy" 1999 vs 2017) would produce duplicate option buttons and ambiguous prompts
+("Who directed The Mummy?"). `disambiguate()` appends the year to every member of a
+title collision → "The Lion King (1994)" / "The Lion King (2019)"; exact title+year
+dups keep the higher-voted one. It needs only the year (already in the data), so it
+also runs as a one-time fixer on existing data without re-fetching. `tools/
+build-data.test.mjs` mock-tests the stratification + disambiguation logic (TMDb is
+unreachable from the sandbox, so the pull itself can't be run here).
 
 ## 3. Code layout (mirrors Atomyx; copy-don't-reinvent applies)
 
