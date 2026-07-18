@@ -26,7 +26,7 @@
 // questions are seeded templates over this checked-in data. TMDb attribution
 // is shown in the game's help modal.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,7 +37,7 @@ const OUT = join(HERE, '..', 'data', 'titles.json');
 const DECADE_QUOTA = 115;   // movies to pull per decade bucket (>100 for headroom)
 const GENRE_QUOTA = 130;    // movies to pull per genre bucket
 const GLOBAL_MOVIES = 600;  // popularity backbone so famous modern films aren't capped
-const TV_COUNT = 350;       // TV shows (single vote_count.desc pull; the ask is movies)
+const TV_COUNT = 700;       // TV shows (single vote_count.desc pull; the ask is movies)
 const MIN_VOTES = 25;       // skip literal noise in bucket queries
 const FIRST_DECADE = 1930;  // decades below this are grouped into one "Pre-1930" bucket
 const PRE1930_QUOTA = 24;   // silent-era classics grouped as "Pre-1930" (own bucket)
@@ -202,6 +202,18 @@ export async function collectDirectorFilms(tmdb, directors, {
 
 // ---- Detail fetch (concurrency pool) -----------------------------------------
 
+// The incremental core: fetch details ONLY for ids not already held, storing
+// each under `${prefix}${id}`; reused ids are never re-fetched. Grows `items`
+// in place, returns the tallies. This is what lets a rebuild skip the hundreds
+// of titles we already have.
+export async function fetchMissing(ids, items, prefix, fetcher, limit = 8) {
+  const missing = ids.filter((id) => !items[`${prefix}${id}`]);
+  const built = await mapPool(missing, limit, fetcher);
+  let added = 0;
+  missing.forEach((id, i) => { if (built[i]) { items[`${prefix}${id}`] = built[i]; added++; } });
+  return { fetched: missing.length, added, reused: ids.length - missing.length };
+}
+
 async function mapPool(items, limit, fn) {
   const out = new Array(items.length);
   let i = 0;
@@ -233,7 +245,7 @@ export function buildMovie(d) {
   const year = Number((d.release_date || '').slice(0, 4));
   if (!year || !d.title) return null;
   const cast = (d.credits?.cast || []).slice(0, 3).map((c) => c.name);
-  const director = (d.credits?.crew || []).find((c) => c.job === 'Director')?.name;
+  const dirCrew = (d.credits?.crew || []).find((c) => c.job === 'Director');
   const genres = (d.genres || []).map((g) => g.name).filter((g) => !SKIP_GENRES.has(g));
   if (!genres.length) return null; // genre is a core field (filter + a question category)
   const countries = (d.production_countries || []).map((c) => c.name);
@@ -251,7 +263,9 @@ export function buildMovie(d) {
   if (d.tagline) item.tagline = d.tagline;
   const plot = firstSentence(d.overview);
   if (plot) item.plot = plot;
-  if (director) item.director = director;
+  // Keep the director's TMDb person-id (`dirId`) so incremental rebuilds can
+  // deepen filmographies without re-fetching every movie just to learn it.
+  if (dirCrew?.name) { item.director = dirCrew.name; if (dirCrew.id) item.dirId = dirCrew.id; }
   const studio = (d.production_companies || [])[0]?.name;
   if (studio) item.studio = studio;
   if (countries.length && !countries.includes('United States of America')) item.country = countries[0];
@@ -322,6 +336,27 @@ export function disambiguate(items) {
   return items;
 }
 
+// Inverse of disambiguate's ` (YEAR)` suffix. Incremental rebuilds reuse the
+// previous titles.json, whose remake titles already carry the suffix; strip it
+// back off so disambiguation runs from raw titles every time and stays
+// idempotent (and a new third remake re-suffixes the whole group correctly).
+// disambiguate only ever appends exactly ` (${year})`, and a real title ending
+// in its own release year in parens doesn't occur in TMDb data.
+export function undisambiguate(items) {
+  for (const it of Object.values(items)) {
+    const suffix = ` (${it.year})`;
+    if (typeof it.title === 'string' && it.title.endsWith(suffix)) it.title = it.title.slice(0, -suffix.length);
+  }
+  return items;
+}
+
+// The details we already fetched, keyed by TMDb id — so a rebuild reuses them
+// instead of re-hitting the API. Missing/unreadable → empty (a clean build).
+function loadExisting(path) {
+  try { return JSON.parse(readFileSync(path, 'utf8')).items || {}; }
+  catch { return {}; }
+}
+
 // Genres worth offering in the dropdown: enough titles to actually play.
 export function genreDropdown(items, min = 20) {
   const counts = {};
@@ -340,43 +375,56 @@ async function main() {
   const tmdb = makeClient(KEY);
 
   const genres = (await tmdb('/genre/movie/list')).genres; // [{ id, name }]
+  // INCREMENTAL by default: reuse the details already in titles.json and fetch
+  // only ids we don't hold yet — so tuning a knob (e.g. more TV) no longer
+  // re-downloads the hundreds of titles we already have. The pool only GROWS:
+  // everything previously stored is kept and new discoveries are added on top.
+  // Set BUFFZ_REFETCH=1 for a clean rebuild — needed when you change a
+  // normalization/quality rule (buildMovie/buildTv, the vote floors) that
+  // should re-apply to titles already stored.
+  const refetch = process.env.BUFFZ_REFETCH === '1';
+  const items = refetch ? {} : loadExisting(OUT);
+  undisambiguate(items); // reuse from RAW titles so disambiguation stays idempotent
+  const reused = Object.keys(items).length;
+  console.log(refetch ? 'clean rebuild (BUFFZ_REFETCH=1) — fetching everything…'
+    : `incremental: reusing ${reused} titles already in titles.json; fetching only new ones…`);
+
+  const fetchMovie = (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).then(buildMovie).catch(() => null);
+  const fetchTv = (id) => tmdb(`/tv/${id}`, { append_to_response: 'credits' }).then(buildTv).catch(() => null);
+
   console.log(`stratified movie pull: global ${GLOBAL_MOVIES} + ${DECADE_QUOTA}/decade + ${GENRE_QUOTA}/genre…`);
   const { ids: movieIds, coverage } = await collectMovieIds(tmdb, genres);
-  console.log(`\n${movieIds.length} distinct movies selected across buckets.`);
+  console.log(`\n${movieIds.length} distinct movies discovered across buckets.`);
 
+  // 1. New movies only.
+  const mv = await fetchMissing(movieIds, items, 'm', fetchMovie);
+  console.log(`fetched ${mv.fetched} new movie details (${mv.reused} reused)`);
+
+  // 2. Deepen directors — count films per director across EVERY movie we now
+  //    hold (reused items carry `dirId`, new ones just got it), then fetch only
+  //    the catalogue films we don't already have.
+  const dirMap = new Map(); // personId -> { id, name, have }
+  for (const [k, it] of Object.entries(items)) {
+    if (k[0] !== 'm' || !it.dirId || !it.director) continue;
+    const e = dirMap.get(it.dirId) || { id: it.dirId, name: it.director, have: 0 };
+    e.have++; dirMap.set(it.dirId, e);
+  }
+  const haveMovieIds = new Set(Object.keys(items).filter((k) => k[0] === 'm').map((k) => Number(k.slice(1))));
+  console.log(`deepening ${[...dirMap.values()].filter((d) => d.have >= DEEPEN_TRIGGER).length} directors (>=${DEEPEN_TRIGGER} pool films; adding all their films >=${DEEPEN_MIN_VOTES} votes)…`);
+  const { ids: extraIds, coverage: deepened } = await collectDirectorFilms(tmdb, [...dirMap.values()], { seen: haveMovieIds });
+  const ex = await fetchMissing(extraIds, items, 'm', fetchMovie);
+  console.log(`deepened: +${ex.added} new director-catalogue films`);
+
+  // 3. New TV only.
   console.log(`discovering top ${TV_COUNT} TV shows…`);
   const tvIds = await discoverBucket(tmdb, 'tv', TV_COUNT, {
     'first_air_date.lte': new Date().toISOString().slice(0, 10),
   });
+  const tv = await fetchMissing(tvIds, items, 'v', fetchTv);
+  console.log(`fetched ${tv.fetched} new TV details (${tv.reused} reused)`);
 
-  console.log('fetching details…');
-  const rawMovies = await mapPool(movieIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).catch(() => null));
-  const movies = rawMovies.map((d) => (d ? buildMovie(d) : null));
-  const shows = await mapPool(tvIds, 8, (id) => tmdb(`/tv/${id}`, { append_to_response: 'credits' }).then(buildTv).catch(() => null));
-
-  // Deepen the directors we already have, so the casting cross-reference
-  // questions have fuller filmographies to draw on. Capture each director's
-  // TMDb person-id from the details we just fetched, count their pool films,
-  // pull their catalogue and fold in extra notable films.
-  const dirMap = new Map(); // personId -> { id, name, have }
-  movieIds.forEach((mid, i) => {
-    const d = rawMovies[i], m = movies[i];
-    if (!d || !m || !m.director) return;
-    const crew = (d.credits?.crew || []).find((c) => c.job === 'Director');
-    if (!crew?.id) return;
-    const e = dirMap.get(crew.id) || { id: crew.id, name: m.director, have: 0 };
-    e.have++; dirMap.set(crew.id, e);
-  });
-  console.log(`deepening ${[...dirMap.values()].filter((d) => d.have >= DEEPEN_TRIGGER).length} directors (>=${DEEPEN_TRIGGER} pool films; adding all their films >=${DEEPEN_MIN_VOTES} votes)…`);
-  const { ids: extraIds, coverage: deepened } = await collectDirectorFilms(tmdb, [...dirMap.values()], { seen: new Set(movieIds) });
-  const rawExtra = await mapPool(extraIds, 8, (id) => tmdb(`/movie/${id}`, { append_to_response: 'credits' }).catch(() => null));
-  const extra = rawExtra.map((d) => (d ? buildMovie(d) : null));
-
-  const items = {};
-  movieIds.forEach((id, i) => { if (movies[i]) items[`m${id}`] = movies[i]; });
-  extraIds.forEach((id, i) => { if (extra[i]) items[`m${id}`] = extra[i]; });
-  tvIds.forEach((id, i) => { if (shows[i]) items[`v${id}`] = shows[i]; });
   disambiguate(items); // remakes get a year suffix; exact dups dropped
+  const fetched = mv.fetched + ex.fetched + tv.fetched;
 
   const out = {
     credit: 'This product uses the TMDB API but is not endorsed or certified by TMDB.',
@@ -398,8 +446,8 @@ async function main() {
     }
   }
   const deepenedDirs = Object.keys(deepened).length;
-  const deepenedFilms = extra.filter(Boolean).length;
-  console.log(`\ndeepened: +${deepenedFilms} films across ${deepenedDirs} directors (${extraIds.length} fetched)`);
+  console.log(`\ndeepened: +${ex.added} films across ${deepenedDirs} directors (${extraIds.length} candidates)`);
+  console.log(`fetched ${fetched} new titles this run; reused ${reused} without re-hitting the API`);
   console.log(`\nitems: ${all.length} (${all.filter((i) => i.t === 'm').length} movies, ${all.filter((i) => i.t === 'v').length} tv)`);
   console.log('\nmovies per decade (bucket fetched → in final data):');
   for (const [d, got] of Object.entries(coverage.decades).sort()) {

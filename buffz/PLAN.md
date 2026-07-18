@@ -103,6 +103,21 @@ dataset built by the pipeline omits it. To (re)build:
    `TMDB_API_KEY=xxx node buffz/tools/build-data.mjs`
 3. Commit the regenerated `buffz/data/titles.json`.
 
+**Incremental by default (the pipeline reuses what it already has).** Every item is
+keyed by its TMDb id (`m<id>`/`v<id>`), so a rebuild loads the existing `titles.json`
+and `fetchMissing()` fetches details ONLY for ids not already held — the bulk cost
+(~1 detail call per title) is paid once. The pool only ever GROWS: everything stored
+is kept, new discoveries are added on top. So bumping a knob (e.g. `TV_COUNT` 350→700
+to double the shows, or adding a decade/genre) re-downloads just the new titles, not
+the thousands you already have. The report prints `fetched N new titles; reused M`.
+To make incremental director-deepening work without re-fetching movies, each movie
+stores its director's TMDb person-id as `dirId`; `undisambiguate()` strips remake year
+suffixes on load so disambiguation re-runs idempotently (verified: round-trip changes
+0 of ~3,900 titles). Set **`BUFFZ_REFETCH=1`** for a clean full rebuild — needed when
+you change a normalization/quality rule (`buildMovie`/`buildTv`, the vote floors) that
+should re-apply to titles already stored, or to backfill `dirId` onto movies pulled
+before it existed.
+
 **Stratified pull (why the pipeline isn't one query).** A single `vote_count.desc`
 pull is recency-biased — vote count tracks how many *current* TMDb users rated a
 title — so old decades and niche genres starve (the first real pull had 1 film in the
@@ -111,7 +126,7 @@ query per decade and per genre**, takes the top ~QUOTA of each (`DECADE_QUOTA` 1
 `GENRE_QUOTA` 130), and unions them with a `GLOBAL_MOVIES` (600) popularity backbone.
 The top-100-by-votes *within the 1970s* is that decade's best-known set even though
 those films trail a modern blockbuster globally — so every decade and genre clears
-~100 movies. TV stays a single 350 pull (the coverage ask was about movies). The
+~100 movies. TV stays a single `TV_COUNT` (700) pull (the coverage ask was about movies). The
 builder prints a per-decade / per-genre coverage table and flags any bucket that TMDb
 can't fill to 100 (the 1930s genuinely doesn't have 100 films most people know).
 Tunable trade-off: filling old/niche buckets pulls in less-famous titles, so the

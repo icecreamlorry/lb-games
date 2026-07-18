@@ -5,7 +5,7 @@
 //   node buffz/tools/build-data.test.mjs
 
 import {
-  discoverBucket, collectMovieIds, collectDirectorFilms, decadeOf, firstSentence, buildMovie, genreDropdown,
+  discoverBucket, collectMovieIds, collectDirectorFilms, fetchMissing, decadeOf, firstSentence, buildMovie, genreDropdown, undisambiguate,
 } from './build-data.mjs';
 
 let passed = 0, failed = 0;
@@ -47,12 +47,13 @@ eq(decadeOf(2009), '2000s', 'decadeOf 2009');
 eq(firstSentence('A man walks in. Then more happens.'), 'A man walks in.', 'firstSentence splits');
 eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here', 'firstSentence keeps unpunctuated');
 {
-  const m = buildMovie({ title: 'X', release_date: '1955-03-01', vote_average: 7.44, vote_count: 900, genres: [{ name: 'Western' }, { name: 'TV Movie' }], production_countries: [{ name: 'Italy' }], credits: { crew: [{ job: 'Director', name: 'Sergio' }], cast: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] } });
+  const m = buildMovie({ title: 'X', release_date: '1955-03-01', vote_average: 7.44, vote_count: 900, genres: [{ name: 'Western' }, { name: 'TV Movie' }], production_countries: [{ name: 'Italy' }], credits: { crew: [{ job: 'Director', name: 'Sergio', id: 42 }], cast: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }] } });
   eq(m.decade, '1950s', 'buildMovie decade');
   eq(m.genres, ['Western'], 'buildMovie drops TV Movie genre');
   eq(m.cast.length, 3, 'buildMovie trims cast to 3');
   eq(m.country, 'Italy', 'buildMovie keeps non-US country');
   eq(m.director, 'Sergio', 'buildMovie director');
+  eq(m.dirId, 42, 'buildMovie keeps the director person-id for incremental deepening');
   ok(buildMovie({ title: 'Y', release_date: '', vote_average: 5, vote_count: 1 }) === null, 'buildMovie drops dateless');
 }
 
@@ -154,6 +155,35 @@ eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here'
   const { ids } = await collectDirectorFilms(tmdb, [{ id: 30, name: 'Prolific', have: 6 }], { seen: new Set(), trigger: 2, minVotes: 100 });
   eq(ids.length, 8, 'collectDirectorFilms adds every film clearing the vote floor — no arbitrary cap');
   ok(!ids.includes(308) && !ids.includes(309), 'collectDirectorFilms still excludes sub-floor films');
+}
+
+// ---- fetchMissing: the incremental core — reuse held ids, fetch only new ----
+{
+  const items = { m1: { t: 'm', title: 'Held' } }; // already have m1
+  const calls = [];
+  const fetcher = async (id) => { calls.push(id); return id === 4 ? null : { t: 'm', title: `New${id}` }; };
+  const res = await fetchMissing([1, 2, 3, 4], items, 'm', fetcher);
+  eq(calls.slice().sort((a, b) => a - b), [2, 3, 4], 'fetchMissing calls the fetcher only for ids not already held');
+  eq(res.reused, 1, 'fetchMissing reports the reused (skipped) count');
+  eq(res.fetched, 3, 'fetchMissing reports how many it fetched');
+  eq(res.added, 2, 'fetchMissing counts only successful builds (null dropped)');
+  ok(items.m1.title === 'Held', 'fetchMissing never overwrites a held id');
+  ok(items.m2 && items.m3 && !items.m4, 'fetchMissing adds new titles and skips failed fetches');
+}
+
+// ---- undisambiguate: strips the (YEAR) suffix so rebuilds stay idempotent ----
+{
+  const items = {
+    a: { title: 'The Mummy (1999)', year: 1999 },
+    b: { title: 'The Mummy (2017)', year: 2017 },
+    c: { title: 'Inception', year: 2010 },          // no suffix → untouched
+    d: { title: 'Blade Runner 2049', year: 2017 },  // trailing number is not a (YEAR) suffix
+  };
+  undisambiguate(items);
+  eq(items.a.title, 'The Mummy', 'undisambiguate strips the year suffix');
+  eq(items.b.title, 'The Mummy', 'undisambiguate strips the year suffix (other remake)');
+  eq(items.c.title, 'Inception', 'undisambiguate leaves un-suffixed titles alone');
+  eq(items.d.title, 'Blade Runner 2049', 'undisambiguate leaves a bare trailing number alone');
 }
 
 // ---- genreDropdown threshold ----
