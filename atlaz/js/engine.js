@@ -143,6 +143,14 @@ export function winnerSeat(mode, results, seats) {
   const top = ranked[0];
   if (!results[top]) return 'tie';
   const next = ranked[1];
-  if (next != null && results[next] && compareResults(mode, results[top], results[next]) === 0) return 'tie';
+  // A draw is an equal SCORE — time only breaks ties for list order, it doesn't
+  // decide the winner. Sweep is the exception: it's an explicit speed race, so
+  // there the full comparator (completion + time) does decide.
+  const tied = next != null && results[next] && (
+    mode === 'sweep'
+      ? compareResults(mode, results[top], results[next]) === 0
+      : scoreOf(results[top]) === scoreOf(results[next])
+  );
+  if (tied) return 'tie';
   return top;
 }

@@ -139,6 +139,8 @@ const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard')
   const r = (score, ms) => ({ outcomes: [], score, total: 10, ms });
   eq(rankSeats({ 0: r(5, 60), 1: r(7, 90), 2: r(7, 50) }, 3), [2, 1, 0], 'score desc, time asc');
   eq(winnerSeat({ 0: r(5, 60), 1: r(5, 60) }, 2), 'tie', 'identical results tie');
+  eq(winnerSeat({ 0: r(7, 50), 1: r(7, 90) }, 2), 'tie', 'equal score, different time → draw (time only orders the list)');
+  eq(winnerSeat({ 0: r(8, 90), 1: r(6, 40) }, 2), 0, 'higher score wins even if slower');
   eq(winnerSeat({}, 2), 'tie', 'nobody submitted → tie');
   eq(scoreOf(undefined), 0, 'missing result scores 0');
   ok(compareResults(r(1, 1), undefined) < 0, 'any result beats no result');

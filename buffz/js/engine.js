@@ -386,8 +386,30 @@ export function buildRounds(mode, diff, poolIds, seed, items) {
   if (isOrderMode(mode)) {
     const size = Math.min(n, pool.length);
     const count = Math.min(ORDER_ROUNDS, Math.floor(pool.length / size) || 1);
+    // Prefer titles with DISTINCT sort-keys within a round (distinct years for
+    // TIMELINE, distinct ratings for RANKED) so there's an unambiguous correct
+    // order. When the pool can't supply enough distinct keys (small pools;
+    // ratings collide often), fall back to any unused title — gradeOrder treats
+    // equal keys as interchangeable, so a tie still grades either way.
     const rounds = [];
-    for (let r = 0; r < count; r++) rounds.push({ ids: pool.slice(r * size, r * size + size) });
+    const used = new Set();
+    for (let r = 0; r < count; r++) {
+      const ids = [];
+      const keys = new Set();
+      for (const id of pool) {
+        if (ids.length >= size) break;
+        if (used.has(id)) continue;
+        const k = orderKey(mode, items[id]);
+        if (keys.has(k)) continue;
+        ids.push(id); keys.add(k); used.add(id);
+      }
+      for (const id of pool) { // fill any shortfall, allowing duplicate keys
+        if (ids.length >= size) break;
+        if (used.has(id)) continue;
+        ids.push(id); used.add(id);
+      }
+      rounds.push({ ids });
+    }
     return rounds;
   }
 
@@ -452,6 +474,8 @@ export function winnerSeat(results, seats) {
   const top = ranked[0];
   if (!results[top]) return 'tie';
   const next = ranked[1];
-  if (next != null && results[next] && compareResults(results[top], results[next]) === 0) return 'tie';
+  // A draw is an equal SCORE — time only breaks ties for list order, it doesn't
+  // decide the winner (otherwise an equal-score game is never a draw).
+  if (next != null && results[next] && scoreOf(results[top]) === scoreOf(results[next])) return 'tie';
   return top;
 }

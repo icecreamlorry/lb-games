@@ -89,6 +89,10 @@ function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), `${name} �
   eq(rankSeats('pinpoint', { 0: A, 1: B, 2: C }, 3), [2, 1, 0], 'score first, faster breaks ties');
   eq(winnerSeat('pinpoint', { 0: A, 1: B, 2: C }, 3), 2, 'winner = top of ranking');
   eq(winnerSeat('pinpoint', { 0: B, 1: { ...B } }, 2), 'tie', 'identical results tie');
+  // Pick modes: equal score is a DRAW even when times differ (A slower, B faster
+  // both scored 5) — time only orders the list, it doesn't decide the winner.
+  eq(winnerSeat('pinpoint', { 0: A, 1: B }, 2), 'tie', 'equal score, different time → draw');
+  eq(winnerSeat('pinpoint', { 0: C, 1: B }, 2), 0, 'higher score wins even if slower');
   eq(winnerSeat('pinpoint', {}, 2), 'tie', 'nobody submitted → tie');
   eq(winnerSeat('pinpoint', { 0: A }, 1), 0, 'solo winner');
 

@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="104" fill="#1c2733"/>
-  <polyline points="116,150 188,374 256,240 324,374 396,150" fill="none" stroke="#f5b942" stroke-width="50" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- Word-hunt grid: a 3×3 of letter tiles, a couple "found" in green -->
+  <g>
+    <rect x="96"  y="96"  width="96" height="96" rx="18" fill="#f5b942"/>
+    <rect x="208" y="96"  width="96" height="96" rx="18" fill="#c8d6e5"/>
+    <rect x="320" y="96"  width="96" height="96" rx="18" fill="#f5b942"/>
+    <rect x="96"  y="208" width="96" height="96" rx="18" fill="#2e8f6b"/>
+    <rect x="208" y="208" width="96" height="96" rx="18" fill="#f5b942"/>
+    <rect x="320" y="208" width="96" height="96" rx="18" fill="#2e8f6b"/>
+    <rect x="96"  y="320" width="96" height="96" rx="18" fill="#f5b942"/>
+    <rect x="208" y="320" width="96" height="96" rx="18" fill="#f5b942"/>
+    <rect x="320" y="320" width="96" height="96" rx="18" fill="#c8d6e5"/>
+  </g>
 </svg>

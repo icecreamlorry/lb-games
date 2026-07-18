@@ -614,6 +614,12 @@ async function persistResult() {
 // ---- Reviewing attempts -------------------------------------------------------------
 
 function spectate(seat) {
+  // Don't reveal another player's answers — they're the correct answers to the
+  // same seeded questions — until you've submitted your own run.
+  if (seat !== app.seat && !app.results[app.seat]) {
+    setStatus('Finish your own game first to see the answers.');
+    return;
+  }
   const r = app.results[seat];
   if (!r) { setStatus('Their answers appear once they finish.'); return; }
   app.viewingSeat = seat;

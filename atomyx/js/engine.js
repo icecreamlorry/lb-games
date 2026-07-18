@@ -188,6 +188,8 @@ export function winnerSeat(results, seats) {
   const top = ranked[0];
   if (!results[top]) return 'tie';
   const next = ranked[1];
-  if (next != null && results[next] && compareResults(results[top], results[next]) === 0) return 'tie';
+  // A draw is an equal SCORE — time only breaks ties for list order, it doesn't
+  // decide the winner (otherwise an equal-score game is never a draw).
+  if (next != null && results[next] && scoreOf(results[top]) === scoreOf(results[next])) return 'tie';
   return top;
 }
