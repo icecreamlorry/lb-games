@@ -135,7 +135,17 @@ for (const f of FILTERS) {
       if (r.cat === 'studio') eq(correct, it.studio, `studio: correct option matches (${it.title})`);
       if (r.cat === 'country') eq(correct, it.country, `country: correct option matches (${it.title})`);
       if (r.cat === 'origtitle') eq(correct, it.orig, `origtitle: correct option matches (${it.title})`);
-      if (r.cat === 'genre') ok(it.genres.includes(correct), `genre: correct option is one of the title's genres (${it.title})`);
+      if (r.cat === 'genre') {
+        // Options are the WHOLE genre set (comma-joined, sorted); exactly the
+        // title's full set is correct and every distractor differs from it.
+        const norm = (gs) => gs.slice().sort().join(' / ');
+        const optKey = (s) => s.split(', ').sort().join(' / ');
+        eq(optKey(correct), norm(it.genres), `genre: correct option is the title's full genre set (${it.title})`);
+        for (let i = 0; i < r.options.length; i++) {
+          if (i === r.answer) continue;
+          ok(optKey(r.options[i]) !== norm(it.genres), `genre: distractor differs from the true set (${it.title})`);
+        }
+      }
       if (r.cat === 'star') ok(it.cast.includes(correct), `star: correct option is in the cast (${it.title})`);
       if (['tagline', 'plot', 'revdirector', 'revstar', 'ratingpick', 'revenuepick'].includes(r.cat)) {
         eq(correct, it.title, `${r.cat}: correct option is the title itself (${it.title})`);

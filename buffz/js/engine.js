@@ -356,18 +356,35 @@ export const CATEGORIES = [
     id: 'genre',
     ok: (it) => it.genres?.length >= 1,
     build(it, ctx) {
+      // "Which genre line-up matches X?" — the WHOLE genre set is the answer, so
+      // there's exactly one right option (a single genre is ambiguous when a
+      // film is legitimately several things). Distractors are other real movies'
+      // genre sets, so the option shapes/sizes follow the real distribution and
+      // always look plausible; deduped by set and never equal to the true set.
       const { rand, n, pool, items } = ctx;
-      const truth = pickFrom(rand, it.genres);
-      const wrong = new Set();
+      const key = (gs) => gs.slice().sort().join(' ');
+      const truthKey = key(it.genres);
+      const seen = new Set([truthKey]);
+      const distractors = [];
       for (const id of shuffleWith(rand, pool)) {
-        for (const g of items[id].genres || []) {
-          if (wrong.size >= n - 1) break;
-          if (!it.genres.includes(g)) wrong.add(g);
-        }
+        if (distractors.length >= n - 1) break;
+        if (id === ctx.id) continue;
+        const gs = items[id].genres;
+        if (!gs?.length) continue;
+        const k = key(gs);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        distractors.push(gs);
       }
-      if (!wrong.size) return null;
-      const options = shuffleWith(rand, [truth, ...wrong]);
-      return { prompt: `Which of these genres fits ${it.title}?`, options, answer: options.indexOf(truth), fact: `${it.title} — ${it.genres.join(' / ')}` };
+      if (!distractors.length) return null;
+      const display = (gs) => gs.slice().sort().join(', '); // stable order → no order tell
+      const optionSets = shuffleWith(rand, [it.genres, ...distractors]);
+      return {
+        prompt: `Which set of genres matches ${it.title}?`,
+        options: optionSets.map(display),
+        answer: optionSets.findIndex((gs) => key(gs) === truthKey),
+        fact: `${it.title} — ${it.genres.join(' / ')}`,
+      };
     },
   },
   {
