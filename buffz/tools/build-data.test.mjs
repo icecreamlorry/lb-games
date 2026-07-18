@@ -78,6 +78,8 @@ eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here'
   const universe = [];
   let id = 1;
   const thisYear = new Date().getFullYear();
+  // A generous silent era (1905..1929) so the pooled "Pre-1930" bucket fills.
+  for (let k = 0; k < 60; k++) universe.push({ id: id++, year: 1905 + (k % 25), votes: 500 - k, genre_ids: [[28, 80, 37, 99][k % 4], 12] });
   for (let start = 1930; start <= thisYear; start += 10) {
     for (let k = 0; k < 200; k++) {
       // Spread genres so each has a deep bench; votes higher for recent decades
@@ -91,7 +93,8 @@ eq(firstSentence('No terminal punctuation here'), 'No terminal punctuation here'
   eq([...new Set(ids)].length, ids.length, 'collectMovieIds returns a deduped union');
   const decades = Object.keys(coverage.decades);
   ok(decades.includes('1930s') && decades.includes('2020s'), 'collectMovieIds covers 1930s..2020s');
-  ok(Object.values(coverage.decades).every((n) => n >= 115), `every decade bucket reached quota (min ${Math.min(...Object.values(coverage.decades))})`);
+  ok(decades.includes('Pre-1930') && coverage.decades['Pre-1930'] >= 24, `Pre-1930 silent-era bucket filled (${coverage.decades['Pre-1930']})`);
+  ok(Object.entries(coverage.decades).filter(([d]) => d !== 'Pre-1930').every(([, n]) => n >= 115), 'every numbered decade bucket reached quota');
   // Western/Documentary exist only 1-in-4, but the genre quota query still fills
   // them because it searches the whole universe by that genre.
   ok(coverage.genres.Western >= 115, `Western genre bucket filled (${coverage.genres.Western})`);

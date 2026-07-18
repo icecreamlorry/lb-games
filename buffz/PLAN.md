@@ -84,6 +84,12 @@ each item is:
   seasons? }              // tv
 ```
 
+Decades are bucketed by `decadeOf(year)`: "1930s".."2020s", with everything earlier
+pooled into one **"Pre-1930"** silent-era bucket (individual pre-1930 decades don't
+have enough well-known films to play; the pipeline pulls ~`PRE1930_QUOTA` of them
+together). `decadeList()` only offers decades with `MIN_POOL`+ titles, so a thin
+bucket never shows as an unplayable dropdown row.
+
 The `sample` flag (when present) puts a "sample data" note in the prestart; the real
 dataset built by the pipeline omits it. To (re)build:
 

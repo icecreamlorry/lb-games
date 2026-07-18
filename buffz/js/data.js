@@ -29,13 +29,14 @@ export function filterIds(data, { type = 'all', decade = 'all', genre = 'all' } 
 }
 
 // Dropdown option lists, derived from the data so they never drift from it.
-// Only decades with enough titles to actually start a game are offered — the
-// stratified pull sweeps in a handful of pre-1930 classics (the 1895 Lumière
-// short, etc.) that shouldn't appear as unplayable "1890s · 1" dropdown rows.
+// Only decades with enough titles to actually start a game are offered, so a
+// thin bucket never shows as an unplayable dropdown row. "Pre-1930" (the pooled
+// silent era) sorts ahead of the numbered decades.
+const decadeRank = (d) => (d === 'Pre-1930' ? -1 : parseInt(d, 10));
 export function decadeList(data) {
   const counts = {};
   for (const it of Object.values(data.items)) counts[it.decade] = (counts[it.decade] || 0) + 1;
-  return Object.keys(counts).filter((d) => counts[d] >= MIN_POOL).sort();
+  return Object.keys(counts).filter((d) => counts[d] >= MIN_POOL).sort((a, b) => decadeRank(a) - decadeRank(b));
 }
 export function genreList(data) {
   return data.genres || [];

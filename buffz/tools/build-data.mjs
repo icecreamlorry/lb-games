@@ -39,7 +39,8 @@ const GENRE_QUOTA = 130;    // movies to pull per genre bucket
 const GLOBAL_MOVIES = 600;  // popularity backbone so famous modern films aren't capped
 const TV_COUNT = 350;       // TV shows (single vote_count.desc pull; the ask is movies)
 const MIN_VOTES = 25;       // skip literal noise in bucket queries
-const FIRST_DECADE = 1930;  // pre-1930 has ~no films most players would know
+const FIRST_DECADE = 1930;  // decades below this are grouped into one "Pre-1930" bucket
+const PRE1930_QUOTA = 24;   // silent-era classics grouped as "Pre-1930" (own bucket)
 const GOAL = 100;           // report buckets that fall short of this
 
 const PAGE = 20; // TMDb page size (fixed)
@@ -119,8 +120,19 @@ export async function collectMovieIds(tmdb, genres, { today = new Date() } = {})
     'primary_release_date.lte': today.toISOString().slice(0, 10),
   })) ids.add(id);
 
-  // 2. Per-decade quotas — each bucket fills toward its own target regardless
-  //    of what the backbone already grabbed, so old decades get their depth.
+  // 2a. The silent era, pooled into one "Pre-1930" bucket (too few well-known
+  //     films per individual pre-1930 decade to stand alone).
+  {
+    const got = await discoverBucket(tmdb, 'movie', PRE1930_QUOTA, {
+      'primary_release_date.lte': `${FIRST_DECADE - 1}-12-31`,
+      'vote_count.gte': MIN_VOTES,
+    });
+    for (const id of got) ids.add(id);
+    coverage.decades['Pre-1930'] = got.length;
+  }
+
+  // 2b. Per-decade quotas — each bucket fills toward its own target regardless
+  //     of what the backbone already grabbed, so old decades get their depth.
   for (const [start, end] of decadeRanges(FIRST_DECADE, thisYear)) {
     const got = await discoverBucket(tmdb, 'movie', DECADE_QUOTA, {
       'primary_release_date.gte': `${start}-01-01`,
@@ -171,7 +183,10 @@ export function firstSentence(s) {
   return (m ? m[0] : t).slice(0, 220);
 }
 
-export function decadeOf(year) { return `${Math.floor(year / 10) * 10}s`; }
+// Everything before FIRST_DECADE collapses into one "Pre-1930" bucket — there
+// aren't enough well-known films per individual pre-1930 decade to play, but
+// pooled together the silent era makes a fun playable category.
+export function decadeOf(year) { return year < FIRST_DECADE ? 'Pre-1930' : `${Math.floor(year / 10) * 10}s`; }
 
 export function buildMovie(d) {
   const year = Number((d.release_date || '').slice(0, 4));

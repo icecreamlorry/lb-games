@@ -36,7 +36,7 @@ const EASY = diffMeta('easy'), MED = diffMeta('medium'), HARD = diffMeta('hard')
     ok(it.t === 'm' || it.t === 'v', `${id}: type is m|v`);
     ok(typeof it.title === 'string' && it.title.length > 0, `${id}: has a title`);
     ok(Number.isFinite(it.year) && it.year >= 1870, `${id}: has a plausible film-era year`);
-    eq(it.decade, `${Math.floor(it.year / 10) * 10}s`, `${id}: decade matches year`);
+    eq(it.decade, it.year < 1930 ? 'Pre-1930' : `${Math.floor(it.year / 10) * 10}s`, `${id}: decade matches year`);
     ok(Array.isArray(it.genres) && it.genres.length >= 1, `${id}: has genres`);
     // Cast/creator/director are OPTIONAL in real TMDb data (obscure or
     // international titles can lack credits) — the generator gates those
