@@ -315,10 +315,11 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
     status = `${oppName}'s turn`;
   }
 
-  // Opponent walked out of a live game — surface it over the turn status.
+  // Opponent backed out to their lobby — that's just presence, not
+  // abandonment (Wurdz plays fine async), so show it beside their name and
+  // keep the turn status / your-turn highlight intact.
   if (oppName && seatLeft(room, oppIndex) && !(state && state.gameOver)) {
-    status = `${oppName} left the game`;
-    mine = false;
+    label = `vs ${oppName} (offline)`;
   }
 
   const score = state && state.started
@@ -541,9 +542,9 @@ document.addEventListener('visibilitychange', () => {
 $('btn-leave').addEventListener('click', async () => {
   sessionStorage.removeItem(SESSION_KEY);
   clearTurnNotification();
-  // Walking out of a live game: flag our seat so the opponent sees we left
-  // (cleared automatically if we come back). Broadcasting the updated room
-  // delivers it instantly to an opponent on the live channel.
+  // Walking out of a live game: flag our seat so the opponent sees us as
+  // offline (cleared automatically if we come back). Broadcasting the updated
+  // room delivers it instantly to an opponent on the live channel.
   if (app.code != null && app.playerIndex != null
       && (app.room?.player_count ?? 0) >= 2 && app.state && !app.state.gameOver) {
     try {
@@ -1227,7 +1228,7 @@ function renderOppPanel() {
   const oppIdx = 1 - app.playerIndex;
   const hasOpp = !!seatName(app.room, oppIdx);
   if (hasOpp && seatLeft(app.room, oppIdx) && !app.state.gameOver) {
-    $('opp-name').innerHTML = `${esc(playerName(oppIdx))} <span class="left-tag">left</span>`;
+    $('opp-name').innerHTML = `${esc(playerName(oppIdx))} <span class="left-tag">offline</span>`;
   } else {
     $('opp-name').textContent = hasOpp ? playerName(oppIdx) : 'Waiting for opponent…';
   }

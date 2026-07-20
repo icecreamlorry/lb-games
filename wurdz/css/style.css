@@ -252,6 +252,9 @@ input, textarea { user-select: text; }
 }
 .online-dot.online { background: var(--good); }
 .online-dot.offline { background: #5b6b7c; }
+/* Wurdz reads the shared left-tag as benign presence ("offline"), not a
+   forfeit — mute the shared red into the offline-dot gray. */
+.left-tag { color: #8fa0b2; border-color: color-mix(in srgb, #8fa0b2 55%, transparent); }
 /* My connection dot: amber while moves are syncing through the DB (websocket
    down) instead of arriving live — the game still works, just less instant. */
 .online-dot.syncing { background: var(--cyan); }
