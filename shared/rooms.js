@@ -221,22 +221,21 @@ export async function fetchFinishedRooms(userId, gameSlug) {
 //     the account occupies so notifications work across games.
 //   • Anonymous  → pass { roomCode, player }: notified for that seat only.
 export async function savePushSubscription(subscription, { userId = null, roomCode = null, player = null, game } = {}) {
-  const row = userId
-    ? { user_id: userId, room_code: null, player: null, game, endpoint: subscription.endpoint, subscription }
-    : { user_id: null, room_code: roomCode, player, game, endpoint: subscription.endpoint, subscription };
-  // NOT an upsert: Postgres runs upsert as INSERT … ON CONFLICT DO UPDATE,
-  // which needs SELECT privilege to read the conflicting row — and this table
-  // deliberately grants anon/authenticated no SELECT (rows hold other devices'
-  // push auth keys), so re-subscribing a device that already had a row failed
-  // with "permission denied". Delete any previous row for this device, then
-  // insert the fresh one; both are covered by the existing grants/policies.
-  const db = supabase();
-  const del = await db.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
-  if (del.error) {
-    logError('savePushSubscription failed (clearing old row):', del.error.message || del.error);
-    throw del.error;
-  }
-  const { error } = await db.from('push_subscriptions').insert(row);
+  // Goes through the save_push_subscription() RPC (see setup.sql) rather than a
+  // direct write. It's a single atomic INSERT … ON CONFLICT (endpoint) DO UPDATE
+  // running SECURITY DEFINER, which fixes two things the old client-side
+  // delete-then-insert couldn't: it can't race two concurrent subscribes into a
+  // duplicate-endpoint error, and it works despite the table granting clients no
+  // SELECT (needed for a normal upsert). Identity is taken from the session
+  // server-side, so `userId` here only decides whether we pass the guest's
+  // seat-routing args; the server ignores them for signed-in devices.
+  const { error } = await supabase().rpc('save_push_subscription', {
+    p_endpoint: subscription.endpoint,
+    p_subscription: subscription,
+    p_game: game,
+    p_room_code: userId ? null : roomCode,
+    p_player: userId ? null : player,
+  });
   if (error) {
     logError('savePushSubscription failed:', error.message || error);
     throw error;

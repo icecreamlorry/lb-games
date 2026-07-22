@@ -174,10 +174,9 @@ grant select, insert, update on table rooms to anon, authenticated;
 grant select, insert on table moves to anon, authenticated;
 -- Deliberately NO full select for players on push_subscriptions: rows hold
 -- other devices' push auth keys. Consequences:
---   • clients cannot UPSERT here (Postgres runs upsert as INSERT … ON
+--   • clients cannot UPSERT here directly (Postgres runs upsert as INSERT … ON
 --     CONFLICT DO UPDATE, which needs SELECT on every column referenced via
---     EXCLUDED) — savePushSubscription in shared/rooms.js does
---     delete-then-insert instead;
+--     EXCLUDED) — so subscribing goes through save_push_subscription() below;
 --   • the endpoint COLUMN alone is select-granted, because any
 --     DELETE/UPDATE … WHERE endpoint = … must read that column.
 grant insert, update, delete on table push_subscriptions to anon, authenticated;
@@ -188,6 +187,49 @@ grant select (endpoint) on table push_subscriptions to anon, authenticated;
 -- raw SQL aren't always granted to it automatically — so grant explicitly.
 grant select on table rooms to service_role;
 grant select, delete on table push_subscriptions to service_role;
+
+-- ---- save_push_subscription() -------------------------------------------
+-- Atomic upsert keyed on the endpoint's unique constraint. The old client-side
+-- delete-then-insert wasn't atomic: two near-simultaneous subscribes for the
+-- same device raced as delete, delete, insert, insert — the second insert
+-- tripping push_subscriptions_endpoint_key. A single INSERT … ON CONFLICT can't
+-- race. It runs SECURITY DEFINER (as the owner) so it may read the conflicting
+-- row despite the no-SELECT grant, and — like submit_score — derives the
+-- signed-in user from the JWT (auth.uid()) instead of trusting the caller, so a
+-- device can't be attached to someone else's account. Signed-in devices are
+-- user-routed (room_code/player forced null); guests are seat-routed.
+create or replace function save_push_subscription(
+  p_endpoint     text,
+  p_subscription jsonb,
+  p_game         text,
+  p_room_code    text default null,
+  p_player       int  default null
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  insert into push_subscriptions (endpoint, subscription, game, user_id, room_code, player)
+  values (
+    p_endpoint, p_subscription, p_game,
+    uid,
+    case when uid is null then p_room_code end,
+    case when uid is null then p_player end
+  )
+  on conflict (endpoint) do update
+    set subscription = excluded.subscription,
+        game         = excluded.game,
+        user_id      = excluded.user_id,
+        room_code    = excluded.room_code,
+        player       = excluded.player,
+        created_at   = now();
+end;
+$$;
+
+grant execute on function save_push_subscription(text, jsonb, text, text, int) to anon, authenticated;
 
 -- ---- N-player rooms (shared rooms layer) --------------------------------
 --
