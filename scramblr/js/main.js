@@ -4,9 +4,9 @@
 
 import {
   makeBoard, validPath, wordFromPath, wordPoints, adjacent, MIN_WORD,
-  COUNTDOWN_MS, GAME_MS, standings,
+  COUNTDOWN_MS, GAME_MS, standings, solveBoard,
 } from './engine.js';
-import { loadDictionary, isWord, dictionaryLoaded } from './dictionary.js';
+import { loadDictionary, isWord, hasPrefix, dictionaryLoaded } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName, seatLeft, markPlayerLeft,
@@ -805,6 +805,7 @@ async function showDailyResults() {
   $('daily-my-words').textContent = lastStandings
     ? `${lastStandings[0]?.unique ?? 0} unique word${(lastStandings[0]?.unique ?? 0) === 1 ? '' : 's'}`
     : '';
+  renderMissedWords($('daily-allwords'), app.results[app.seat] ?? [...app.found]);
 
   const lbEl = $('daily-lb-list');
   lbEl.innerHTML = '<div class="daily-lb-empty">Submitting…</div>';
@@ -844,6 +845,56 @@ async function showDailyResults() {
   } catch {
     lbEl.innerHTML = '<div class="daily-lb-empty muted">Could not load leaderboard.</div>';
   }
+}
+
+// Every dictionary word on the current board, solved once and cached by board
+// signature (the solve is ~30ms but re-renders are frequent). Empty until the
+// dictionary has loaded.
+let solveCache = { key: '', words: null };
+function boardSolution() {
+  if (!dictionaryLoaded() || !app.board) return null;
+  const key = app.board.join('');
+  if (solveCache.key !== key) solveCache = { key, words: solveBoard(app.board, isWord, hasPrefix) };
+  return solveCache.words;
+}
+
+// Render the "words you missed" panel into `container`: how many of the board's
+// words the player found, and an expandable list of the rest (best-scoring
+// first). `mine` is the player's own valid word list. No-op if unsolved.
+function renderMissedWords(container, mine) {
+  if (!container) return;
+  const all = boardSolution();
+  if (!all || !all.size) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+  const got = new Set((mine || []).map((w) => String(w).toUpperCase()).filter((w) => all.has(w)));
+  const missed = [...all].filter((w) => !got.has(w))
+    .sort((a, b) => wordPoints(b) - wordPoints(a) || b.length - a.length || (a < b ? -1 : 1));
+
+  container.classList.remove('hidden');
+  container.innerHTML = '';
+  const summary = document.createElement('div');
+  summary.className = 'aw-summary';
+  summary.textContent = `You found ${got.size} of ${all.size} words on this board.`;
+  container.appendChild(summary);
+
+  if (!missed.length) return; // found them all — nothing to reveal
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'aw-toggle';
+  const list = document.createElement('div');
+  list.className = 'aw-list';
+  list.innerHTML = missed
+    .map((w) => `<span class="aw-word">${esc(titleWord(w))}<span class="aw-pts">${wordPoints(w)}</span></span>`)
+    .join('');
+  const label = (open) => `${open ? 'Hide' : 'Show'} ${missed.length} word${missed.length === 1 ? '' : 's'} you missed`;
+  toggle.textContent = `${label(false)} ›`;
+  toggle.addEventListener('click', () => {
+    const open = list.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+    toggle.textContent = `${label(open)} ${open ? '⌄' : '›'}`;
+  });
+  container.appendChild(toggle);
+  container.appendChild(list);
 }
 
 // Build and show the final scoreboard with expandable unique-word lists.
@@ -922,6 +973,7 @@ function renderFinalResults() {
   }
 
   $('results-waiting').classList.add('hidden');
+  renderMissedWords($('results-allwords'), wordsBySeat[app.seat] || []);
   persistResultIfReady(Object.keys(app.results).length, seats);
   renderPlayers();
 }

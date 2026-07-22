@@ -205,6 +205,31 @@ body {
 .r-words { display: none; font-size: 0.68rem; color: rgba(var(--neon),0.5); padding-left: 2em; line-height: 1.6; }
 .r-words.open { display: block; }
 
+/* ---- "Words you missed" panel (all dictionary words on the board) ---- */
+.allwords {
+  width: 100%; display: flex; flex-direction: column; gap: 8px;
+  border-top: 1px solid rgba(var(--neon),0.12); padding-top: 12px; margin-top: 2px;
+}
+.aw-summary { font-size: 0.78rem; color: rgba(var(--neon),0.7); }
+.aw-toggle {
+  align-self: flex-start; background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--font-ui); font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--magenta); text-shadow: var(--glow-magenta, none);
+}
+.aw-toggle:hover { color: #fff; }
+.aw-list {
+  display: none; flex-wrap: wrap; gap: 5px 6px; max-height: 190px; overflow-y: auto;
+  text-align: left; scrollbar-width: thin;
+}
+.aw-list.open { display: flex; }
+.aw-word {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; color: rgba(var(--neon),0.62);
+  background: rgba(var(--neon),0.06); border: 1px solid rgba(var(--neon),0.12);
+  border-radius: 999px; padding: 2px 7px;
+}
+.aw-pts { font-family: var(--font-ui); font-size: 0.6rem; font-weight: 800; color: var(--cyan); }
+
 /* ---- Scoring animation overlay ---- */
 .scoring-card {
   background: var(--panel); border: 1px solid rgba(var(--neon),0.25); border-radius: var(--panel-radius);

@@ -105,6 +105,34 @@ export function canForm(board, word) {
   return false;
 }
 
+// Solve the board: every dictionary word that can be traced on it. This is the
+// classic prefix-pruned Boggle DFS — from each cell we grow a path, and at each
+// step we only recurse while the letters so far are the prefix of *some*
+// dictionary word (hasPrefix). The moment a prefix leads nowhere we abandon that
+// whole branch, which is what keeps a 16-cell / 8-neighbour search fast despite
+// the huge word list. A path never reuses a cell; tiles may be multi-char ('QU')
+// and contribute all their letters at once. Predicates are injected so this
+// stays pure and unit-testable without loading the real dictionary:
+//   isWord(str)    — is str a complete dictionary word?
+//   hasPrefix(str) — is str a prefix of at least one dictionary word?
+// Returns a Set of the unique formable words (length >= MIN_WORD).
+export function solveBoard(board, isWord, hasPrefix) {
+  const found = new Set();
+  const used = new Array(CELLS).fill(false);
+  const dfs = (cell, prefix) => {
+    const str = prefix + board[cell];
+    if (!hasPrefix(str)) return; // dead branch — no word extends this far
+    if (str.length >= MIN_WORD && isWord(str)) found.add(str);
+    used[cell] = true;
+    for (let n = 0; n < CELLS; n++) {
+      if (!used[n] && adjacent(cell, n)) dfs(n, str);
+    }
+    used[cell] = false;
+  };
+  for (let c = 0; c < CELLS; c++) dfs(c, '');
+  return found;
+}
+
 // Final standings with classic dedup: a word found by more than one player
 // scores for nobody. Each word is re-validated (length, dictionary, board-
 // formable) so a tampered list can't inflate a score.
