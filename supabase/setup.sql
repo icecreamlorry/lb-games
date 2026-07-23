@@ -77,7 +77,7 @@ create table if not exists moves (
   room_code text not null references rooms (code) on delete cascade,
   move_index int not null,
   player int not null, -- 0 = host, 1 = guest
-  type text not null,  -- wurdz: start|place|exchange|pass|challenge|forfeit · scramblr: start|result
+  type text not null,  -- wurdz: start|place|exchange|pass|challenge|forfeit · scramblr: start|result · weiqi: start|place|pass|forfeit
   payload jsonb not null default '{}',
   created_at timestamptz not null default now(),
   unique (room_code, move_index)

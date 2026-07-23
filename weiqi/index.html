@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weiqi</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1c2733">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Weiqi">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="../shared/shared.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Configures the shared account layer (account-ui.js / lobby-ui.js) for Weiqi.
+    window.LB_CONFIG = { gameSlug: 'weiqi', gameName: 'Weiqi', history: true, daily: false, defaultTheme: 'maritime' };
+  </script>
+  <script src="../shared/theme-boot.js"></script>
+</head>
+<body>
+
+  <!-- Boot veil + pre-paint auth hint (lifted by the boot code via LBBoot.done()) -->
+  <script src="../shared/boot.js"></script>
+
+  <!-- Landing screen -->
+  <section id="screen-landing" class="screen">
+    <div class="landing-card">
+      <h1 class="logo">Weiqi</h1>
+      <p class="tagline">The ancient game of surrounding territory — 围棋 · Go.</p>
+      <input id="landing-name-input" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
+      <div class="landing-buttons">
+        <button id="btn-create" class="btn-primary">New Game</button>
+        <button id="btn-join" class="btn-ghost">Join a Room</button>
+      </div>
+      <div id="join-box" class="join-box hidden">
+        <input id="code-input" type="text" maxlength="6" placeholder="Room code" autocomplete="off">
+        <button id="btn-join-go" class="btn-primary">Join</button>
+      </div>
+      <p id="landing-error" class="error-text"></p>
+
+      <!-- Account bar markup injected by shared/lobby-ui.js -->
+      <div id="account-bar"></div>
+    </div>
+  </section>
+
+  <!-- Lobby ("My Games") — signed-in players; markup injected by shared/lobby-ui.js -->
+  <section id="screen-lobby" class="screen hidden"></section>
+
+  <!-- Game screen -->
+  <section id="screen-game" class="screen hidden">
+    <header class="game-header">
+      <span class="logo logo-small">Weiqi</span>
+      <button id="room-code-chip" class="chip" title="Click to copy">Room: <strong id="room-code-text"></strong></button>
+      <button id="btn-resign" class="chip chip-button chip-danger hidden" title="Forfeit this game">Resign</button>
+      <button id="btn-leave" class="chip chip-button chip-icon" title="Leave" aria-label="Leave">
+        <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 2H4a1.2 1.2 0 0 0-1.2 1.2v9.6A1.2 1.2 0 0 0 4 14h2.5"/>
+          <path d="M10 5.2 13 8l-3 2.8"/>
+          <path d="M13 8H6"/>
+        </svg>
+      </button>
+    </header>
+
+    <div class="table">
+      <!-- Opponent sits across the board -->
+      <div id="opp-panel" class="player-panel opp-panel">
+        <span id="opp-online" class="online-dot offline" title="offline"></span>
+        <span id="opp-name" class="player-name">Waiting for opponent…</span>
+        <span id="opp-captures" class="capture-count"></span>
+        <span id="opp-turn" class="turn-marker hidden">their turn</span>
+      </div>
+
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
+        <div id="start-overlay" class="board-overlay hidden">
+          <div class="overlay-card">
+            <h2 id="start-title">Ready to play?</h2>
+            <p id="start-size" class="start-size"></p>
+            <p id="start-versus"></p>
+            <p id="start-share" class="hidden">Share the room code <strong id="start-code"></strong> with a friend to begin.</p>
+            <button id="btn-start" class="btn-primary hidden">Start Game</button>
+            <p id="start-waiting" class="muted hidden">Waiting for the host to start the game…</p>
+          </div>
+        </div>
+        <div id="gameover-overlay" class="board-overlay hidden">
+          <div class="overlay-card">
+            <h2 id="gameover-title"></h2>
+            <div id="gameover-detail"></div>
+            <button id="btn-rematch" class="btn-primary">Rematch</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-panel my-panel">
+        <span id="my-online" class="online-dot online" title="Connected"></span>
+        <span id="my-name" class="player-name"></span>
+        <span id="my-captures" class="capture-count"></span>
+        <span id="my-turn" class="turn-marker hidden">your turn</span>
+      </div>
+
+      <p id="status-line" class="status-line"></p>
+
+      <div class="controls">
+        <button id="btn-play" class="btn-primary" disabled>Play</button>
+        <button id="btn-pass" class="btn-ghost" disabled>Pass</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tutorial (Training) screen -->
+  <section id="screen-tutorial" class="screen hidden">
+    <header class="game-header">
+      <button id="tut-exit" class="chip chip-button">← Exit</button>
+      <span id="tut-title" class="logo logo-small tut-title">Training</span>
+      <button id="tut-menu-btn" class="chip chip-button">Lessons</button>
+    </header>
+
+    <div class="tut-wrap">
+      <div id="tut-board" class="tut-board"></div>
+      <div class="tut-panel">
+        <div id="tut-badge" class="tut-badge"></div>
+        <p id="tut-text" class="tut-text"></p>
+        <p id="tut-feedback" class="tut-feedback"></p>
+        <div class="tut-nav">
+          <button id="tut-prev" class="tut-arrow" aria-label="Previous step">←</button>
+          <span id="tut-steps" class="tut-steps"></span>
+          <button id="tut-pass" class="btn-ghost hidden">Pass</button>
+          <button id="tut-next" class="tut-arrow" aria-label="Next step">→</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="tut-levels" class="modal hidden">
+      <div class="modal-card">
+        <div class="modal-head">
+          <h2>Lessons</h2>
+          <button id="tut-levels-close" class="modal-close">&times;</button>
+        </div>
+        <div id="tut-levels-list" class="tut-levels-list"></div>
+      </div>
+    </div>
+
+    <div id="tut-complete" class="modal hidden">
+      <div class="modal-card modal-narrow">
+        <div class="modal-head"><h2 id="tut-complete-title">Lesson complete</h2></div>
+        <p id="tut-complete-msg"></p>
+        <div class="confirm-buttons">
+          <button id="tut-complete-menu" class="btn-ghost">All lessons</button>
+          <button id="tut-complete-next" class="btn-primary">Next lesson →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- New-game setup: board size or training -->
+  <div id="modal-setup" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head"><h2>New game</h2></div>
+      <p class="muted">Pick a board. Bigger boards mean longer, deeper games.</p>
+      <div id="setup-sizes" class="setup-sizes">
+        <button class="setup-size" data-size="beginner"><strong>Beginner</strong><span>9 × 9 — quick to learn</span></button>
+        <button class="setup-size" data-size="intermediate"><strong>Intermediate</strong><span>13 × 13 — a real fight</span></button>
+        <button class="setup-size" data-size="full"><strong>Full</strong><span>19 × 19 — the classic board</span></button>
+      </div>
+      <button id="setup-training" class="setup-size setup-training"><strong>Training</strong><span>Learn the rules &amp; techniques — 15 guided lessons</span></button>
+      <div class="confirm-buttons">
+        <button id="setup-cancel" class="btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic confirmation dialog (Weiqi-owned; unique wq-confirm-* ids) -->
+  <div id="modal-confirm" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <div class="modal-head"><h2 id="wq-confirm-title">Are you sure?</h2></div>
+      <p id="wq-confirm-message"></p>
+      <div class="confirm-buttons">
+        <button id="wq-confirm-cancel" class="btn-ghost">Cancel</button>
+        <button id="wq-confirm-ok" class="btn-primary">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- How to play (opened by the shared menu's "How to play") -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-card modal-help-card">
+      <div class="modal-head">
+        <h2>How to play</h2>
+        <button id="help-close" class="modal-close">&times;</button>
+      </div>
+      <div class="help-body">
+        <section class="help-section">
+          <h3>The idea</h3>
+          <p>Weiqi (Go) is a game of <strong>surrounding territory</strong>. Black and White take turns placing a stone on any empty crossing. Black plays first. You never move a stone once it's down — you only lose stones by being <strong>captured</strong>. When both players pass, whoever controls more of the board wins.</p>
+        </section>
+        <section class="help-section">
+          <h3>New to the game?</h3>
+          <p>Start with <strong>Training</strong> from the New Game menu — 15 short, guided lessons take you from placing your first stone to capturing techniques like the ladder and double atari.</p>
+        </section>
+        <section class="help-section">
+          <h3>Placing a stone</h3>
+          <p>On your turn, tap an empty crossing to <strong>preview</strong> your stone (it shows as a shadow, with any captures noted). Tap the same spot again, or press <strong>Play</strong>, to confirm. Tap a different point to move the preview.</p>
+        </section>
+        <section class="help-section">
+          <h3>Capturing &amp; liberties</h3>
+          <p>A stone or connected group is captured when its last <strong>liberty</strong> (adjacent empty point) is filled. Captured stones are lifted off and counted. You may not play a stone with no liberties (suicide) unless the move captures. A stone can't immediately retake a single stone in a repeating position (the <strong>ko</strong> rule).</p>
+        </section>
+        <section class="help-section">
+          <h3>Board sizes</h3>
+          <p><strong>Beginner</strong> is 9×9 (fast), <strong>Intermediate</strong> 13×13, and <strong>Full</strong> the classic 19×19. The host picks the size when creating the game.</p>
+        </section>
+        <section class="help-section">
+          <h3>Ending &amp; scoring</h3>
+          <p>When there's nothing useful left, <strong>pass</strong>. Two passes in a row end the game. Your score is your stones on the board plus the empty points you've surrounded; White also gets <strong>6.5 komi</strong> for going second. Capture or surround dead stones before you pass — the count assumes the position is settled.</p>
+        </section>
+        <section class="help-section">
+          <h3>Turn notifications</h3>
+          <p>Tap the 🔔 in the menu to be notified when it becomes your turn while the game is in the background. With Web Push set up, notifications arrive even if the browser is fully closed. <strong>On iPhone</strong>, first add Weiqi to your Home Screen (Share → Add to Home Screen) and open it from there.</p>
+        </section>
+        <section class="help-section">
+          <h3>Offline, leaving &amp; resigning</h3>
+          <p>Weiqi is happily asynchronous — an opponent going <strong>offline</strong> is fine; play resumes when they return. <strong>Leave</strong> just exits to your games list. <strong>Resign</strong> gives up the game for good: your opponent wins and it's removed from your list.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../shared/lobby-ui.js"></script>
+  <script type="module" src="../shared/account-ui.js"></script>
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="../shared/devtools.js"></script>
+</body>
+</html>
