@@ -163,6 +163,7 @@ export function createBoard(container, { onPoint } = {}) {
         class: 'annot-ghost', cx: pos(gh.c), cy: pos(gh.r), r: STONE_R,
         fill: seat === blackSeat ? '#1b232c' : '#f2f4f6',
         stroke: gh.color === 'white' ? '#aab2bd' : '#05080b', 'stroke-width': 0.03,
+        opacity: gh.opacity != null ? gh.opacity : 0.4, // clearly a ghost, not a placed stone
       });
       gAnnot.appendChild(node);
     }

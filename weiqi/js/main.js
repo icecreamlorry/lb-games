@@ -62,10 +62,16 @@ function getName() {
 }
 
 // Board-size / training picker. Opening context is stashed so the modal buttons
-// know who is creating and where to report errors.
+// know who is creating and where to report errors. When `friend` is set the
+// picker is for a friend challenge (Training is hidden — you can't train against
+// someone) and the chosen size flows into the challenge room.
 let setupCtx = null;
-function openSetup(name, userId, onError) {
-  setupCtx = { name, userId, onError };
+function openSetup(name, userId, onError, friend = null) {
+  setupCtx = { name, userId, onError, friend };
+  $('setup-training').classList.toggle('hidden', !!friend);
+  $('setup-subtitle').textContent = friend
+    ? `Pick a board for your challenge to ${friend.display_name || 'your friend'}.`
+    : 'Pick a board. Bigger boards mean longer, deeper games.';
   $('modal-setup').classList.remove('hidden');
 }
 function closeSetup() { $('modal-setup').classList.add('hidden'); setupCtx = null; }
@@ -76,7 +82,8 @@ document.querySelectorAll('#setup-sizes .setup-size').forEach((btn) => {
     const ctx = setupCtx;
     closeSetup();
     if (!ctx) return;
-    createAndEnter(ctx.name, ctx.userId, key, ctx.onError);
+    if (ctx.friend) createChallengeWithSize(ctx.friend, key);
+    else createAndEnter(ctx.name, ctx.userId, key, ctx.onError);
   });
 });
 $('setup-training').addEventListener('click', () => {
@@ -365,13 +372,21 @@ async function openRoomFromLobby(room, myIndex) {
 
 // ---- Challenge a friend -------------------------------------------------
 
-async function challengeFriend(friend) {
+// Fed into the shared profile dialog via LB_CONFIG.onChallengeFriend. Open the
+// board-size picker first so a challenge gets a chosen size like any other game
+// (rather than silently defaulting to a full board).
+function challengeFriend(friend) {
+  openSetup(app.name, app.userId, lobbyError, friend);
+}
+
+async function createChallengeWithSize(friend, sizeKey) {
   try {
+    app.sizeKey = sizeKey;
     let room = await createRoom(app.name, app.userId, {
       userId: friend.id,
       name: friend.display_name || 'Friend',
     });
-    room = await stampSize(room, app.sizeKey);
+    room = await stampSize(room, sizeKey);
     triggerPush({
       user_id: friend.id,
       title: 'Weiqi — you have been challenged',

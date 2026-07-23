@@ -135,9 +135,14 @@ input, textarea { user-select: text; }
 /* ---- Table layout ---- */
 
 .table {
-  max-width: 680px; margin: 0 auto; padding: 12px 14px 20px;
+  /* width:100% (not just max-width) so the column has a DEFINITE width — without
+     it, margin:0 auto in the #screen-game flex column shrinks .table to its
+     content and the board's SVG collapses to its 300px intrinsic size instead of
+     filling the space (and jiggled as content changed). scrollbar-gutter keeps
+     the board a fixed size whether or not a scrollbar appears. */
+  width: 100%; max-width: 680px; margin: 0 auto; padding: 12px 14px 20px;
   display: flex; flex-direction: column; gap: 10px;
-  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch;
 }
 .player-panel {
   display: flex; align-items: center; gap: 12px;
@@ -174,7 +179,12 @@ input, textarea { user-select: text; }
   width: 100%; height: auto; display: block; aspect-ratio: 1;
   border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.45);
   touch-action: manipulation;
+  /* The board is a control, not selectable content: no text-selection flash and
+     no blue/grey tap-highlight when you tap an intersection. */
+  user-select: none; -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+.goban text { user-select: none; -webkit-user-select: none; }
 .goban.locked { cursor: default; }
 .goban:not(.locked) { cursor: pointer; }
 .goban-bg { fill: var(--goban-wood); stroke: var(--goban-wood-edge); stroke-width: 0.12; }
