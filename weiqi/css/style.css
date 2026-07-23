@@ -304,7 +304,9 @@ input, textarea { user-select: text; }
 }
 .tut-arrow:hover:not(:disabled) { filter: brightness(1.2); }
 .tut-arrow:disabled { opacity: 0.35; cursor: default; }
-#tut-next { min-width: 78px; margin-left: auto; }
+/* The next button also carries text ("Next →", "Finish ✓"), so let it size to
+   its label on one line instead of wrapping inside the fixed arrow width. */
+#tut-next { width: auto; min-width: 64px; margin-left: auto; padding: 0 16px; font-size: 16px; white-space: nowrap; }
 .tut-steps { display: flex; gap: 6px; align-items: center; }
 .step-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--panel-light); display: inline-block; }
 .step-dot.done { background: var(--good); }

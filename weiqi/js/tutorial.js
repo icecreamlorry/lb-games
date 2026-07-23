@@ -214,7 +214,11 @@ function renderStepDots() {
 }
 
 function paint(ann) {
-  board.render({ board: workBoard, size: level().size, blackSeat: 0, lastMove: null }, ann);
+  // Once a point actually holds a stone, drop any hint ghost on it — otherwise
+  // the translucent ghost sits on top of the real stone and it looks like the
+  // tap did nothing (most noticeable on lesson 1, where nothing else changes).
+  const ghosts = (ann.ghosts || []).filter((g) => workBoard[g.r]?.[g.c] == null);
+  board.render({ board: workBoard, size: level().size, blackSeat: 0, lastMove: null }, { ...ann, ghosts });
 }
 
 // Apply the authored solution (+ replies) to workBoard. Used to show a solved
