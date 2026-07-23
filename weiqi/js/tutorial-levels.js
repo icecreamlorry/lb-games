@@ -197,7 +197,7 @@ export const LEVELS = [
 
   // 7 ───────────────────────────────────────────────────────────────────────
   {
-    id: 'suicide', title: 'Suicide — and the exception', size: 9,
+    id: 'suicide', title: 'The suicide rule', size: 9,
     steps: [
       {
         text: 'You may <b>not</b> play a stone that would have <b>no liberties</b> — that\'s <b>suicide</b>, and it\'s illegal. The marked point is surrounded by White on all sides, so Black can\'t play there.',
@@ -327,7 +327,7 @@ export const LEVELS = [
 
   // 12 ──────────────────────────────────────────────────────────────────────
   {
-    id: 'territory', title: 'Territory, komi & passing', size: 9,
+    id: 'territory', title: 'Scoring & passing', size: 9,
     steps: [
       {
         text: 'The game ends when there\'s nothing useful left to play and <b>both players pass</b>. Then you count. Here Black walls off the left, White the right. The empty points a player surrounds are their <b>territory</b>.',
@@ -364,7 +364,7 @@ export const LEVELS = [
 
   // 13 ──────────────────────────────────────────────────────────────────────
   {
-    id: 'ladder', title: 'Technique: the ladder', size: 9,
+    id: 'ladder', title: 'The ladder', size: 9,
     steps: [
       {
         text: 'A stone with two liberties can sometimes be caught in a <b>ladder</b> — a forced zig-zag where <b>every</b> move is atari, driving it into the corner until it runs out of room. Here\'s a White stone ready to be laddered.',
@@ -401,7 +401,7 @@ export const LEVELS = [
 
   // 14 ──────────────────────────────────────────────────────────────────────
   {
-    id: 'doubleatari', title: 'Technique: double atari', size: 9,
+    id: 'doubleatari', title: 'Double atari', size: 9,
     steps: [
       {
         text: 'A <b>double atari</b> is one move that puts <b>two</b> separate groups in atari at the same time. Your opponent can only save one — you capture the other. Look for a point that two weak enemy stones share as a liberty.',
@@ -425,7 +425,7 @@ export const LEVELS = [
 
   // 15 ──────────────────────────────────────────────────────────────────────
   {
-    id: 'cutconnect', title: 'Technique: cut & connect', size: 9,
+    id: 'cutconnect', title: 'Cut & connect', size: 9,
     steps: [
       {
         text: 'Two of your groups that <b>touch</b> are far stronger than two that are merely close — one strong group is much harder to attack. When there\'s a gap an opponent could push through, <b>connect</b> it.',
