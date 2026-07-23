@@ -91,8 +91,26 @@ input, textarea { user-select: text; }
 .game-header {
   display: flex; align-items: center; flex-wrap: wrap;
   gap: 8px 12px; padding: 10px 18px; background: var(--panel);
+  /* Reserve the top-right corner for the shared fixed hamburger (#btn-menu,
+     injected by account-ui at z-index 970) so it never lands on top of the
+     header's own buttons. Applies to the game AND tutorial headers. */
+  padding-right: 58px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
 }
 .game-header .logo, .game-header .tut-title { margin-right: auto; }
+
+/* On wide screens pull the hamburger in beside the centred column instead of
+   leaving it out in the true window corner (matches the other games). */
+@media (min-width: 561px) {
+  #screen-game:not(.hidden) ~ #btn-menu,
+  #screen-game:not(.hidden) ~ #app-menu {
+    right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 340px + 6px));
+  }
+  #screen-tutorial:not(.hidden) ~ #btn-menu,
+  #screen-tutorial:not(.hidden) ~ #app-menu {
+    right: max(calc(env(safe-area-inset-right, 0px) + 10px), calc(50% - 520px + 6px));
+  }
+}
 .chip {
   background: var(--panel-light); border: none; color: var(--text);
   border-radius: 999px; padding: 6px 14px; font-size: 13px; white-space: nowrap;
