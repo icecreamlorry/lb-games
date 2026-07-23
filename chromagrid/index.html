@@ -174,7 +174,13 @@
       transform: translateY(-6px);
     }
 
-    #grid-wrap { position: relative; }
+    /* align-self:center so the board panel hugs the canvas and stays centred.
+       Without it, #board-col's align-items:stretch stretches the panel to the
+       width of the wider header/score-bar while the fixed-size canvas stays
+       left-aligned inside — leaving the board hugging the left with a gap on the
+       right (worst on a short viewport, e.g. iPhone Safari with its toolbars,
+       where the board shrinks to fit the height). */
+    #grid-wrap { position: relative; align-self: center; }
 
     #grid {
       padding: 12px;

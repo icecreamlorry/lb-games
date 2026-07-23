@@ -64,6 +64,15 @@ html, body { height: 100%; overflow: hidden; }
   viewport.
 - Wide content (boards, tables, code) scrolls inside its own
   `overflow-x: auto` container — the page body never scrolls sideways.
+- **Fixed-size boards/canvases in an `align-items: stretch` flex column** hug the
+  left with a gap on the right: the panel stretches to the widest sibling (title,
+  score bar) while the fixed-size board stays left-aligned inside it. Worst on a
+  short viewport (iPhone Safari with toolbars) where the board shrinks to fit the
+  height. Give the board's wrapper `align-self: center` so the panel hugs the
+  board and centres (Chromagrid's `#grid-wrap`). Relatedly, an SVG/`<canvas>`
+  with `width:100%` needs an ancestor with a *definite* width or it collapses to
+  its 300px intrinsic size — don't leave the flex column on `margin:0 auto` alone
+  (Weiqi's `.table` needs `width:100%`).
 
 The classic mistake: setting only `justify-content: center` without
 `display: flex` + `align-items: center`. That leaves the card top-left **and**
