@@ -24,6 +24,25 @@ import { playerKey } from '../../shared/leaderboard.js';
 const $ = (id) => document.getElementById(id);
 const MAX_PLAYERS = 8;
 const SESSION_KEY = 'scramblr_session';
+
+// Guests keep the "resume this room" pointer in localStorage so they auto-return
+// to their game after a full browser close (they have no server-side games
+// list); signed-in players keep it tab-scoped in sessionStorage and rely on
+// their lobby. See shared/guest-id.js for the matching persistent guest id.
+function saveSession(data) {
+  const raw = JSON.stringify(data);
+  try {
+    if (app.userId) { sessionStorage.setItem(SESSION_KEY, raw); localStorage.removeItem(SESSION_KEY); }
+    else { localStorage.setItem(SESSION_KEY, raw); sessionStorage.removeItem(SESSION_KEY); }
+  } catch { /* storage blocked — resume just won't persist */ }
+}
+function readSession() {
+  try { return localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY); }
+  catch { return null; }
+}
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const app = {
@@ -273,7 +292,7 @@ async function enterRoom(code, seat, name, room) {
   setStatus('');
   setPhase('waiting');
   loadDictionary().catch(() => {});
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, name }));
+  saveSession({ code, name });
 
   app.conn = new RoomConnection(code, seat, name, {
     onMove: handleMove,
@@ -337,7 +356,7 @@ $('btn-leave').addEventListener('click', async () => {
   if (app.code != null && app.seat != null && app.room && app.room.status !== 'finished') {
     try { const room = await markPlayerLeft(app.code, app.seat); if (room) app.conn?.broadcastRoom(room); } catch { /* best effort */ }
   }
-  sessionStorage.removeItem(SESSION_KEY);
+  clearSession();
   if (app.conn) { app.conn.close(); app.conn = null; }
   resetGame();
   app.code = null; app.seat = null; app.room = null;
@@ -1014,14 +1033,14 @@ function winnerSeat(scores) {
 // ---- Resume / boot --------------------------------------------------------
 
 async function tryResume() {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const raw = readSession();
   if (!raw) return false;
   try {
     const { code, name } = JSON.parse(raw);
     const { room, playerIndex } = await joinRoom(code, name, app.userId);
     await enterRoom(code, playerIndex, name, room);
     return true;
-  } catch { sessionStorage.removeItem(SESSION_KEY); return false; }
+  } catch { clearSession(); return false; }
 }
 
 async function boot() {
