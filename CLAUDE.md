@@ -99,6 +99,12 @@ lets its fixed width push past the edge → both bugs at once.
   DB columns.
 - Turn notifications, offline/online presence, and resignation come from the
   shared layer; Wurdz/Weiqi are the reference implementations.
+- **Guests get a persistent per-device identity** (`shared/guest-id.js`,
+  localStorage) so they can rejoin their seat with the room code after a browser
+  close — never store the guest id in sessionStorage. For true auto-resume, keep
+  the game's "resume this room" pointer in **localStorage for guests** (they have
+  no server-side games list) and sessionStorage for signed-in players (they have
+  the lobby). See Weiqi's `saveSession`/`readSession`/`clearSession`.
 - Add each new game as a card in the root `index.html`, and give it engine tests
   under `<game>/test/*.mjs` (run with `node`).
 

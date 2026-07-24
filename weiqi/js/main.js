@@ -50,6 +50,27 @@ function esc(s) {
 
 const SESSION_KEY = 'weiqi_session';
 
+// Where the "resume this room" pointer lives. Guests keep it in localStorage so
+// they auto-return to their game after a full browser close — the seamless
+// equivalent of a signed-in player's lobby (guests have no server-side games
+// list). Signed-in players keep it tab-scoped in sessionStorage and rely on
+// their lobby across restarts, so opening the app fresh never drops them
+// straight into an old game.
+function saveSession(data) {
+  const raw = JSON.stringify(data);
+  try {
+    if (app.userId) { sessionStorage.setItem(SESSION_KEY, raw); localStorage.removeItem(SESSION_KEY); }
+    else { localStorage.setItem(SESSION_KEY, raw); sessionStorage.removeItem(SESSION_KEY); }
+  } catch { /* storage blocked — resume just won't persist */ }
+}
+function readSession() {
+  try { return localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY); }
+  catch { return null; }
+}
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+
 // ---- Landing screen -----------------------------------------------------
 
 function landingError(msg) { $('landing-error').textContent = msg || ''; }
@@ -410,7 +431,7 @@ async function enterRoom(code, playerIndex, name, room) {
   app.rematching = false;
   app.pending = null;
   const rb = $('btn-rematch'); if (rb) rb.disabled = false;
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ code, playerIndex, name }));
+  saveSession({ code, playerIndex, name });
 
   app.finishPersisted = room.status === 'finished';
   app.state = newGameState(room.seed);
@@ -550,7 +571,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 $('btn-leave').addEventListener('click', async () => {
-  sessionStorage.removeItem(SESSION_KEY);
+  clearSession();
   clearTurnNotification();
   if (app.code != null && app.playerIndex != null
       && (app.room?.player_count ?? 0) >= 2 && app.state && !app.state.gameOver) {
@@ -601,7 +622,7 @@ $('btn-resign').addEventListener('click', async () => {
 });
 
 async function tryResume() {
-  const raw = sessionStorage.getItem(SESSION_KEY);
+  const raw = readSession();
   if (!raw) return false;
   try {
     const { code, name } = JSON.parse(raw);
@@ -609,7 +630,7 @@ async function tryResume() {
     await enterRoom(code, playerIndex, name, room);
     return true;
   } catch {
-    sessionStorage.removeItem(SESSION_KEY);
+    clearSession();
     return false;
   }
 }
