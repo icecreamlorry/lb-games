@@ -1,6 +1,6 @@
 // Run: node scramblr/test/engine.test.mjs
 import {
-  makeBoard, CELLS, adjacent, validPath, wordFromPath, wordPoints, canForm, standings, solveBoard,
+  makeBoard, CELLS, adjacent, validPath, wordFromPath, wordPoints, canForm, standings, solveBoard, missedBreakdown,
 } from '../js/engine.js';
 
 let pass = 0, fail = 0;
@@ -81,6 +81,23 @@ const quHasPrefix = (p) => { let lo = 0, hi = quSorted.length; while (lo < hi) {
 const quBoard = ['QU', 'I', 'T', 'S', ...Array(12).fill('.')];
 const quSolved = solveBoard(quBoard, (w) => quMini.has(w), quHasPrefix);
 ok(quSolved.has('QUIT') && quSolved.has('QUITS'), 'solveBoard handles the QU tile');
+
+// missedBreakdown: the results-screen split of the solution into common /
+// obscure missed words.
+const sol = new Set(['CAT', 'CATS', 'TABS', 'STAB', 'BAST', 'TAS', 'ABS']);
+const commonWords = new Set(['CAT', 'CATS', 'TABS', 'STAB', 'ABS']);
+const mb = missedBreakdown(sol, ['cat', 'abs', 'DOG', 'tas'], (w) => commonWords.has(w));
+ok(mb.found === 3 && mb.total === 7, 'missedBreakdown counts finds that are on the board (DOG ignored, case-insensitive)');
+ok(mb.groups.length === 2 && mb.groups[0].key === 'common' && mb.groups[1].key === 'obscure', 'two groups, common first');
+ok(mb.groups[0].found === 2 && mb.groups[0].total === 5, 'common group: 2 of 5 found');
+ok(JSON.stringify(mb.groups[0].missed) === JSON.stringify(['CATS', 'STAB', 'TABS']), 'common missed sorted by points, then alphabetical');
+const mbLong = missedBreakdown(new Set(['CAT', 'CATTLE', 'TACT']), [], null);
+ok(JSON.stringify(mbLong.groups[0].missed) === JSON.stringify(['CATTLE', 'TACT', 'CAT']), 'missed words sorted best-scoring first');
+ok(mb.groups[1].found === 1 && mb.groups[1].total === 2 && JSON.stringify(mb.groups[1].missed) === JSON.stringify(['BAST']), 'obscure group: TAS found, BAST missed');
+const mbAll = missedBreakdown(sol, ['CAT'], null);
+ok(mbAll.groups.length === 1 && mbAll.groups[0].key === 'all' && mbAll.groups[0].missed.length === 6, 'no isCommon -> one ungrouped bucket');
+const mbNone = missedBreakdown(sol, [...sol], (w) => commonWords.has(w));
+ok(mbNone.groups.every((g) => g.missed.length === 0 && g.found === g.total), 'found everything -> nothing missed in either group');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

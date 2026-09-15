@@ -4,9 +4,9 @@
 
 import {
   makeBoard, validPath, wordFromPath, wordPoints, adjacent, MIN_WORD,
-  COUNTDOWN_MS, GAME_MS, standings, solveBoard,
+  COUNTDOWN_MS, GAME_MS, standings, solveBoard, missedBreakdown,
 } from './engine.js';
-import { loadDictionary, isWord, hasPrefix, dictionaryLoaded } from './dictionary.js';
+import { loadDictionary, isWord, hasPrefix, dictionaryLoaded, commonLoaded, isCommon } from './dictionary.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMyRooms, updateRoomStatus,
   finishRoom, RoomConnection, triggerPush, seatName, seatLeft, markPlayerLeft,
@@ -865,41 +865,51 @@ function boardSolution() {
 
 // Render the "words you missed" panel into `container`: how many of the board's
 // words the player found, and an expandable list of the rest (best-scoring
-// first). `mine` is the player's own valid word list. No-op if unsolved.
+// first), split into COMMON words (the ones you kick yourself over) and
+// OBSCURE ones (Scrabble-list oddities) when the common list has loaded.
+// `mine` is the player's own valid word list. No-op if unsolved.
 function renderMissedWords(container, mine) {
   if (!container) return;
   const all = boardSolution();
   if (!all || !all.size) { container.classList.add('hidden'); container.innerHTML = ''; return; }
-  const got = new Set((mine || []).map((w) => String(w).toUpperCase()).filter((w) => all.has(w)));
-  const missed = [...all].filter((w) => !got.has(w))
-    .sort((a, b) => wordPoints(b) - wordPoints(a) || b.length - a.length || (a < b ? -1 : 1));
+  const b = missedBreakdown(all, mine, commonLoaded() ? isCommon : null);
 
   container.classList.remove('hidden');
   container.innerHTML = '';
   const summary = document.createElement('div');
   summary.className = 'aw-summary';
-  summary.textContent = `You found ${got.size} of ${all.size} words on this board.`;
+  if (b.groups.length === 1) {
+    summary.textContent = `You found ${b.found} of ${b.total} words on this board.`;
+  } else {
+    const [c, o] = b.groups;
+    const head = c.total && c.found === c.total
+      ? `You found all ${c.total} common word${c.total === 1 ? '' : 's'} on this board`
+      : `You found ${c.found} of ${c.total} common words on this board`;
+    summary.textContent = `${head}, and ${o.found} of ${o.total} obscure one${o.total === 1 ? '' : 's'}.`;
+  }
   container.appendChild(summary);
 
-  if (!missed.length) return; // found them all — nothing to reveal
-
-  const toggle = document.createElement('button');
-  toggle.type = 'button';
-  toggle.className = 'aw-toggle';
-  const list = document.createElement('div');
-  list.className = 'aw-list';
-  list.innerHTML = missed
-    .map((w) => `<span class="aw-word">${esc(titleWord(w))}<span class="aw-pts">${wordPoints(w)}</span></span>`)
-    .join('');
-  const label = (open) => `${open ? 'Hide' : 'Show'} ${missed.length} word${missed.length === 1 ? '' : 's'} you missed`;
-  toggle.textContent = `${label(false)} ›`;
-  toggle.addEventListener('click', () => {
-    const open = list.classList.toggle('open');
-    toggle.classList.toggle('open', open);
-    toggle.textContent = `${label(open)} ${open ? '⌄' : '›'}`;
-  });
-  container.appendChild(toggle);
-  container.appendChild(list);
+  for (const g of b.groups) {
+    if (!g.missed.length) continue; // found them all — nothing to reveal
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = `aw-toggle aw-${g.key}`;
+    const list = document.createElement('div');
+    list.className = `aw-list aw-${g.key}`;
+    list.innerHTML = g.missed
+      .map((w) => `<span class="aw-word">${esc(titleWord(w))}<span class="aw-pts">${wordPoints(w)}</span></span>`)
+      .join('');
+    const kind = g.label ? `${g.label} ` : '';
+    const label = (open) => `${open ? 'Hide' : 'Show'} ${g.missed.length} ${kind}word${g.missed.length === 1 ? '' : 's'} you missed`;
+    toggle.textContent = `${label(false)} ›`;
+    toggle.addEventListener('click', () => {
+      const open = list.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+      toggle.textContent = `${label(open)} ${open ? '⌄' : '›'}`;
+    });
+    container.appendChild(toggle);
+    container.appendChild(list);
+  }
 }
 
 // Build and show the final scoreboard with expandable unique-word lists.

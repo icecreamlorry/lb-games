@@ -224,6 +224,11 @@ body {
   color: var(--magenta); text-shadow: var(--glow-magenta, none);
 }
 .aw-toggle:hover { color: #fff; }
+/* The obscure group is the one you're not expected to know — dim it so the
+   common list reads as the headline. The label text carries the distinction;
+   the colour is only a supplementary cue. */
+.aw-toggle.aw-obscure { color: rgba(var(--neon),0.55); text-shadow: none; }
+.aw-list.aw-obscure .aw-word { opacity: 0.75; }
 .aw-list {
   display: none; flex-wrap: wrap; gap: 5px 6px; max-height: 190px; overflow-y: auto;
   text-align: left; scrollbar-width: thin;

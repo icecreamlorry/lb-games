@@ -133,6 +133,32 @@ export function solveBoard(board, isWord, hasPrefix) {
   return found;
 }
 
+// Results-screen breakdown of the board's full solution (`all`, a Set from
+// solveBoard) against a player's own words (`mine`, any case). Missed words
+// are split into COMMON and OBSCURE via the injected `isCommon(w)` predicate
+// (data/common.txt) so "you missed 3 common words" isn't buried under twenty
+// Scrabble-list oddities nobody has heard of. Pass `isCommon = null` (the list
+// hasn't loaded) to get a single ungrouped bucket instead.
+// Returns { found, total, groups: [{ key, label, found, total, missed }] } —
+// each `missed` sorted best-scoring first, then longest, then alphabetical.
+export function missedBreakdown(all, mine, isCommon) {
+  const got = new Set();
+  for (const raw of mine || []) {
+    const w = String(raw || '').toUpperCase();
+    if (all.has(w)) got.add(w);
+  }
+  const byValue = (a, b) => wordPoints(b) - wordPoints(a) || b.length - a.length || (a < b ? -1 : 1);
+  const groups = isCommon
+    ? [{ key: 'common', label: 'common', test: (w) => !!isCommon(w) }, { key: 'obscure', label: 'obscure', test: (w) => !isCommon(w) }]
+    : [{ key: 'all', label: '', test: () => true }];
+  const out = groups.map(({ key, label, test }) => {
+    const words = [...all].filter(test);
+    const missed = words.filter((w) => !got.has(w)).sort(byValue);
+    return { key, label, found: words.length - missed.length, total: words.length, missed };
+  });
+  return { found: got.size, total: all.size, groups: out };
+}
+
 // Final standings with classic dedup: a word found by more than one player
 // scores for nobody. Each word is re-validated (length, dictionary, board-
 // formable) so a tampered list can't inflate a score.

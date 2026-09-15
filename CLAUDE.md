@@ -312,6 +312,15 @@ dataset against the clock, solo or in a room" game:
   Never touches the real guest id/name, so it's safe to leave set walking away.
 - Add each new game as a card in the root `index.html`, and give it engine tests
   under `<game>/test/*.mjs` (run with `node`).
+- **Scramblr's missed-words split** (`scramblr/data/common.txt`) — the ~45k
+  "common" subset of the ENABLE dictionary, built by
+  `node scramblr/tools/build-common.mjs` from SCOWL word-list sizes + spoken
+  (OpenSubtitles) and written (Google web) frequency, with an inflection rule so
+  plurals of common words count as common. The results screen splits "words
+  you missed" into common vs obscure with it. The rule and knobs are documented
+  in the script; if the split ever needs tuning, change a knob there, re-run,
+  eyeball the printed samples, and commit the regenerated file — never hand-edit
+  it. The other word games could reuse the file (same ENABLE list).
 - **Icons: the source of truth is `<game>/icons/icon.svg`** (a rounded-square
   512 viewBox, `rx="104"`, transparent corners — see any game for the house
   style). The three PNGs (`apple-touch-icon.png` 180, `icon-192.png`,
