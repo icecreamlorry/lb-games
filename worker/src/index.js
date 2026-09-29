@@ -717,6 +717,8 @@ async function supabasePage(env, table, offset, limit) {
   return res.json();
 }
 
+const iso = (t) => (t ? new Date(t).toISOString() : now());
+
 // One page per call (keeps each request well inside the CPU limit):
 // ?table=rooms|moves|scores&offset=N → { table, count, next } (next null = done).
 async function importFromSupabase(env, url) {

@@ -19,7 +19,9 @@
     // (verified once against Supabase Auth on first sign-in). Delete both once
     // every migrated account has signed in — then Supabase can be shut down.
     "LEGACY_SUPABASE_URL": "https://ymeobjtrhxbwywcvaova.supabase.co",
-    "LEGACY_SUPABASE_ANON_KEY": "sb_publishable_xic2yc7GGMKvfs6D09MzQA_rcGvFMwT"
+    "LEGACY_SUPABASE_ANON_KEY": "sb_publishable_xic2yc7GGMKvfs6D09MzQA_rcGvFMwT",
+    // Transitional: enables POST /admin/import-supabase. Remove after cutover.
+    "MIGRATE_FROM_SUPABASE": "1"
   }
   // Email links (magic sign-in, password reset) need Workers Paid + a domain
   // onboarded to Cloudflare Email Service; then add:
