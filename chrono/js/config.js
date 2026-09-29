@@ -1,5 +1,5 @@
-import { configReady, SUPABASE_URL, SUPABASE_ANON_KEY } from '../../shared/supabase-config.js';
+import { configReady, API_BASE } from '../../shared/api-config.js';
 
 export const GAME_SLUG = 'chrono';
 export const GAME_NAME = 'Chrono';
-export { configReady, SUPABASE_URL, SUPABASE_ANON_KEY };
+export { configReady, API_BASE };

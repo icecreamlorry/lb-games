@@ -19,7 +19,7 @@ import { openHistory } from '../../shared/history.js';
 import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import { registerServiceWorker } from './notify.js';
-import { supabase } from '../../shared/supabaseClient.js';
+import { postScore, fetchTopScores } from '../../shared/leaderboard.js';
 import { playerKey } from '../../shared/leaderboard.js';
 import { saveSession, readSession, clearSession } from '../../shared/game-session.js';
 
@@ -818,23 +818,8 @@ async function showDailyResults() {
   try {
     const key = playerKey(app.user);
     const name = (app.name || 'Player').trim();
-    await supabase().rpc('submit_score', {
-      p_game: slug,
-      p_player_key: key,
-      p_name: name,
-      p_score: Math.max(0, Math.round(myFinalScore)),
-      p_user_id: app.userId ?? null,
-    });
-
-    const { data: rows, error } = await supabase()
-      .from('scores')
-      .select('player_key, name, score')
-      .eq('game', slug)
-      .order('score', { ascending: false })
-      .order('updated_at', { ascending: true })
-      .limit(10);
-
-    if (error) throw error;
+    await postScore(slug, key, name, myFinalScore);
+    const rows = await fetchTopScores(slug, 10);
 
     lbEl.innerHTML = '';
     (rows || []).forEach((row, i) => {

@@ -1,26 +1,16 @@
 // Shared rooms, invites, and realtime layer for LB Games.
 // Pass your GAME_SLUG to createRoom, fetchMyRooms, and savePushSubscription.
 //
-// Every move is written to the `moves` table first (source of truth), then
-// broadcast over a realtime channel for low latency. Slow or flaky connections
-// only cost latency, never moves.
+// Every move is written to the move log first (source of truth, via the LB
+// Games API), then broadcast over the room's live channel for low latency.
+// Slow or flaky connections only cost latency, never moves.
 
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
-import { supabase } from './supabaseClient.js';
+import { api, wsUrl, ApiError } from './api.js';
 import { getGuestId } from './guest-id.js';
 import { getPushDeviceId } from './push-device-id.js';
 import { logError } from './devlog.js';
 
-export { supabase };
-
 const POLL_INTERVAL_MS = 2500;
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
-
-function randomCode(len = 6) {
-  const buf = new Uint32Array(len);
-  crypto.getRandomValues(buf);
-  return Array.from(buf, (n) => CODE_ALPHABET[n % CODE_ALPHABET.length]).join('');
-}
 
 // ---- Room player helpers ---------------------------------------------------
 
@@ -63,33 +53,24 @@ export function seatLeft(room, seat) {
 // extraHostFields (e.g. { matchWins, matchPoints } — see shared/rematch.js
 // callers) is merged straight into the host's players[] entry, so a rematch
 // chain can carry a running score forward with no extra round-trip.
+// The server picks the (unique) room code.
 export async function createRoom(hostName, hostUserId = null, invite = null, gameSlug, maxPlayers = 2, extraHostFields = null) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const hostPlayer = { seat: 0, name: cleanName(hostName), userId: hostUserId ?? null, ...extraHostFields };
   if (!hostUserId) hostPlayer.guestId = getGuestId(); // distinguish same-named guests
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const code = randomCode();
-    const row = {
-      code,
-      players: [hostPlayer],
-      player_count: 1,
-      max_players: maxPlayers,
-      seed,
-      game: gameSlug,
-    };
-    if (invite) {
-      row.invited_user_id = invite.userId;
-      row.invited_name = invite.name;
-    }
-    const { data, error } = await supabase()
-      .from('rooms')
-      .insert(row)
-      .select()
-      .single();
-    if (!error) return data;
-    if (error.code !== '23505') throw error; // retry only on code collision
+  const row = { players: [hostPlayer], max_players: maxPlayers, seed, game: gameSlug };
+  if (invite) {
+    row.invited_user_id = invite.userId;
+    row.invited_name = invite.name;
   }
-  throw new Error('Could not generate a unique room code, please try again.');
+  return api('/rooms', { method: 'POST', body: row });
+}
+
+// Update a room's mutable fields (players, player_count, status, max_players).
+// Resolves to the updated room. With expect (e.g. { player_count: 1 }) the
+// write only lands if the room still matches — resolves to null otherwise.
+export async function updateRoom(code, set, expect = null) {
+  return api(`/rooms/${encodeURIComponent(code)}`, { method: 'PATCH', body: { set, expect } });
 }
 
 // Resolve and claim a seat in a room. Signed-in players are matched by userId;
@@ -100,12 +81,10 @@ export async function createRoom(hostName, hostUserId = null, invite = null, gam
 // there, since that's the row a prior stamp (or this same merge, last time)
 // already wrote.
 export async function joinRoom(code, name, userId = null, extraGuestFields = null) {
-  const { data: room, error } = await supabase()
-    .from('rooms')
-    .select()
-    .eq('code', code)
-    .maybeSingle();
-  if (error) throw error;
+  const room = await api(`/rooms/${encodeURIComponent(code)}`, { allow404: true }).catch((e) => {
+    if (e.status === 400) return null; // malformed code
+    throw e;
+  });
   if (!room) throw new Error('No room found with that code.');
 
   const players = room.players ?? [];
@@ -139,35 +118,31 @@ export async function joinRoom(code, name, userId = null, extraGuestFields = nul
   const newPlayers = [...players, newPlayer];
   const newStatus = nextSeat + 1 >= room.max_players ? 'full' : 'waiting';
 
-  const { data: updated, error: updErr } = await supabase()
-    .from('rooms')
-    .update({ players: newPlayers, player_count: nextSeat + 1, status: newStatus })
-    .eq('code', code)
-    .eq('player_count', room.player_count) // optimistic lock: claim only if count unchanged
-    .select()
-    .maybeSingle();
-  if (updErr) throw updErr;
+  const updated = await updateRoom(
+    code,
+    { players: newPlayers, player_count: nextSeat + 1, status: newStatus },
+    { player_count: room.player_count }, // optimistic lock: claim only if count unchanged
+  );
   if (!updated) throw new Error('Someone else just took the last seat in that room.');
   return { room: updated, playerIndex: nextSeat };
 }
 
-// All rooms a signed-in player appears in or is invited to, newest first.
+// All rooms the signed-in player appears in or is invited to, newest first.
+// (The server takes the player from the session; userId is kept for callers.)
 export async function fetchMyRooms(userId, gameSlug) {
-  const { data, error } = await supabase()
-    .rpc('my_rooms', { p_user_id: userId, p_game: gameSlug });
-  if (error) throw error;
-  return data ?? [];
+  if (!userId) return [];
+  const q = gameSlug ? `?game=${encodeURIComponent(gameSlug)}` : '';
+  return (await api(`/rooms/mine${q}`)) ?? [];
 }
 
 export async function fetchRoom(code) {
-  const { data, error } = await supabase().from('rooms').select().eq('code', code).single();
-  if (error) throw error;
-  return data;
+  const room = await api(`/rooms/${encodeURIComponent(code)}`, { allow404: true });
+  if (!room) throw new ApiError('No room found with that code.', 404);
+  return room;
 }
 
 export async function updateRoomStatus(code, status) {
-  const { error } = await supabase().from('rooms').update({ status }).eq('code', code);
-  if (error) throw error;
+  await updateRoom(code, { status });
 }
 
 // ---- Leaving / forfeiting --------------------------------------------------
@@ -184,10 +159,12 @@ async function setSeatLeft(code, players, seat, left) {
     const { left: _l, leftAt: _t, ...rest } = p; // drop any existing flag first
     return left ? { ...rest, left: true, leftAt: new Date().toISOString() } : rest;
   });
-  const { data, error } = await supabase()
-    .from('rooms').update({ players: next }).eq('code', code).select().maybeSingle();
-  if (error) { logError('setSeatLeft failed:', error.message || error); return null; }
-  return data;
+  try {
+    return await updateRoom(code, { players: next });
+  } catch (error) {
+    logError('setSeatLeft failed:', error.message || error);
+    return null;
+  }
 }
 
 // Flag a seat as having left/forfeited. Returns the updated room, or null.
@@ -199,25 +176,17 @@ export async function markPlayerLeft(code, seat) {
   return setSeatLeft(code, room.players ?? [], seat, true);
 }
 
-// Mark a room finished and store its final result (see schema: rooms.result).
+// Mark a room finished and store its final result (rooms.result).
 // `result` shape: { scores: number[] by seat, winner: seat|'tie'|null, reason }.
 // purgeMoves deletes the room's move log too (Wurdz: the stored result makes it
 // redundant). Safe to call from both clients — it's idempotent.
 export async function finishRoom(code, result, purgeMoves = false) {
   const payload = { ...result, endedAt: result.endedAt || new Date().toISOString() };
-  const { error } = await supabase()
-    .rpc('finish_room', { p_code: code, p_result: payload, p_purge_moves: purgeMoves });
-  if (error) {
-    // If the RPC hasn't been deployed yet, fall back to a direct table update.
-    // (The RPC also optionally purges moves, but Scramblr never sets purgeMoves.)
-    if (error.code === 'PGRST202' || (error.message || '').includes('Could not find the function')) {
-      const { error: e2 } = await supabase()
-        .from('rooms')
-        .update({ status: 'finished', result: payload })
-        .eq('code', code);
-      if (e2) { logError('finishRoom fallback failed:', e2.message || e2); throw e2; }
-      return payload;
-    }
+  try {
+    await api(`/rooms/${encodeURIComponent(code)}/finish`, {
+      method: 'POST', body: { result: payload, purge_moves: !!purgeMoves },
+    });
+  } catch (error) {
     logError('finishRoom failed:', error.message || error);
     throw error;
   }
@@ -237,69 +206,63 @@ export async function fetchFinishedRooms(userId, gameSlug) {
 //   • Signed in  → pass { userId }: one subscription covers every game/seat
 //     the account occupies so notifications work across games. Each game
 //     registers its own service worker scope, so the same browser still ends
-//     up with one row per game — p_device_id (shared per-browser, see
-//     push-device-id.js) is how the notify Edge Function collapses those back
-//     down to one push per physical device instead of one per game.
+//     up with one row per game — device_id (shared per-browser, see
+//     push-device-id.js) is how the server collapses those back down to one
+//     push per physical device instead of one per game.
 //   • Anonymous  → pass { roomCode, player }: notified for that seat only.
+// Identity is taken from the session server-side, so `userId` here only
+// decides whether we pass the guest's seat-routing args.
 export async function savePushSubscription(subscription, { userId = null, roomCode = null, player = null, game } = {}) {
-  // Goes through the save_push_subscription() RPC (see setup.sql) rather than a
-  // direct write. It's a single atomic INSERT … ON CONFLICT (endpoint) DO UPDATE
-  // running SECURITY DEFINER, which fixes two things the old client-side
-  // delete-then-insert couldn't: it can't race two concurrent subscribes into a
-  // duplicate-endpoint error, and it works despite the table granting clients no
-  // SELECT (needed for a normal upsert). Identity is taken from the session
-  // server-side, so `userId` here only decides whether we pass the guest's
-  // seat-routing args; the server ignores them for signed-in devices.
-  const { error } = await supabase().rpc('save_push_subscription', {
-    p_endpoint: subscription.endpoint,
-    p_subscription: subscription,
-    p_game: game,
-    p_room_code: userId ? null : roomCode,
-    p_player: userId ? null : player,
-    p_device_id: getPushDeviceId(),
-  });
-  if (error) {
+  try {
+    await api('/push/subscribe', {
+      method: 'POST',
+      body: {
+        endpoint: subscription.endpoint,
+        subscription,
+        game,
+        room_code: userId ? null : roomCode,
+        player: userId ? null : player,
+        device_id: getPushDeviceId(),
+      },
+    });
+  } catch (error) {
     logError('savePushSubscription failed:', error.message || error);
     throw error;
   }
 }
 
 export async function deletePushSubscription(endpoint) {
-  const { error } = await supabase().from('push_subscriptions').delete().eq('endpoint', endpoint);
-  if (error) {
+  try {
+    await api('/push/unsubscribe', { method: 'POST', body: { endpoint } });
+  } catch (error) {
     logError('deletePushSubscription failed:', error.message || error);
     throw error;
   }
 }
 
-// Ask the Edge Function to push someone. Target a seat ({ room_code, player })
-// or a user directly ({ user_id }, e.g. for friend invites). Fire-and-forget.
+// Ask the server to push someone. Target a seat ({ room_code, player }) or a
+// user directly ({ user_id }, e.g. for friend invites). Fire-and-forget.
 export async function triggerPush({ room_code, player, user_id, title, body, url }) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/notify`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      apikey: SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify({ room_code, player, user_id, title, body, url }),
-  });
-  if (!res.ok) {
-    logError(`triggerPush failed (${res.status}):`, await res.text().catch(() => ''));
-    throw new Error(`push trigger failed (${res.status})`);
+  try {
+    return await api('/push/notify', { method: 'POST', body: { room_code, player, user_id, title, body, url } });
+  } catch (error) {
+    logError(`triggerPush failed (${error.status}):`, error.message || '');
+    throw new Error(`push trigger failed (${error.status})`);
   }
-  return res.json();
 }
 
 export async function fetchMoves(code, fromIndex = 0) {
-  const { data, error } = await supabase()
-    .from('moves')
-    .select()
-    .eq('room_code', code)
-    .gte('move_index', fromIndex)
-    .order('move_index');
-  if (error) throw error;
-  return data;
+  return (await api(`/rooms/${encodeURIComponent(code)}/moves?from=${fromIndex | 0}`)) ?? [];
+}
+
+// Append one move to a room's log. Rejects with code '23505' (the old
+// Postgres unique-violation code, which callers test for) when that
+// move_index is already taken.
+export async function insertMove(code, move) {
+  await api(`/rooms/${encodeURIComponent(code)}/moves`, {
+    method: 'POST',
+    body: { move_index: move.move_index, player: move.player, type: move.type, payload: move.payload ?? {} },
+  });
 }
 
 // ---- Rematch --------------------------------------------------------------
@@ -313,21 +276,22 @@ export async function fetchMoves(code, fromIndex = 0) {
 export const REMATCH_MOVE_INDEX = 9_000_000;
 
 export async function proposeRematch(oldCode, newCode, seat) {
-  const move = {
-    room_code: oldCode, move_index: REMATCH_MOVE_INDEX,
-    player: seat ?? 0, type: 'rematch', payload: { code: newCode },
-  };
-  const { error } = await supabase().from('moves').insert(move);
-  if (!error) return { code: newCode, host: true };
-  // Someone proposed first — follow their room instead.
-  const moves = await fetchMoves(oldCode, REMATCH_MOVE_INDEX).catch(() => []);
-  const rm = moves.find((m) => m.type === 'rematch');
-  return { code: rm?.payload?.code || newCode, host: false };
+  const move = { move_index: REMATCH_MOVE_INDEX, player: seat ?? 0, type: 'rematch', payload: { code: newCode } };
+  try {
+    await insertMove(oldCode, move);
+    return { code: newCode, host: true };
+  } catch {
+    // Someone proposed first — follow their room instead.
+    const moves = await fetchMoves(oldCode, REMATCH_MOVE_INDEX).catch(() => []);
+    const rm = moves.find((m) => m.type === 'rematch');
+    return { code: rm?.payload?.code || newCode, host: false };
+  }
 }
 
 // ---- RoomConnection -------------------------------------------------------
 //
-// Manages the realtime channel, presence, and the polling fallback.
+// Manages the live channel (a WebSocket to the room's RoomHub), presence, and
+// the polling fallback.
 // Handlers: onMove(move), onPresence(onlineSet), onMode(mode), onRoomUpdate(room).
 // Mode is 'live' (websocket) or 'db' (polling).
 export class RoomConnection {
@@ -336,8 +300,11 @@ export class RoomConnection {
     this.playerIndex = playerIndex;
     this.name = name;
     this.handlers = handlers;
-    this.channel = null;
+    this.ws = null;
     this.pollTimer = null;
+    this.pingTimer = null;
+    this.retryTimer = null;
+    this.retries = 0;
     this.mode = 'db';
     this.nextIndex = 0; // next move_index we expect; owner updates via setNextIndex
     this.closed = false;
@@ -348,39 +315,63 @@ export class RoomConnection {
   }
 
   connect() {
-    this.channel = supabase().channel(`room:${this.code}`, {
-      config: {
-        broadcast: { self: false },
-        presence: { key: String(this.playerIndex) },
-      },
-    });
-
-    this.channel
-      .on('broadcast', { event: 'move' }, ({ payload }) => {
-        this.handlers.onMove?.(payload.move);
-      })
-      .on('broadcast', { event: 'room' }, ({ payload }) => {
-        this.handlers.onRoomUpdate?.(payload.room);
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const present = new Set(Object.keys(this.channel.presenceState()));
-        this.handlers.onPresence?.(present);
-      })
-      .subscribe(async (status) => {
-        if (this.closed) return;
-        if (status === 'SUBSCRIBED') {
-          this.setMode('live');
-          await this.channel.track({ name: this.name, player: this.playerIndex });
-          await this.pollOnce(); // catch up on anything missed while offline
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          this.setMode('db');
-        }
-      });
-
+    this.openSocket();
     // Poller runs continuously but only does work in db mode.
     this.pollTimer = setInterval(() => {
       if (this.mode === 'db') this.pollOnce().catch(() => {});
     }, POLL_INTERVAL_MS);
+    this.onVisible = () => {
+      if (document.visibilityState === 'visible' && !this.closed && !this.ws) this.openSocket();
+    };
+    document.addEventListener('visibilitychange', this.onVisible);
+  }
+
+  openSocket() {
+    if (this.closed) return;
+    clearTimeout(this.retryTimer);
+    const q = `?key=${encodeURIComponent(String(this.playerIndex))}&name=${encodeURIComponent(this.name || '')}`;
+    let ws;
+    try { ws = new WebSocket(wsUrl(`/rooms/${encodeURIComponent(this.code)}/ws${q}`)); }
+    catch { this.scheduleReconnect(); return; }
+    this.ws = ws;
+
+    ws.onopen = () => {
+      if (this.closed || this.ws !== ws) return;
+      this.retries = 0;
+      this.setMode('live');
+      this.pollOnce().catch(() => {}); // catch up on anything missed while offline
+      clearInterval(this.pingTimer);
+      this.pingTimer = setInterval(() => { try { ws.send('ping'); } catch {} }, 25000);
+    };
+    ws.onmessage = (ev) => {
+      if (this.closed || typeof ev.data !== 'string' || ev.data === 'pong') return;
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+      if (msg.type === 'presence') {
+        this.handlers.onPresence?.(new Set(msg.keys || []));
+      } else if (msg.type === 'broadcast') {
+        if (msg.event === 'move' && msg.payload?.move) this.handlers.onMove?.(msg.payload.move);
+        else if (msg.event === 'room' && msg.payload?.room) this.handlers.onRoomUpdate?.(msg.payload.room);
+      }
+    };
+    ws.onclose = () => {
+      if (this.ws !== ws) return;
+      this.ws = null;
+      clearInterval(this.pingTimer);
+      if (this.closed) return;
+      this.setMode('db');
+      this.scheduleReconnect();
+    };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+  }
+
+  scheduleReconnect() {
+    if (this.closed) return;
+    const delay = Math.min(30000, 1000 * 2 ** Math.min(this.retries++, 5));
+    this.retryTimer = setTimeout(() => {
+      if (document.visibilityState === 'hidden') return; // reopened by onVisible
+      this.openSocket();
+    }, delay);
   }
 
   setMode(mode) {
@@ -401,40 +392,35 @@ export class RoomConnection {
     }
   }
 
-  // Persist the move, then broadcast if the socket is up. The database
-  // write is what makes the move official; the broadcast is just speed.
+  send(event, payload) {
+    if (this.mode !== 'live' || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    try { this.ws.send(JSON.stringify({ type: 'broadcast', event, payload })); } catch {}
+  }
+
+  // Persist the move, then broadcast if the socket is up. The log write is
+  // what makes the move official; the broadcast is just speed. (The server
+  // bumps the room's last_move_at as part of the same write.)
   async sendMove(move) {
-    const { error } = await supabase().from('moves').insert({
-      room_code: this.code,
-      move_index: move.move_index,
-      player: move.player,
-      type: move.type,
-      payload: move.payload,
-    });
-    if (error) throw error;
-    supabase().from('rooms').update({ last_move_at: new Date().toISOString() }).eq('code', this.code).then(() => {}, () => {});
-    if (this.mode === 'live') {
-      this.channel.send({ type: 'broadcast', event: 'move', payload: { move } }).catch(() => {});
-    }
+    await insertMove(this.code, move);
+    this.send('move', { move });
   }
 
   async broadcastRoom(room) {
-    if (this.mode === 'live') {
-      this.channel.send({ type: 'broadcast', event: 'room', payload: { room } }).catch(() => {});
-    }
+    this.send('room', { room });
   }
 
   // Push a move over the live channel without persisting it (already written,
   // or written elsewhere). Used to deliver a rematch pointer instantly.
   broadcastMove(move) {
-    if (this.mode === 'live' && this.channel) {
-      this.channel.send({ type: 'broadcast', event: 'move', payload: { move } }).catch(() => {});
-    }
+    this.send('move', { move });
   }
 
   close() {
     this.closed = true;
     if (this.pollTimer) clearInterval(this.pollTimer);
-    if (this.channel) supabase().removeChannel(this.channel);
+    clearInterval(this.pingTimer);
+    clearTimeout(this.retryTimer);
+    if (this.onVisible) document.removeEventListener('visibilitychange', this.onVisible);
+    if (this.ws) { try { this.ws.close(1000); } catch {} this.ws = null; }
   }
 }

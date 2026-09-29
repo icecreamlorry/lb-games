@@ -20,7 +20,7 @@ const { chromium } = require('playwright');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const STUB = fs.readFileSync(path.join(HERE, 'supabase-stub.mjs'), 'utf8');
+const STUB = fs.readFileSync(path.join(HERE, 'api-stub.js'), 'utf8');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.txt': 'text/plain' };
 
@@ -49,11 +49,8 @@ function check(name, cond, detail = '') {
   const base = `http://localhost:${server.address().port}`;
   const browser = await chromium.launch({ headless: true, args: ['--ignore-certificate-errors'] });
   const ctx = await browser.newContext({ viewport: { width: 411, height: 914 } });
-  await ctx.route('**://cdn.jsdelivr.net/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: STUB }));
+  await ctx.addInitScript({ content: STUB }); // in-page stub of the LB Games API
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  // The "your turn" push is fire-and-forget; stub the Edge Function so the test
-  // sandbox doesn't log a CORS/network error for it.
-  await ctx.route(/functions\/v1\/notify/, (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{}' }));
   await ctx.addInitScript(() => { localStorage.setItem('lbgames.name', 'Alice'); });
   const page = await ctx.newPage();
   const errs = [];

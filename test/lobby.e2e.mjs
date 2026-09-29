@@ -21,7 +21,7 @@ const { chromium } = require('playwright');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const STUB = fs.readFileSync(path.join(HERE, 'supabase-stub.mjs'), 'utf8');
+const STUB = fs.readFileSync(path.join(HERE, 'api-stub.js'), 'utf8');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 
@@ -54,15 +54,15 @@ function check(name, cond, detail = '') {
 
 async function newPage(browser, base, { signedIn }) {
   const ctx = await browser.newContext({ viewport: { width: 411, height: 914 }, ignoreHTTPSErrors: true });
-  await ctx.route('**://cdn.jsdelivr.net/**', (r) => r.fulfill({ status: 200, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' }, body: STUB }));
+  await ctx.addInitScript({ content: STUB }); // in-page stub of the LB Games API
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
   await ctx.addInitScript(([user, rooms]) => {
     localStorage.setItem('lbgames.name', 'Alice');
     if (user) {
       globalThis.__TEST_USER = user; globalThis.__TEST_MYROOMS = rooms;
-      // The real supabase-js persists the session here (persistSession: true);
-      // shared/boot.js + auth.cachedUser() read it to route before paint.
-      localStorage.setItem('sb-test-auth-token', JSON.stringify({ access_token: 'tok', user }));
+      // shared/api.js persists the session here; shared/boot.js +
+      // auth.cachedUser() read it to route before paint.
+      localStorage.setItem('lb.auth', JSON.stringify({ token: 'tok', user }));
     }
   }, [signedIn ? USER : null, SEED_ROOMS]);
   const page = await ctx.newPage();

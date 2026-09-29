@@ -2,21 +2,15 @@
 //
 // A signed-in player has a profile row with a unique shareable friend code.
 // Adding a friend by code sends a request; the other player accepts from
-// their profile panel. Everything goes through SECURITY DEFINER RPCs so the
-// underlying tables stay locked down.
-//
-// Copy this file as-is into any LB Games title on the same Supabase project.
+// their profile panel. Everything goes through the LB Games API's /friends
+// endpoints, which act as the signed-in caller.
 
-import { supabase } from './supabaseClient.js';
+import { api } from './api.js';
 
 // Ensure the current user has a profile (and a friend code), optionally
 // seeding/updating the display name. Returns { id, display_name, friend_code }.
 export async function ensureProfile(displayName = null) {
-  const { data, error } = await supabase().rpc('ensure_profile', {
-    p_display_name: displayName,
-  });
-  if (error) throw error;
-  return Array.isArray(data) ? data[0] : data;
+  return api('/friends/profile', { method: 'POST', body: { display_name: displayName } });
 }
 
 export async function myProfile() {
@@ -27,38 +21,25 @@ export async function myProfile() {
 //   'requested' | 'accepted' | 'already_friends' | 'already_requested'
 //   | 'self' | 'not_found'
 export async function addFriendByCode(code) {
-  const { data, error } = await supabase().rpc('send_friend_request', {
-    p_code: (code || '').trim().toUpperCase(),
-  });
-  if (error) throw error;
-  return data;
+  return api('/friends/request', { method: 'POST', body: { code: (code || '').trim().toUpperCase() } });
 }
 
 // Accepted friends: [{ id, display_name, friend_code }].
 export async function listFriends() {
-  const { data, error } = await supabase().rpc('list_friends');
-  if (error) throw error;
-  return data ?? [];
+  return (await api('/friends')) ?? [];
 }
 
 // Incoming pending requests: [{ id, display_name, friend_code }].
 export async function listFriendRequests() {
-  const { data, error } = await supabase().rpc('list_friend_requests');
-  if (error) throw error;
-  return data ?? [];
+  return (await api('/friends/requests')) ?? [];
 }
 
 export async function respondToRequest(requesterId, accept) {
-  const { error } = await supabase().rpc('respond_friend_request', {
-    p_requester: requesterId,
-    p_accept: !!accept,
-  });
-  if (error) throw error;
+  await api('/friends/respond', { method: 'POST', body: { requester: requesterId, accept: !!accept } });
 }
 
 export async function removeFriend(friendId) {
-  const { error } = await supabase().rpc('remove_friend', { p_friend: friendId });
-  if (error) throw error;
+  await api('/friends/remove', { method: 'POST', body: { friend: friendId } });
 }
 
 export function addFriendMessage(result) {

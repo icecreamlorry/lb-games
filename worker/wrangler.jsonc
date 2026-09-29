@@ -1,0 +1,27 @@
+// LB Games API Worker. Deployed initially through the Cloudflare API (same
+// bindings as below); `npx wrangler deploy` from this folder works too.
+// Secrets (never committed): JWT_SECRET, VAPID_PRIVATE_JWK
+//   npx wrangler secret put JWT_SECRET
+{
+  "name": "lb-games-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "lb-games", "database_id": "dbd44fe1-5fdb-4746-90d9-1cc7b78e6fb9" }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "ROOM_HUB", "class_name": "RoomHub" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RoomHub"] }],
+  "vars": {
+    "VAPID_SUBJECT": "https://icecreamlorry.github.io/lb-games/",
+    // Transitional: lets accounts migrated from Supabase keep their password
+    // (verified once against Supabase Auth on first sign-in). Delete both once
+    // every migrated account has signed in — then Supabase can be shut down.
+    "LEGACY_SUPABASE_URL": "https://ymeobjtrhxbwywcvaova.supabase.co",
+    "LEGACY_SUPABASE_ANON_KEY": "sb_publishable_xic2yc7GGMKvfs6D09MzQA_rcGvFMwT"
+  }
+  // Email links (magic sign-in, password reset) need Workers Paid + a domain
+  // onboarded to Cloudflare Email Service; then add:
+  // "send_email": [{ "name": "EMAIL" }], and a var EMAIL_FROM = "noreply@yourdomain"
+}

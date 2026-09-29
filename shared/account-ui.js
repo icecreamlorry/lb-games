@@ -25,14 +25,14 @@
 import {
   cachedUser, onAuthChange, displayName,
   signUp, signInWithPassword, signInWithMagicLink, signOut, setDisplayName,
-  resetPasswordForEmail, updatePassword, onPasswordRecovery,
+  resetPasswordForEmail, updatePassword, onPasswordRecovery, emailLinksAvailable,
 } from './auth.js';
 import { submitScore, topScores, friendScores, playerKey } from './leaderboard.js';
 import {
   ensureProfile, addFriendByCode, addFriendMessage,
   listFriends, listFriendRequests, respondToRequest, removeFriend,
 } from './friends.js';
-import { configReady } from './supabase-config.js';
+import { configReady } from './api-config.js';
 import { getGuestName, setGuestName } from './guest-name.js';
 import { openHistory } from './history.js';
 import { loadTheme, createThemePicker } from './themes.js';
@@ -293,11 +293,19 @@ function setAuthMode(mode) {
   $('auth-tab-signin').classList.toggle('active', signin);
   $('auth-tab-signup').classList.toggle('active', signup);
   $('auth-intro').classList.toggle('hidden', reset || newpw);
-  $('btn-auth-forgot').classList.toggle('hidden', !signin);
+  // Email links (forgot password / magic link) only exist once the backend can
+  // send email; until then those controls stay hidden.
+  $('btn-auth-forgot').classList.toggle('hidden', !signin || !emailLinks);
   $('btn-auth-back').classList.toggle('hidden', !reset);
-  $('auth-or').classList.toggle('hidden', reset || newpw);
-  $('btn-auth-magic').classList.toggle('hidden', reset || newpw);
+  $('auth-or').classList.toggle('hidden', reset || newpw || !emailLinks);
+  $('btn-auth-magic').classList.toggle('hidden', reset || newpw || !emailLinks);
 }
+
+let emailLinks = false;
+emailLinksAvailable().then((ok) => {
+  emailLinks = ok;
+  if (ok && $('auth-title')) setAuthMode(authMode);
+});
 
 function authStatus(msg) { $('auth-status').textContent = msg || ''; }
 

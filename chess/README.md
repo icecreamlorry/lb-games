@@ -112,5 +112,4 @@ node chess/tools/make-icons.mjs
 
 Chess reuses the shared schema unchanged — the time control rides the `start`
 move and the host's chosen control is stamped onto their player record, so no new
-columns are needed. Run `supabase/setup.sql` if you haven't already (it's
-idempotent).
+columns are needed (see `worker/schema.sql`).

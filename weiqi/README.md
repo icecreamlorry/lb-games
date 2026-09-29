@@ -89,5 +89,4 @@ node weiqi/tools/make-icons.mjs
 ## Database
 
 Weiqi reuses the shared schema unchanged — the board size rides the `start`
-move, so no new columns are needed. Run `supabase/setup.sql` if you haven't
-already (it's idempotent).
+move, so no new columns are needed (see `worker/schema.sql`).

@@ -98,11 +98,24 @@ function urlBase64ToUint8Array(base64) {
 // Subscribe this device to Web Push so the opponent's move can reach us even
 // with the browser closed. No-ops unless notifications are enabled and a
 // VAPID key is configured.
+function sameServerKey(buf, base64) {
+  if (!buf) return true; // browser doesn't expose it — assume it matches
+  const a = new Uint8Array(buf);
+  const b = urlBase64ToUint8Array(base64);
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 export async function subscribeToPush(route) {
   if (!pushSupported() || !isEnabled()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
+    // A subscription made under a different server key (e.g. before the move
+    // to the Cloudflare backend) can never be pushed to again — replace it.
+    if (sub && !sameServerKey(sub.options?.applicationServerKey, VAPID_PUBLIC_KEY)) {
+      await sub.unsubscribe().catch(() => {});
+      sub = null;
+    }
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,

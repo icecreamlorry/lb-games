@@ -4,7 +4,7 @@ import {
 } from './engine.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
-  finishRoom, RoomConnection, triggerPush, seatName, userSeat, seatLeft, markPlayerLeft, supabase,
+  finishRoom, RoomConnection, triggerPush, seatName, userSeat, seatLeft, markPlayerLeft, updateRoom,
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { takeRoomParam, roomShareUrl } from '../../shared/deep-link.js';
@@ -78,7 +78,7 @@ $('modal-setup').addEventListener('click', (e) => { if (e.target.id === 'modal-s
 async function stampTime(room, key) {
   try {
     const players = (room.players || []).map((p, i) => (i === 0 ? { ...p, time: key } : p));
-    const { data } = await supabase().from('rooms').update({ players }).eq('code', room.code).select().maybeSingle();
+    const data = await updateRoom(room.code, { players });
     return data || { ...room, players };
   } catch { return { ...room, players: (room.players || []).map((p, i) => (i === 0 ? { ...p, time: key } : p)) }; }
 }
@@ -659,7 +659,7 @@ $('btn-start').addEventListener('click', async () => {
     await submitMove('start', { players, tpm: TIME_CONTROLS[roomTimeKey(app.room)] || 0 });
     // Lock the table to the players present so nobody can grab a seat mid-game.
     try {
-      await supabase().from('rooms').update({ status: 'playing', max_players: players }).eq('code', app.code);
+      await updateRoom(app.code, { status: 'playing', max_players: players });
       app.room.status = 'playing'; app.room.max_players = players;
     } catch { await updateRoomStatus(app.code, 'playing').catch(() => {}); }
     app.conn.broadcastRoom(app.room); renderOverlays();
@@ -856,7 +856,7 @@ async function boot() {
   renderNotifyBtns();
 
   if (!configReady()) {
-    landingError('Setup needed: paste your Supabase anon key into shared/supabase-config.js (see README).');
+    landingError('Setup needed: set the API endpoint in shared/api-config.js (see README).');
     $('btn-create').disabled = true; $('btn-join').disabled = true; window.LBBoot?.done(); return;
   }
 

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 
-const REQUIRED_CONFIG_EXPORTS = ['GAME_SLUG', 'GAME_NAME', 'configReady', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const REQUIRED_CONFIG_EXPORTS = ['GAME_SLUG', 'GAME_NAME', 'configReady', 'API_BASE'];
 const REQUIRED_NOTIFY_EXPORTS = ['notificationsSupported', 'notificationPermission', 'isEnabled', 'subscribeToPush', 'registerServiceWorker'];
 
 const games = ['reversi', 'dominoes', 'chrono', 'chess', 'backgammon', 'weiqi', 'flagz', 'atlaz', 'atomyx', 'buffz', 'draughts', 'rummikub'];

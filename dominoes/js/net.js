@@ -6,7 +6,7 @@
 import { GAME_SLUG } from './config.js';
 import { createNet } from '../../shared/net.js';
 
-export { supabase, seatName, seatUserId, userSeat, seatLeft, markPlayerLeft } from '../../shared/rooms.js';
+export { seatName, seatUserId, userSeat, seatLeft, markPlayerLeft, updateRoom } from '../../shared/rooms.js';
 export { fetchRoom, fetchMoves, updateRoomStatus, finishRoom, triggerPush, RoomConnection } from '../../shared/rooms.js';
 export { deletePushSubscription, proposeRematch, REMATCH_MOVE_INDEX } from '../../shared/rooms.js';
 

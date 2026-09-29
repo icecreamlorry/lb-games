@@ -15,8 +15,8 @@
 // the game. Nothing is stored or duplicated — we import the engine lazily and
 // only for rooms actually in progress.
 
-import { supabase } from './supabaseClient.js';
-import { configReady } from './supabase-config.js';
+import { configReady } from './api-config.js';
+import { fetchTopScores, fetchScoreFor } from './leaderboard.js';
 import { fetchMyRooms, fetchMoves, seatName, userSeat } from './rooms.js';
 
 const $ = (id) => document.getElementById(id);
@@ -177,16 +177,10 @@ async function dailyStatus(game, user) {
   const slug = dailySlug(game.slug);
   let high = null, mine = null;
   try {
-    const { data: top } = await supabase().from('scores')
-      .select('name, score').eq('game', slug)
-      .order('score', { ascending: false }).order('updated_at', { ascending: true }).limit(1);
+    const top = await fetchTopScores(slug, 1);
     high = top && top[0] ? top[0] : null;
     const key = playerKeyFor(game.slug, user);
-    if (key) {
-      const { data: row } = await supabase().from('scores')
-        .select('score').eq('game', slug).eq('player_key', key).maybeSingle();
-      mine = row ? row.score : null;
-    }
+    if (key) mine = await fetchScoreFor(slug, key);
   } catch { /* leave nulls — still render the "play today" card */ }
   return { game, high, mine };
 }

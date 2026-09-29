@@ -25,18 +25,11 @@
 (function () {
   var user = null;
   try {
-    // supabase-js v2 persists the session at sb-<project-ref>-auth-token.
-    // Scan rather than hardcode the ref (it lives in an ES module we can't
-    // import from a classic script). Presence of a session = optimistically
-    // signed in; if the refresh later fails, onAuthChange corrects the UI.
-    for (var i = 0; i < localStorage.length; i++) {
-      var k = localStorage.key(i);
-      if (/^sb-.+-auth-token$/.test(k)) {
-        var s = JSON.parse(localStorage.getItem(k));
-        user = (s && (s.user || (s.currentSession && s.currentSession.user))) || null;
-        break;
-      }
-    }
+    // shared/api.js persists the session at 'lb.auth' (SESSION_KEY there —
+    // keep in sync). Presence of a session = optimistically signed in; if the
+    // server rejects it later, onAuthChange corrects the UI.
+    var s = JSON.parse(localStorage.getItem('lb.auth') || 'null');
+    user = (s && s.token && s.user) || null;
   } catch (e) {}
   document.documentElement.dataset.auth = user ? 'in' : 'out';
 

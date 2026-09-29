@@ -5,7 +5,7 @@ import { createBoard } from './board.js';
 import { initTutorial, openTutorial } from './tutorial.js';
 import {
   createRoom, joinRoom, fetchRoom, fetchMoves, fetchMyRooms, updateRoomStatus,
-  finishRoom, RoomConnection, triggerPush, seatName, userSeat, seatLeft, markPlayerLeft, supabase,
+  finishRoom, RoomConnection, triggerPush, seatName, userSeat, seatLeft, markPlayerLeft, updateRoom,
 } from './net.js';
 import { createRematch } from '../../shared/rematch.js';
 import { takeRoomParam, roomShareUrl } from '../../shared/deep-link.js';
@@ -114,7 +114,7 @@ async function stampSize(room, sizeKey, timeKey) {
   const patch = (p, i) => (i === 0 ? { ...p, size: sizeKey, time: timeKey } : p);
   try {
     const players = (room.players || []).map(patch);
-    const { data } = await supabase().from('rooms').update({ players }).eq('code', room.code).select().maybeSingle();
+    const data = await updateRoom(room.code, { players });
     return data || { ...room, players };
   } catch {
     return { ...room, players: (room.players || []).map(patch) };
@@ -1152,7 +1152,7 @@ async function boot() {
 
 
   if (!configReady()) {
-    landingError('Setup needed: paste your Supabase anon key into shared/supabase-config.js (see README).');
+    landingError('Setup needed: set the API endpoint in shared/api-config.js (see README).');
     $('btn-create').disabled = true;
     $('btn-join').disabled = true;
     window.LBBoot?.done();

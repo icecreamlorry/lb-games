@@ -102,11 +102,24 @@ function urlBase64ToUint8Array(base64) {
 //
 // Pass { userId } when signed in (one subscription notifies across all the
 // account's games), or { roomCode, player } when anonymous (that seat only).
+function sameServerKey(buf, base64) {
+  if (!buf) return true; // browser doesn't expose it — assume it matches
+  const a = new Uint8Array(buf);
+  const b = urlBase64ToUint8Array(base64);
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 export async function subscribeToPush(route) {
   if (!pushSupported() || !isEnabled()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
+    // A subscription made under a different server key (e.g. before the move
+    // to the Cloudflare backend) can never be pushed to again — replace it.
+    if (sub && !sameServerKey(sub.options?.applicationServerKey, VAPID_PUBLIC_KEY)) {
+      await sub.unsubscribe().catch(() => {});
+      sub = null;
+    }
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,

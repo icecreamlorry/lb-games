@@ -1,8 +1,8 @@
 # LB Games — working notes for Claude
 
 A family of vanilla-JS web games (Chromagrid, Wurdz, Scramblr, Splitz, Lexicorp,
-Atlaz, Flagz, Atomyx, Buffz, Weiqi, Chess, Draughts, Backgammon, Rummikub) sharing one Supabase rooms/accounts/push
-layer under `shared/`, plus **Tools** (`tools/` — puzzle utilities such as the
+Atlaz, Flagz, Atomyx, Buffz, Weiqi, Chess, Draughts, Backgammon, Rummikub) sharing one rooms/accounts/push layer under
+`shared/` backed by one Cloudflare Worker (`worker/` — D1 + a Durable Object), plus **Tools** (`tools/` — puzzle utilities such as the
 anagram helper; no rooms or scores, it only takes the shared chrome). Repo-level
 dev scripts live in `scripts/` (not `tools/`, which is the game). No build step — static HTML + ES modules, served straight
 from GitHub Pages (`icecreamlorry.github.io/lb-games`). Each game lives in its
@@ -148,8 +148,18 @@ Watch for: valid/invalid states, status/turn indicators, categories/suits/teams,
 
 ## Shared layer (don't re-implement per game)
 
+- **Backend = the `worker/` Cloudflare Worker** (`lb-games-api`; see
+  `worker/README.md`): D1 database `lb-games` (schema `worker/schema.sql`), a
+  `RoomHub` Durable Object per room for the live channel, its own email+password
+  auth, Web Push. D1 has no row-level security — **every access rule lives in
+  the Worker's handlers**, so a new query/permission means a new endpoint there,
+  never a client-side table write. Clients reach it only through
+  `shared/api.js` (`api(path, …)`, the session in localStorage `lb.auth`); the
+  endpoint + VAPID public key live in `shared/api-config.js`. Deploy with
+  `npx wrangler deploy` from `worker/` (or the Cloudflare API).
 - `shared/rooms.js` + `shared/net.js` — rooms, moves, realtime, push. Each game's
-  `js/net.js` calls `createNet(GAME_SLUG)`.
+  `js/net.js` calls `createNet(GAME_SLUG)`. Room field changes go through
+  `updateRoom(code, set, expect)` — never write rooms any other way.
 - `shared/account-ui.js` / `shared/lobby-ui.js` — auth modals, hamburger menu,
   the injected lobby card + account bar. **The landing account bar is shared
   chrome present on every game** (mount point `<div id="account-bar"></div>`),
@@ -168,10 +178,9 @@ Watch for: valid/invalid states, status/turn indicators, categories/suits/teams,
   rules). It lives here, not in a kit file, because the solo/word games link
   only this stylesheet.
 - `shared/boot.js` — the boot veil (lifts on `LBBoot.done()`, 8s failsafe).
-- `shared/supabaseClient.js` imports supabase-js from a **CDN**, so the whole app
-  graph only evaluates when that CDN is reachable. In a network-blocked sandbox
-  the game screens won't boot; test game-independent pieces (engines, tutorials)
-  in isolation instead.
+- There's no CDN dependency any more: every game boots offline; only API calls
+  (rooms, scores, auth) need the Worker. The e2e tests inject
+  `test/api-stub.js` (an in-page fake of the API) instead.
 - `shared/home-dashboard.js` — the landing page's cross-game **"Your games"**
   (open invites + rooms where it's your turn) and **"Daily challenges"**
   dashboards. **Register a new game here** in `ROOM_GAMES` (kind `'replay'` if its
@@ -341,6 +350,6 @@ branch.
 ## Talking to the owner
 
 - The owner already knows the sandbox can't run the full room/multiplayer flow
-  (the Supabase client loads from a CDN that's blocked here). **Don't keep
-  repeating that caveat** — just ship to `main` and, if something genuinely
+  (the API Worker may be unreachable from here). **Don't keep repeating that
+  caveat** — just ship to `main` and, if something genuinely
   couldn't be checked, say so once, briefly.

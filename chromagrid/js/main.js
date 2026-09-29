@@ -18,8 +18,7 @@ import { openHistory } from '../../shared/history.js';
 import { filterDismissed, dismissGame, makeDismissControl } from '../../shared/dismissed-games.js';
 import { getGuestName } from '../../shared/guest-name.js';
 import { saveSession, readSession, clearSession } from '../../shared/game-session.js';
-import { supabase } from '../../shared/supabaseClient.js';
-import { playerKey } from '../../shared/leaderboard.js';
+import { playerKey, postScore, fetchTopScores } from '../../shared/leaderboard.js';
 
 let colourBlindMode        = localStorage.getItem('chromagrid-cbm') === '1';
 let colourBlindModePending = colourBlindMode;
@@ -1530,19 +1529,12 @@ function getPlayerName() {
   return (n || '').trim() || 'Player';
 }
 
-let currentUser = null;
-supabase().auth.onAuthStateChange((_, session) => { currentUser = session?.user ?? null; });
-supabase().auth.getSession().then(({ data }) => { currentUser = data?.session?.user ?? null; });
+let currentUser = cachedUser();
+onAuthChange((u) => { currentUser = u; });
 
 async function fetchAndRenderLB(slug, lbEl) {
   const myKey = playerKey(currentUser);
-  const { data: rows } = await supabase()
-    .from('scores')
-    .select('player_key, name, score')
-    .eq('game', slug)
-    .order('score', { ascending: false })
-    .order('updated_at', { ascending: true })
-    .limit(10);
+  const rows = await fetchTopScores(slug, 10).catch(() => []);
   lbEl.innerHTML = '';
   (rows || []).forEach((row, i) => {
     const isMe = row.player_key === myKey;
@@ -1559,13 +1551,7 @@ async function fetchAndRenderLB(slug, lbEl) {
 window.__dailySubmitAndFetch = async (score, slug, lbEl) => {
   const key = playerKey(currentUser);
   try {
-    await supabase().rpc('submit_score', {
-      p_game: slug,
-      p_player_key: key,
-      p_name: getPlayerName(),
-      p_score: Math.max(0, Math.round(score)),
-      p_user_id: currentUser?.id ?? null,
-    });
+    await postScore(slug, key, getPlayerName(), score);
   } catch {}
   await fetchAndRenderLB(slug, lbEl);
 };

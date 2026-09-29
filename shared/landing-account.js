@@ -3,14 +3,14 @@
 // Shows the signed-in account (project-wide — one login works across every
 // game) or, for guests, a name field that syncs across all games via the
 // shared guest-name key. Signing in here signs you in everywhere, because the
-// Supabase session lives in this origin's localStorage, shared by every page
-// under /lb-games/.
+// session lives in this origin's localStorage, shared by every page under
+// /lb-games/.
 
 import {
   cachedUser, onAuthChange, displayName,
-  signUp, signInWithPassword, signInWithMagicLink, signOut,
+  signUp, signInWithPassword, signInWithMagicLink, signOut, emailLinksAvailable,
 } from './auth.js';
-import { configReady } from './supabase-config.js';
+import { configReady } from './api-config.js';
 import { getGuestName, setGuestName } from './guest-name.js';
 
 const $ = id => document.getElementById(id);
@@ -127,6 +127,12 @@ async function init() {
   render();
   if (!configReady()) return;
   onAuthChange(u => { user = u; render(); });
+  // No email sending on the backend yet → no magic-link option.
+  emailLinksAvailable().then(ok => {
+    if (ok) return;
+    $('btn-auth-magic')?.classList.add('hidden');
+    $('auth-or')?.classList.add('hidden');
+  });
 }
 
 init();
