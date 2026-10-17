@@ -1,4 +1,4 @@
-// LB Games API — the Cloudflare Worker that replaced Supabase.
+// LB Games API — the shared backend for every LB Games title.
 //
 // One Worker serves every game: accounts, rooms + move logs, live room
 // channels (the RoomHub Durable Object), leaderboards, friends and Web Push.
@@ -14,11 +14,6 @@
 //   VAPID_SUBJECT      var    — mailto: contact for push services
 //   EMAIL, EMAIL_FROM  optional send_email binding + from address; without them
 //                      magic-link / password-reset endpoints report "unavailable"
-//   LEGACY_SUPABASE_URL, LEGACY_SUPABASE_ANON_KEY
-//                      optional, TRANSITIONAL — accounts migrated from Supabase
-//                      carry no password hash; while these are set, their first
-//                      sign-in is checked against Supabase Auth and the password
-//                      is then stored here. Remove once everyone has signed in.
 
 import { RoomHub } from './room-hub.js';
 import {
@@ -102,22 +97,6 @@ async function findUserByEmail(env, email) {
   return env.DB.prepare('select * from users where email = ?').bind(email).first();
 }
 
-async function checkLegacyPassword(env, email, password) {
-  if (!env.LEGACY_SUPABASE_URL || !env.LEGACY_SUPABASE_ANON_KEY) return null;
-  try {
-    const res = await fetch(`${env.LEGACY_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { apikey: env.LEGACY_SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.user?.id ? data.user : null;
-  } catch {
-    return null;
-  }
-}
-
 async function authRoutes(request, env, path) {
   if (path === '/auth/config' && request.method === 'GET') {
     return json({ email: !!(env.EMAIL && env.EMAIL_FROM) });
@@ -143,28 +122,13 @@ async function authRoutes(request, env, path) {
     const password = typeof b.password === 'string' ? b.password : '';
     const bad = () => fail(400, 'Invalid login credentials');
     if (!email || !password) bad();
-    let u = await findUserByEmail(env, email);
-    if (u?.password_hash) {
-      const { ok, rehash } = await verifyPassword(password, u.password_hash);
-      if (!ok) bad();
-      if (rehash) {
-        await env.DB.prepare('update users set password_hash = ?, updated_at = ? where id = ?')
-          .bind(await hashPassword(password), now(), u.id).run();
-      }
-      return json(await issueSession(env, u));
-    }
-    // No local password yet: a migrated account (or one created on the old
-    // site after the migration) — verify once against Supabase, then adopt it.
-    const legacy = await checkLegacyPassword(env, email, password);
-    if (!legacy) bad();
-    const t = now();
-    const hash = await hashPassword(password);
-    if (u) {
-      await env.DB.prepare('update users set password_hash = ?, updated_at = ? where id = ?').bind(hash, t, u.id).run();
-    } else {
-      u = { id: legacy.id, email, display_name: str(legacy.user_metadata?.display_name, 40) || null };
-      await env.DB.prepare('insert into users (id, email, password_hash, display_name, created_at, updated_at) values (?, ?, ?, ?, ?, ?)')
-        .bind(u.id, u.email, hash, u.display_name, t, t).run();
+    const u = await findUserByEmail(env, email);
+    if (!u?.password_hash) bad();
+    const { ok, rehash } = await verifyPassword(password, u.password_hash);
+    if (!ok) bad();
+    if (rehash) {
+      await env.DB.prepare('update users set password_hash = ?, updated_at = ? where id = ?')
+        .bind(await hashPassword(password), now(), u.id).run();
     }
     return json(await issueSession(env, u));
   }
@@ -700,68 +664,6 @@ async function notify(env, b) {
   return json({ sent });
 }
 
-// ---- One-time import from Supabase (TRANSITIONAL) ------------------------
-// POST /admin/import-supabase copies the publicly readable tables (rooms,
-// moves, scores) from the old Supabase project's REST API. Only enabled while
-// the MIGRATE_FROM_SUPABASE var is '1'. Idempotent and never clobbers newer
-// data: a room is only overwritten by a copy at least as recent, moves are
-// insert-or-ignore, scores keep the higher value. (Accounts, profiles and
-// friendships aren't publicly readable and were copied separately.)
-
-async function supabasePage(env, table, offset, limit) {
-  const order = table === 'moves' ? 'id' : 'created_at';
-  const res = await fetch(`${env.LEGACY_SUPABASE_URL}/rest/v1/${table}?select=*&order=${order}.asc&limit=${limit}&offset=${offset}`, {
-    headers: { apikey: env.LEGACY_SUPABASE_ANON_KEY },
-  });
-  if (!res.ok) fail(502, `Supabase ${table}: ${res.status} ${await res.text()}`);
-  return res.json();
-}
-
-const iso = (t) => (t ? new Date(t).toISOString() : now());
-
-// One page per call (keeps each request well inside the CPU limit):
-// ?table=rooms|moves|scores&offset=N → { table, count, next } (next null = done).
-async function importFromSupabase(env, url) {
-  if (env.MIGRATE_FROM_SUPABASE !== '1' || !env.LEGACY_SUPABASE_URL) fail(404, 'Not found');
-  const table = url.searchParams.get('table');
-  if (!['rooms', 'moves', 'scores'].includes(table)) fail(400, 'table must be rooms, moves or scores');
-  const offset = int(url.searchParams.get('offset')) ?? 0;
-  const LIMIT = 200;
-  const rows = await supabasePage(env, table, offset, LIMIT);
-  const rooms = table === 'rooms' ? rows : [];
-  const moves = table === 'moves' ? rows : [];
-  const scores = table === 'scores' ? rows : [];
-  const stmts = [];
-  for (const r of rooms) {
-    const players = Array.isArray(r.players) ? r.players : [];
-    stmts.push(env.DB.prepare(`insert into rooms (code, id, game, seed, status, players, player_count, max_players,
-                                 invited_user_id, invited_name, result, created_at, last_move_at)
-                               values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                               on conflict (code) do update set status = excluded.status, players = excluded.players,
-                                 player_count = excluded.player_count, max_players = excluded.max_players,
-                                 result = excluded.result, last_move_at = excluded.last_move_at
-                               where excluded.last_move_at >= rooms.last_move_at`)
-      .bind(r.code, r.id, r.game || 'wurdz', r.seed ?? 0, r.status || 'waiting', JSON.stringify(players),
-        r.player_count ?? players.length, r.max_players ?? 2, r.invited_user_id ?? null, r.invited_name ?? null,
-        r.result == null ? null : JSON.stringify(r.result), iso(r.created_at), iso(r.last_move_at)));
-    stmts.push(...roomUsersStmts(env, r.code, r.game || 'wurdz', players));
-  }
-  for (const m of moves) {
-    stmts.push(env.DB.prepare(`insert or ignore into moves (room_code, move_index, player, type, payload, created_at)
-                               values (?, ?, ?, ?, ?, ?)`)
-      .bind(m.room_code, m.move_index, m.player, m.type, JSON.stringify(m.payload ?? {}), iso(m.created_at)));
-  }
-  for (const s of scores) {
-    stmts.push(env.DB.prepare(`insert into scores (id, game, player_key, user_id, name, score, created_at, updated_at)
-                               values (?, ?, ?, ?, ?, ?, ?, ?)
-                               on conflict (game, player_key) do update set score = max(scores.score, excluded.score),
-                                 updated_at = max(scores.updated_at, excluded.updated_at)`)
-      .bind(s.id, s.game, s.player_key, s.user_id ?? null, s.name || 'Player', s.score ?? 0, iso(s.created_at), iso(s.updated_at)));
-  }
-  if (stmts.length) await env.DB.batch(stmts);
-  return json({ table, count: rows.length, next: rows.length < LIMIT ? null : offset + LIMIT });
-}
-
 // ---- Entry ----------------------------------------------------------------
 
 export default {
@@ -771,7 +673,6 @@ export default {
     const path = url.pathname.replace(/\/+$/, '') || '/';
     try {
       if (path === '/') return json({ ok: true, service: 'lb-games-api' });
-      if (path === '/admin/import-supabase' && request.method === 'POST') return await importFromSupabase(env, url);
       const res = (path.startsWith('/auth') && await authRoutes(request, env, path))
         || (path.startsWith('/rooms') && await roomRoutes(request, env, path, url))
         || (path.startsWith('/scores') && await scoreRoutes(request, env, path, url))

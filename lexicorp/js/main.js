@@ -1306,7 +1306,7 @@ async function tryResume() {
 async function boot() {
   registerServiceWorker();
   window.LB_CONFIG.onChallengeFriend = challengeFriend;
-  if (!configReady()) { landingError('Setup needed: Supabase key missing.'); window.LBBoot?.done(); return; }
+  if (!configReady()) { landingError('Setup needed: set the API endpoint in shared/api-config.js.'); window.LBBoot?.done(); return; }
   // Cached session (sync, no network) decides the initial screen; the boot
   // veil stays up until the route — including a room resume — is settled,
   // so the page never shows the lobby and then jumps into a resumed game.

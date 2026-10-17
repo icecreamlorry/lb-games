@@ -841,8 +841,8 @@ async function init() {
   // Seed from the locally cached session (synchronous, no network) so the
   // very first render already shows the right signed-in/out state instead of
   // flashing "Playing as a guest" and reconfiguring. The authoritative
-  // session arrives via onAuthChange (Supabase fires INITIAL_SESSION once the
-  // client has initialised), where onUser also loads the profile + badge.
+  // session arrives via onAuthChange (it fires once with the validated user),
+  // where onUser also loads the profile + badge.
   app.user = cachedUser();
   if (app.user) app.name = displayName(app.user);
 

@@ -57,14 +57,3 @@ domain onboarded to Cloudflare Email Service. Until then the Worker answers 501
 and the UI hides those buttons (email + password sign-in always works). To turn
 it on: onboard a domain, add `"send_email": [{ "name": "EMAIL" }]` and a var
 `EMAIL_FROM` to `wrangler.jsonc`, deploy.
-
-## Transitional Supabase hooks (delete when done)
-
-- `LEGACY_SUPABASE_URL` / `LEGACY_SUPABASE_ANON_KEY` — accounts copied from
-  Supabase carry no password hash (hashes weren't exported). On an account's
-  first sign-in the Worker checks the password against Supabase Auth once, then
-  stores its own hash. When every migrated account has signed in
-  (`select email from users where password_hash is null` is empty), delete both
-  vars and shut the Supabase project down.
-- `MIGRATE_FROM_SUPABASE` + `POST /admin/import-supabase?table=rooms|moves|scores&offset=N`
-  — one-time, idempotent copy of the public tables. Remove the var after cutover.

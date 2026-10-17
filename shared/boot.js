@@ -1,16 +1,16 @@
 // Boot veil + pre-paint auth hint — theme-boot.js's sibling for layout.
 //
 // Problem: every page's static HTML is the signed-OUT layout, and the account
-// layer only learns "actually, you're logged in" after Supabase resolves. So a
+// layer only learns "actually, you're logged in" after the API confirms the session. So a
 // signed-in visitor always saw the guest screen flash in and then reconfigure
 // (account bar flips, screen swaps to the lobby, maybe again into a resumed
-// game). Supabase caches the whole session in localStorage though, so
+// game). shared/api.js caches the whole session in localStorage though, so
 // signed-in-ness is knowable synchronously, before first paint.
 //
 // This runs as a classic (blocking) script at the TOP OF <body>, after
 // window.LB_CONFIG and theme-boot.js:
 //
-//   1. Reads the cached Supabase session and stamps <html data-auth="in|out">
+//   1. Reads the cached session and stamps <html data-auth="in|out">
 //      so CSS/inline scripts can paint the right variant immediately. The
 //      cached user (if any) is exposed as LBBoot.user.
 //   2. On game pages (LB_CONFIG.gameSlug set) it injects a full-screen boot

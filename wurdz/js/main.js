@@ -31,7 +31,7 @@ const $ = (id) => document.getElementById(id);
 // ---- App state ----------------------------------------------------------
 
 const app = {
-  user: null,        // Supabase auth user, or null when playing as a guest
+  user: null,        // signed-in user (shared/auth.js), or null when playing as a guest
   userId: null,
   name: null,
   code: null,
@@ -1508,7 +1508,7 @@ async function boot() {
   // any other game) and keep it in sync as it's edited here.
 
   if (!configReady()) {
-    landingError('Setup needed: paste your Supabase anon key into js/config.js (see README).');
+    landingError('Setup needed: set the API endpoint in shared/api-config.js.');
     $('btn-create').disabled = true;
     $('btn-join').disabled = true;
     window.LBBoot?.done();

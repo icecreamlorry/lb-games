@@ -1,6 +1,6 @@
 // RoomHub — one Durable Object per room code, relaying the live channel.
 //
-// Replaces Supabase Realtime (broadcast + presence) for shared/rooms.js's
+// The live channel (broadcast + presence) for shared/rooms.js's
 // RoomConnection. It holds no game state: the move log in D1 stays the source
 // of truth, and this is only the low-latency path.
 //
