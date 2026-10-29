@@ -256,7 +256,10 @@ input, textarea { user-select: text; }
 
 .board {
   display: grid;
-  grid-template-columns: repeat(15, 1fr);
+  /* minmax(0, 1fr) both ways so a row holding tiles (bigger glyphs) can't
+     grow taller than an empty one — the squares stay square. */
+  grid-template-columns: repeat(var(--board-n, 15), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--board-n, 15), minmax(0, 1fr));
   gap: 2px;
   background: var(--board-line);
   border: 4px solid var(--board-line);
@@ -307,7 +310,7 @@ input, textarea { user-select: text; }
 .cell.has-tile {
   background: var(--tile);
   border-radius: 3px;
-  box-shadow: inset 0 -2px 0 var(--tile-edge);
+  box-shadow: inset 0 calc(-1 * var(--stack-edge, 2px)) 0 var(--tile-edge);
   color: var(--tile-text);
 }
 .cell.pending {
@@ -319,7 +322,7 @@ input, textarea { user-select: text; }
 .cell.last-move {
   outline: 2px solid var(--good);
   outline-offset: -2px;
-  box-shadow: inset 0 -2px 0 var(--tile-edge), 0 0 10px rgba(76, 209, 126, 0.6);
+  box-shadow: inset 0 calc(-1 * var(--stack-edge, 2px)) 0 var(--tile-edge), 0 0 10px rgba(76, 209, 126, 0.6);
 }
 .cell.blank-tile .t-letter { color: #8a6d3b; }
 
@@ -333,6 +336,68 @@ input, textarea { user-select: text; }
   bottom: 0;
   font-size: clamp(6px, 1vw, 9px);
 }
+
+/* ---- UpWurdz (Upwords rules): 10×10 board with stacked tiles ----
+   Stack height reads two ways, neither of them colour: a small inverted
+   number badge in the tile's top-right corner (from 2 up — a lone tile has
+   none), and a bottom edge that thickens with each level so a tall stack
+   looks physically taller. The cell's title lists the letters underneath. */
+.board.up-board .cell .t-letter { font-size: clamp(15px, 3.6vw, 28px); }
+.board.up-board .cell { font-size: clamp(9px, 2vw, 14px); }
+.t-letter small { font-size: 0.6em; }
+.cell[data-h="2"] { --stack-edge: 3px; }
+.cell[data-h="3"] { --stack-edge: 5px; }
+.cell[data-h="4"] { --stack-edge: 7px; }
+.cell[data-h="5"] { --stack-edge: 9px; }
+.cell[data-h] .t-letter { margin-bottom: calc(var(--stack-edge, 2px) - 2px); }
+.cell .t-h {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 1.35em;
+  padding: 0 2px;
+  border-radius: 4px;
+  background: var(--tile-text);
+  color: var(--tile);
+  font-size: clamp(8px, 1.6vw, 12px);
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+/* The four centre squares the first word must cover — a ◆ glyph plus a
+   lighter fill. */
+.cell.up-center {
+  background: color-mix(in srgb, var(--cell) 70%, var(--text));
+  color: var(--text);
+}
+
+.mode-chip { font-weight: 700; color: var(--cyan); }
+
+.mode-pick {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 4px 0 16px;
+}
+.mode-opt {
+  flex: 1 1 140px;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 2px solid var(--panel-light);
+  border-radius: var(--item-radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.mode-opt .mode-name { font-weight: 800; font-size: 16px; }
+.mode-opt .mode-sub { font-size: 12px; color: var(--muted); }
+.mode-opt.selected { border-color: var(--cyan); background: var(--panel-light); }
+.mode-opt.selected .mode-name::before { content: '✓ '; color: var(--cyan); }
 
 /* ---- Overlays ---- */
 
@@ -901,7 +966,7 @@ input, textarea { user-select: text; }
    pip — cyberpunk, but high-contrast and easy to read. */
 :root[data-theme="synth"] .cell.has-tile {
   background: linear-gradient(180deg, #3a2470 0%, #271650 100%);
-  box-shadow: inset 0 0 0 1px rgba(0,245,255,0.30), inset 0 -2px 0 var(--tile-edge);
+  box-shadow: inset 0 0 0 1px rgba(0,245,255,0.30), inset 0 calc(-1 * var(--stack-edge, 2px)) 0 var(--tile-edge);
 }
 :root[data-theme="synth"] .rack-tile,
 :root[data-theme="synth"] .drag-ghost {

@@ -1,6 +1,7 @@
 import {
-  BOARD_SIZE, CENTER, BLANK, TILE_POINTS, RACK_SIZE,
+  CENTER, BLANK, TILE_POINTS, RACK_SIZE,
   MAX_SCORELESS_TURNS, MAX_CONSECUTIVE_PASSES,
+  MODES, MODE_LABELS, UP_CENTER, UP_MAX_HEIGHT, UP_BOARD_SIZE, isUp,
   premiumAt, newGameState, applyMove, validatePlacement, replayMoves,
 } from './engine.js';
 import {
@@ -47,6 +48,13 @@ const app = {
   connMode: 'db',          // 'live' (websocket) or 'db' (polling fallback)
   pendingMoves: new Map(), // out-of-order moves waiting for their turn
 };
+
+// The host's mode pick on the start overlay, remembered for the next game.
+const MODE_KEY = 'wurdz.mode';
+function savedMode() {
+  try { const m = localStorage.getItem(MODE_KEY); return MODES.includes(m) ? m : 'classic'; } catch { return 'classic'; }
+}
+app.startMode = savedMode();
 
 function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => (
@@ -276,6 +284,7 @@ function stateFromResult(result) {
   return {
     started: true,
     gameOver: true,
+    mode: result.mode || 'classic',
     winner: result.winner,
     scores: Array.isArray(result.scores) ? result.scores : [0, 0],
   };
@@ -323,6 +332,8 @@ function buildLobbyCard({ room, myIndex, oppIndex, oppName, state }) {
   if (oppName && seatLeft(room, oppIndex) && !(state && state.gameOver)) {
     label = `vs ${oppName} (offline)`;
   }
+
+  if (state?.mode === 'upwurdz') label += ` · ${MODE_LABELS.upwurdz}`;
 
   const score = state && state.started
     ? `<span class="lobby-score">${state.scores[myIndex]} – ${state.scores[oppIndex]}</span>`
@@ -700,7 +711,7 @@ function announceLastMove() {
   const who = lm.player === app.playerIndex ? 'You' : playerName(lm.player);
   if (lm.type === 'place') {
     const words = lm.words.join(', ');
-    setStatus(`${who} played ${words} for ${lm.score} points${lm.bingo ? ' — BINGO! (+50)' : ''}.`);
+    setStatus(`${who} played ${words} for ${lm.score} points${lm.bingo ? ` — BINGO! (+${bingoBonus()})` : ''}.`);
   } else if (lm.type === 'exchange') {
     setStatus(`${who} exchanged ${lm.count} tile${lm.count === 1 ? '' : 's'}.`);
   } else if (lm.type === 'pass') {
@@ -714,7 +725,8 @@ function announceLastMove() {
       setStatus(`${who} challenged, but ${lm.words.join(', ')} ${lm.words.length > 1 ? 'are' : 'is'} valid — ${who} ${verb} the turn.`);
     }
   } else if (lm.type === 'start') {
-    setStatus(`Game on! ${playerName(lm.firstPlayer)} goes first.`);
+    const modeNote = lm.mode === 'upwurdz' ? ' UpWurdz: stack letters to make new words.' : '';
+    setStatus(`Game on! ${playerName(lm.firstPlayer)} goes first.${modeNote}`);
   } else if (lm.type === 'forfeit') {
     const who = lm.player === app.playerIndex ? 'You' : playerName(lm.player);
     setStatus(`${who} resigned — game over.`);
@@ -734,6 +746,10 @@ function myRack() {
 
 function isMyTurn() {
   return app.state.started && !app.state.gameOver && app.state.turn === app.playerIndex;
+}
+
+function bingoBonus() {
+  return isUp(app.state) ? 20 : 50;
 }
 
 function setStatus(msg) {
@@ -786,6 +802,7 @@ async function maybeFinish() {
     winner: app.state.winner,
     reason: app.state.endDetail?.reason ?? 'out',
     endDetail: app.state.endDetail ?? null,
+    mode: app.state.mode,
   };
   try {
     await finishRoom(app.code, result, true); // true = purge the move log
@@ -802,6 +819,11 @@ function applyStoredResult(stateObj, result) {
   stateObj.started = true;
   stateObj.gameOver = true;
   stateObj.winner = result.winner;
+  if (result.mode === 'upwurdz' && !isUp(stateObj)) {
+    stateObj.mode = 'upwurdz';
+    stateObj.size = UP_BOARD_SIZE;
+    stateObj.board = Array.from({ length: UP_BOARD_SIZE }, () => Array(UP_BOARD_SIZE).fill(null));
+  }
   if (Array.isArray(result.scores)) stateObj.scores = result.scores.slice();
   stateObj.endDetail = result.endDetail || { reason: result.reason || 'out', outPlayer: result.winner };
 }
@@ -809,7 +831,7 @@ function applyStoredResult(stateObj, result) {
 $('btn-start').addEventListener('click', async () => {
   $('btn-start').disabled = true;
   try {
-    await submitMove('start', {});
+    await submitMove('start', { mode: app.startMode });
     await updateRoomStatus(app.code, 'playing');
     app.room.status = 'playing';
     app.conn.broadcastRoom(app.room);
@@ -870,10 +892,16 @@ $('btn-pass').addEventListener('click', async () => {
   await submitMove('pass', {});
 });
 
+// Classic swaps any number while 7+ remain in the bag; UpWurdz (Upwords
+// rules) swaps exactly one tile, any time the bag isn't empty.
+function exchangeMin() { return isUp(app.state) ? 1 : RACK_SIZE; }
+
 $('btn-exchange').addEventListener('click', () => {
   if (!isMyTurn()) return;
-  if (app.state.bag.length < RACK_SIZE) {
-    setStatus('You can only exchange while at least 7 tiles remain in the bag.');
+  if (app.state.bag.length < exchangeMin()) {
+    setStatus(isUp(app.state)
+      ? 'The bag is empty — nothing to exchange.'
+      : 'You can only exchange while at least 7 tiles remain in the bag.');
     return;
   }
   recallTiles(false);
@@ -958,7 +986,10 @@ function onRackTileClick(idx) {
   if (suppressNextClick) { suppressNextClick = false; return; } // came from a drag
   if (app.exchangeMode) {
     if (app.exchangeSel.has(idx)) app.exchangeSel.delete(idx);
-    else app.exchangeSel.add(idx);
+    else {
+      if (isUp(app.state)) app.exchangeSel.clear(); // one tile per exchange
+      app.exchangeSel.add(idx);
+    }
     renderRack();
     renderControls();
     return;
@@ -986,14 +1017,31 @@ function onBoardCellClick(r, c) {
   placeTileFromRack(app.selectedRackIdx, r, c);
 }
 
+// Whether `letter` may go on (r,c): an empty square, or in UpWurdz a stack
+// that isn't full and doesn't already show that same letter.
+function canDropOn(r, c, letter) {
+  if (app.pending.some((p) => p.r === r && p.c === c)) return false;
+  const under = app.state.board[r][c];
+  if (!under) return true;
+  if (!isUp(app.state) || under.h >= UP_MAX_HEIGHT) return false;
+  return letter == null || under.letter !== letter;
+}
+
 // Shared by tap-to-place and drag-to-place.
 function placeTileFromRack(rackIdx, r, c) {
   if (!isMyTurn() || app.exchangeMode) return;
-  if (app.state.board[r][c]) return;
-  if (app.pending.some((p) => p.r === r && p.c === c)) return;
   if (pendingRackIndices().has(rackIdx)) return;
 
   const letter = myRack()[rackIdx];
+  if (!canDropOn(r, c, letter)) {
+    const under = app.state.board[r][c];
+    if (under && isUp(app.state)) {
+      setStatus(under.h >= UP_MAX_HEIGHT
+        ? `That stack is full (${UP_MAX_HEIGHT} high).`
+        : "You can't stack a letter on the same letter.");
+    }
+    return;
+  }
   if (letter === BLANK) {
     openBlankPicker((chosen) => {
       app.pending.push({ r, c, letter: chosen, blank: true, rackIdx });
@@ -1021,12 +1069,18 @@ function placeTileFromRack(rackIdx, r, c) {
 let suppressNextClick = false;
 let rackDragCleanup = null; // tears down an in-progress drag if the rack re-renders
 
+// The inside of a rack/ghost tile. UpWurdz tiles carry no point values (and
+// its Q tile reads "Qu"); classic tiles show their points in the corner.
+function rackFaceHTML(letter) {
+  if (letter === BLANK) return '<span class="t-letter">&nbsp;</span>';
+  if (isUp(app.state)) return `<span class="t-letter">${letter === 'Q' ? 'Q<small>u</small>' : letter}</span>`;
+  return `<span class="t-letter">${letter}</span><span class="t-pts">${TILE_POINTS[letter]}</span>`;
+}
+
 function createGhost(letter) {
   const g = document.createElement('div');
   g.className = 'drag-ghost';
-  g.innerHTML = letter === BLANK
-    ? '<span class="t-letter">&nbsp;</span>'
-    : `<span class="t-letter">${letter}</span><span class="t-pts">${TILE_POINTS[letter]}</span>`;
+  g.innerHTML = rackFaceHTML(letter);
   return g;
 }
 
@@ -1092,6 +1146,7 @@ function startRackDrag(e, idx) {
   // the selection has no gaps even though the cells have visible borders.
   const boardEl = $('board');
   const BOARD_BORDER = 4; // .board border width (px)
+  const BOARD_SIZE = app.state.size;
   const boardCellAt = (fx, fy) => {
     const rect = boardEl.getBoundingClientRect();
     if (!rect.width) return null;
@@ -1110,9 +1165,7 @@ function startRackDrag(e, idx) {
     const cell = boardCellAt(fx, fy);
     if (cell && isMyTurn()) {
       const r = +cell.dataset.r, c = +cell.dataset.c;
-      if (!app.state.board[r][c] && !app.pending.some((p) => p.r === r && p.c === c)) {
-        cell.classList.add('drop-target');
-      }
+      if (canDropOn(r, c, letter === BLANK ? null : letter)) cell.classList.add('drop-target');
       hideGap();
       return;
     }
@@ -1210,31 +1263,65 @@ function renderMyOnline() {
   dot.title = live ? 'Connected — moves arrive instantly' : 'Syncing through the database';
 }
 
+// A board tile's letter + corner badge. In UpWurdz the corner shows the stack
+// height (from 2 up — a lone tile needs no number) instead of points, and the
+// cell's data-h thickens its bottom edge so taller stacks look taller.
+function boardTileHTML(t, h) {
+  if (!isUp(app.state)) {
+    return `<span class="t-letter">${t.letter}</span><span class="t-pts">${t.blank ? '' : TILE_POINTS[t.letter]}</span>`;
+  }
+  const letter = t.letter === 'Q' ? 'Q<small>u</small>' : t.letter;
+  return `<span class="t-letter">${letter}</span>${h > 1 ? `<span class="t-h" aria-hidden="true">${h}</span>` : ''}`;
+}
+
+// "O on A on C" — the letters in a stack, top first, for its tooltip.
+function stackTitle(top, under) {
+  const letters = [];
+  for (let t = under; t; t = t.below) letters.push(t.letter === 'Q' ? 'Qu' : t.letter);
+  const h = letters.length + 1;
+  return h > 1 ? `Stack of ${h}: ${[top === 'Q' ? 'Qu' : top, ...letters].join(' on ')}` : '';
+}
+
 function renderBoard() {
   const boardEl = $('board');
   boardEl.innerHTML = '';
+  const up = isUp(app.state);
+  const size = app.state.size;
+  boardEl.classList.toggle('up-board', up);
+  boardEl.style.setProperty('--board-n', size);
   // Tiles placed by the most recent play, so the last turn is visible at a
   // glance. Only 'place' moves put tiles on the board.
   const lm = app.state.lastMove;
   const lastCells = (lm && lm.type === 'place' && Array.isArray(lm.cells))
     ? new Set(lm.cells.map((p) => `${p.r},${p.c}`))
     : null;
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.r = r;
       cell.dataset.c = c;
-      const prem = premiumAt(r, c);
+      const prem = up ? null : premiumAt(r, c);
       const tile = app.state.board[r][c];
       const pend = app.pending.find((p) => p.r === r && p.c === c);
       if (tile || pend) {
-        const t = tile || pend;
+        // A pending tile shows on top of whatever it's stacked on.
+        const t = pend || tile;
+        const h = pend ? (tile ? tile.h + 1 : 1) : (tile.h || 1);
         cell.classList.add('has-tile');
         if (pend) cell.classList.add('pending');
         else if (lastCells && lastCells.has(`${r},${c}`)) cell.classList.add('last-move');
-        cell.innerHTML = `<span class="t-letter">${t.letter}</span><span class="t-pts">${t.blank ? '' : TILE_POINTS[t.letter]}</span>`;
+        cell.innerHTML = boardTileHTML(t, h);
+        if (up) {
+          cell.dataset.h = h;
+          const title = stackTitle(t.letter, pend ? tile : tile.below);
+          if (title) cell.title = title;
+          cell.setAttribute('aria-label', h > 1 ? `${t.letter}, stack of ${h}` : t.letter);
+        }
         if (t.blank) cell.classList.add('blank-tile');
+      } else if (up && UP_CENTER.some(([cr, cc]) => cr === r && cc === c)) {
+        cell.classList.add('up-center');
+        cell.textContent = '◆';
       } else if (prem) {
         cell.classList.add(`prem-${prem.toLowerCase()}`);
         cell.textContent = (r === CENTER && c === CENTER) ? '★' : prem;
@@ -1256,9 +1343,7 @@ function renderRack() {
     if (used.has(idx)) tile.classList.add('placed');
     if (app.selectedRackIdx === idx) tile.classList.add('selected');
     if (app.exchangeMode && app.exchangeSel.has(idx)) tile.classList.add('exchange-sel');
-    tile.innerHTML = letter === BLANK
-      ? '<span class="t-letter">&nbsp;</span>'
-      : `<span class="t-letter">${letter}</span><span class="t-pts">${TILE_POINTS[letter]}</span>`;
+    tile.innerHTML = rackFaceHTML(letter);
     tile.addEventListener('pointerdown', (e) => startRackDrag(e, idx));
     tile.addEventListener('click', () => onRackTileClick(idx));
     rackEl.appendChild(tile);
@@ -1297,7 +1382,7 @@ function renderControls() {
   const passWarn = app.state.consecutivePasses >= MAX_CONSECUTIVE_PASSES - 2
     || app.state.scorelessTurns >= MAX_SCORELESS_TURNS - 2;
   $('btn-pass').classList.toggle('btn-pass-warn', passWarn);
-  $('btn-exchange').disabled = !my || app.state.bag.length < RACK_SIZE;
+  $('btn-exchange').disabled = !my || app.state.bag.length < exchangeMin();
   $('btn-shuffle').disabled = !!app.pending.length;
   $('btn-challenge').disabled = !canChallenge();
 
@@ -1308,7 +1393,7 @@ function renderControls() {
     if (result.ok) {
       playBtn.disabled = false;
       playBtn.textContent = `Play for ${result.total}`;
-      setStatus(`Forms: ${result.words.map((w) => w.word).join(', ')}${result.bingo ? ' — BINGO! (+50)' : ''}`);
+      setStatus(`Forms: ${result.words.map((w) => w.word).join(', ')}${result.bingo ? ` — BINGO! (+${bingoBonus()})` : ''}`);
     } else {
       playBtn.disabled = true;
       playBtn.textContent = 'Play';
@@ -1320,6 +1405,10 @@ function renderControls() {
   }
 
   $('exchange-bar').classList.toggle('hidden', !app.exchangeMode);
+  $('exchange-hint').textContent = isUp(app.state)
+    ? 'Select one tile to swap, then confirm.'
+    : 'Select tiles to swap, then confirm.';
+  $('mode-chip').classList.toggle('hidden', !isUp(app.state));
   $('btn-exchange-go').textContent = `Swap ${app.exchangeSel.size} tile${app.exchangeSel.size === 1 ? '' : 's'}`;
   $('btn-exchange-go').disabled = !app.exchangeSel.size;
 
@@ -1345,6 +1434,7 @@ function renderOverlays() {
   }
 
   startOv.classList.remove('hidden');
+  renderModePick();
   const haveGuest = !!seatName(app.room, 1);
   $('start-share').classList.toggle('hidden', haveGuest);
   $('start-code').textContent = app.code;
@@ -1362,6 +1452,25 @@ function renderOverlays() {
     $('start-waiting').classList.add('hidden');
   }
 }
+
+// Host-only Classic / UpWurdz picker on the start overlay. The pick rides the
+// 'start' move payload; ✓ + aria-checked mark it (not just the highlight).
+function renderModePick() {
+  const box = $('mode-pick');
+  box.classList.toggle('hidden', app.playerIndex !== 0);
+  box.querySelectorAll('.mode-opt').forEach((b) => {
+    const on = b.dataset.mode === app.startMode;
+    b.classList.toggle('selected', on);
+    b.setAttribute('aria-checked', String(on));
+  });
+}
+$('mode-pick').querySelectorAll('.mode-opt').forEach((b) => {
+  b.addEventListener('click', () => {
+    app.startMode = b.dataset.mode;
+    try { localStorage.setItem(MODE_KEY, app.startMode); } catch { /* per-device nicety */ }
+    renderModePick();
+  });
+});
 
 function renderGameOver() {
   const s = app.state;
@@ -1382,9 +1491,9 @@ function renderGameOver() {
   } else {
     reason = `${playerName(s.endDetail.outPlayer)} played their last tile.`;
   }
-  const adjustNote = s.endDetail.reason === 'forfeit'
-    ? ''
-    : '<p class="muted">Final scores include unplayed-tile adjustments.</p>';
+  let adjustNote = '<p class="muted">Final scores include unplayed-tile adjustments.</p>';
+  if (s.endDetail.reason === 'forfeit') adjustNote = '';
+  else if (isUp(s)) adjustNote = '<p class="muted">Final scores include −5 for each unplayed tile.</p>';
   $('gameover-detail').innerHTML = `
     <p>${reason}</p>
     <p class="final-scores">
@@ -1502,6 +1611,7 @@ async function boot() {
   registerServiceWorker();
   // Feed the game-specific challenge action into the shared friends dialog.
   window.LB_CONFIG.onChallengeFriend = challengeFriend;
+  window.LB_CONFIG.historyDetail = (room) => (room.result?.mode === 'upwurdz' ? MODE_LABELS.upwurdz : '');
   renderNotifyBtns(); // set the menu's notification label/visibility up-front
 
   // Seed the guest name field from the shared key (set on the landing page or

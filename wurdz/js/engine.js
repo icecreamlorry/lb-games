@@ -9,6 +9,40 @@ export const RACK_SIZE = 7;
 export const CENTER = 7;
 export const BLANK = '_';
 
+// Game modes. The host picks one on the start overlay and it rides the
+// 'start' move payload, so the log alone says which rules a room plays.
+//  - classic: the 15×15 premium-square board above.
+//  - upwurdz: the rules + board of Upwords — a plain 10×10 board where
+//    tiles may be STACKED on letters already played (up to five high) to
+//    turn one word into another; words score by stack height.
+export const MODES = ['classic', 'upwurdz'];
+export const MODE_LABELS = { classic: 'Classic', upwurdz: 'UpWurdz' };
+
+export const UP_BOARD_SIZE = 10;
+export const UP_MAX_HEIGHT = 5;
+// The four centre squares; the first UpWurdz word must cover one of them.
+export const UP_CENTER = [[4, 4], [4, 5], [5, 4], [5, 5]];
+export const UP_BINGO = 20;        // all seven tiles in one turn
+export const UP_QU_BONUS = 2;      // a flat word using the Qu tile
+export const UP_LEFTOVER = 5;      // penalty per unplayed tile at the end
+// Upwords' 100-tile set. No blanks; 'Q' is the single "Qu" tile.
+export const UP_TILE_DISTRIBUTION = {
+  A: 7, B: 3, C: 4, D: 5, E: 8, F: 3, G: 3, H: 3, I: 7, J: 1, K: 2, L: 5,
+  M: 5, N: 5, O: 7, P: 3, Q: 1, R: 5, S: 6, T: 5, U: 5, V: 1, W: 2, X: 1,
+  Y: 2, Z: 1,
+};
+
+export function isUp(state) { return state.mode === 'upwurdz'; }
+
+// The letters a tile spells in a word — the UpWurdz Q tile reads "QU".
+export function tileText(letter, mode) {
+  return mode === 'upwurdz' && letter === 'Q' ? 'QU' : letter;
+}
+
+function emptyBoard(size) {
+  return Array.from({ length: size }, () => Array(size).fill(null));
+}
+
 // The game ends on whichever comes first: six consecutive scoreless turns
 // (passes, exchanges, or upheld challenges), or four consecutive passes
 // (both players passing twice in a row).
@@ -79,9 +113,10 @@ function shuffle(arr, rng) {
   return arr;
 }
 
-export function makeBag(seed) {
+export function makeBag(seed, mode = 'classic') {
   const bag = [];
-  for (const [letter, count] of Object.entries(TILE_DISTRIBUTION)) {
+  const dist = mode === 'upwurdz' ? UP_TILE_DISTRIBUTION : TILE_DISTRIBUTION;
+  for (const [letter, count] of Object.entries(dist)) {
     for (let i = 0; i < count; i++) bag.push(letter);
   }
   return shuffle(bag, mulberry32(seed));
@@ -90,7 +125,9 @@ export function makeBag(seed) {
 export function newGameState(seed) {
   return {
     seed,
-    board: Array.from({ length: BOARD_SIZE }, () => Array(BOARD_SIZE).fill(null)),
+    mode: 'classic',       // switched by the 'start' move's payload
+    size: BOARD_SIZE,
+    board: emptyBoard(BOARD_SIZE),
     bag: makeBag(seed),
     racks: [[], []],
     scores: [0, 0],
@@ -117,7 +154,8 @@ function removeFromRack(rack, letter) {
   rack.splice(i, 1);
 }
 
-function rackValue(rack) {
+function rackValue(rack, mode) {
+  if (mode === 'upwurdz') return rack.length * UP_LEFTOVER;
   return rack.reduce((sum, t) => sum + TILE_POINTS[t], 0);
 }
 
@@ -130,8 +168,13 @@ function scorelessEndReached(state) {
 
 function finishGame(state, outPlayer) {
   state.gameOver = true;
-  const deductions = state.racks.map(rackValue);
-  if (outPlayer !== null) {
+  const deductions = state.racks.map((r) => rackValue(r, state.mode));
+  if (outPlayer !== null && isUp(state)) {
+    // Upwords: the leftovers just cost their holder; nobody gains them.
+    state.scores[0] -= deductions[0];
+    state.scores[1] -= deductions[1];
+    state.endDetail = { reason: 'out', outPlayer, deductions };
+  } else if (outPlayer !== null) {
     // The player who went out gains the opponent's unplayed letters.
     const other = 1 - outPlayer;
     state.scores[outPlayer] += deductions[other];
@@ -151,15 +194,23 @@ function finishGame(state, outPlayer) {
 
 // Words formed by placing `cells` ([{r,c,letter,blank}]) on `board`.
 // Returns { words: [{word, score, cells}], total, bingo } — placement is
-// assumed to already be validated.
-export function scorePlacement(board, cells) {
+// assumed to already be validated. In UpWurdz a placed cell may sit on top of
+// an existing tile, and each tile carries its stack height `h`.
+export function scorePlacement(board, cells, mode = 'classic') {
+  const up = mode === 'upwurdz';
+  const size = board.length;
   const placed = new Map(cells.map((p) => [`${p.r},${p.c}`, p]));
   const letterAt = (r, c) => {
-    if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return null;
+    if (r < 0 || r >= size || c < 0 || c >= size) return null;
     const p = placed.get(`${r},${c}`);
-    if (p) return { letter: p.letter, points: p.blank ? 0 : TILE_POINTS[p.letter], isNew: true, r, c };
     const t = board[r][c];
-    if (t) return { letter: t.letter, points: t.blank ? 0 : TILE_POINTS[t.letter], isNew: false, r, c };
+    if (p) {
+      return {
+        letter: p.letter, points: p.blank ? 0 : TILE_POINTS[p.letter], isNew: true, r, c,
+        h: t ? (t.h || 1) + 1 : 1,
+      };
+    }
+    if (t) return { letter: t.letter, points: t.blank ? 0 : TILE_POINTS[t.letter], isNew: false, r, c, h: t.h || 1 };
     return null;
   };
 
@@ -174,7 +225,18 @@ export function scorePlacement(board, cells) {
     return tiles;
   };
 
+  // Upwords scoring: a word lying flat (every tile one high) scores 2 a tile,
+  // +2 if it uses the Qu; once any tile in it is stacked it scores 1 per tile
+  // in every stack instead (the sum of the heights).
+  const scoreUpWord = (tiles) => {
+    if (tiles.every((t) => t.h === 1)) {
+      return tiles.length * 2 + (tiles.some((t) => t.letter === 'Q') ? UP_QU_BONUS : 0);
+    }
+    return tiles.reduce((s, t) => s + t.h, 0);
+  };
+
   const scoreWord = (tiles) => {
+    if (up) return scoreUpWord(tiles);
     let score = 0;
     let multiplier = 1;
     for (const t of tiles) {
@@ -195,20 +257,21 @@ export function scorePlacement(board, cells) {
   const dr = sameRow ? 0 : 1;
   const dc = sameRow ? 1 : 0;
 
+  const spell = (tiles) => tiles.map((t) => tileText(t.letter, mode)).join('');
   const words = [];
   const main = collectWord(cells[0].r, cells[0].c, dr, dc);
   if (main.length >= 2) {
-    words.push({ word: main.map((t) => t.letter).join(''), score: scoreWord(main), tiles: main });
+    words.push({ word: spell(main), score: scoreWord(main), tiles: main });
   }
   for (const p of cells) {
     const cross = collectWord(p.r, p.c, dc, dr);
     if (cross.length >= 2) {
-      words.push({ word: cross.map((t) => t.letter).join(''), score: scoreWord(cross), tiles: cross });
+      words.push({ word: spell(cross), score: scoreWord(cross), tiles: cross });
     }
   }
 
   const bingo = cells.length === RACK_SIZE;
-  const total = words.reduce((s, w) => s + w.score, 0) + (bingo ? 50 : 0);
+  const total = words.reduce((s, w) => s + w.score, 0) + (bingo ? (up ? UP_BINGO : 50) : 0);
   return { words, total, bingo };
 }
 
@@ -216,13 +279,23 @@ export function scorePlacement(board, cells) {
 // {ok:false, error}.
 export function validatePlacement(state, cells) {
   if (!cells.length) return { ok: false, error: 'Place at least one tile.' };
+  const up = isUp(state);
+  const size = state.size || BOARD_SIZE;
 
   const seen = new Set();
   for (const p of cells) {
     const key = `${p.r},${p.c}`;
+    if (p.r < 0 || p.r >= size || p.c < 0 || p.c >= size) return { ok: false, error: 'Off the board.' };
     if (seen.has(key)) return { ok: false, error: 'Duplicate square.' };
     seen.add(key);
-    if (state.board[p.r][p.c]) return { ok: false, error: 'Square already occupied.' };
+    const under = state.board[p.r][p.c];
+    if (under && !up) return { ok: false, error: 'Square already occupied.' };
+    if (under && under.h >= UP_MAX_HEIGHT) {
+      return { ok: false, error: `Stacks top out at ${UP_MAX_HEIGHT} tiles.` };
+    }
+    if (under && under.letter === p.letter) {
+      return { ok: false, error: "You can't stack a letter on the same letter." };
+    }
   }
 
   const sameRow = cells.every((p) => p.r === cells[0].r);
@@ -249,7 +322,14 @@ export function validatePlacement(state, cells) {
   }
 
   const boardEmpty = state.board.every((row) => row.every((t) => !t));
-  if (boardEmpty) {
+  if (boardEmpty && up) {
+    if (!cells.some((p) => UP_CENTER.some(([r, c]) => p.r === r && p.c === c))) {
+      return { ok: false, error: 'The first word must cover one of the four centre squares.' };
+    }
+    if (cells.length < 2) {
+      return { ok: false, error: 'The first word needs at least two letters.' };
+    }
+  } else if (boardEmpty) {
     if (!cells.some((p) => p.r === CENTER && p.c === CENTER)) {
       return { ok: false, error: 'The first word must cover the center star.' };
     }
@@ -257,10 +337,11 @@ export function validatePlacement(state, cells) {
       return { ok: false, error: 'The first word needs at least two letters.' };
     }
   } else {
-    const touchesExisting = cells.some((p) =>
-      [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => {
+    // Stacking on a tile counts as connecting to it.
+    const touchesExisting = cells.some((p) => state.board[p.r][p.c]
+      || [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dr, dc]) => {
         const r = p.r + dr, c = p.c + dc;
-        return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && state.board[r][c];
+        return r >= 0 && r < size && c >= 0 && c < size && state.board[r][c];
       })
     );
     if (!touchesExisting) {
@@ -268,11 +349,39 @@ export function validatePlacement(state, cells) {
     }
   }
 
-  const scoring = scorePlacement(state.board, cells);
+  if (up) {
+    const err = coversWholeWord(state.board, cells);
+    if (err) return { ok: false, error: err };
+  }
+
+  const scoring = scorePlacement(state.board, cells, state.mode);
   if (!scoring.words.length) {
     return { ok: false, error: 'A word needs at least two letters.' };
   }
   return { ok: true, ...scoring };
+}
+
+// Upwords: one play may not bury every letter of a word already on the board
+// — at least one of its tiles must stay showing. Checks each existing word
+// (a run of 2+ tiles, either direction) that a stacked tile lands on.
+function coversWholeWord(board, cells) {
+  const size = board.length;
+  const covered = new Set(cells.filter((p) => board[p.r][p.c]).map((p) => `${p.r},${p.c}`));
+  if (covered.size < 2) return null;
+  const at = (r, c) => r >= 0 && r < size && c >= 0 && c < size && board[r][c];
+  for (const key of covered) {
+    const [r0, c0] = key.split(',').map(Number);
+    for (const [dr, dc] of [[0, 1], [1, 0]]) {
+      let r = r0, c = c0;
+      while (at(r - dr, c - dc)) { r -= dr; c -= dc; }
+      const run = [];
+      while (at(r, c)) { run.push(`${r},${c}`); r += dr; c += dc; }
+      if (run.length >= 2 && run.every((k) => covered.has(k))) {
+        return "You can't cover a whole word in one turn — leave one of its letters showing.";
+      }
+    }
+  }
+  return null;
 }
 
 // Applies one move from the log. Throws on structurally invalid moves —
@@ -286,11 +395,17 @@ export function applyMove(state, move) {
 
   switch (move.type) {
     case 'start': {
+      if (payload.mode === 'upwurdz') {
+        state.mode = 'upwurdz';
+        state.size = UP_BOARD_SIZE;
+        state.board = emptyBoard(UP_BOARD_SIZE);
+        state.bag = makeBag(state.seed, 'upwurdz');
+      }
       draw(state, 0, RACK_SIZE);
       draw(state, 1, RACK_SIZE);
       state.turn = Math.floor(mulberry32(state.seed ^ 0x5f3759df)() * 2);
       state.started = true;
-      state.lastMove = { type: 'start', player, firstPlayer: state.turn };
+      state.lastMove = { type: 'start', player, firstPlayer: state.turn, mode: state.mode };
       break;
     }
     case 'place': {
@@ -299,11 +414,16 @@ export function applyMove(state, move) {
       if (!result.ok) throw new Error(`Invalid placement in move log: ${result.error}`);
       const prevScoreless = state.scorelessTurns;
       const placedRackTiles = [];
+      // What each placed tile landed on (null, or the UpWurdz tile it covers),
+      // so a challenge can lift the stack back off.
+      const covered = [];
       for (const p of cells) {
         const rackTile = p.blank ? BLANK : p.letter;
         removeFromRack(state.racks[player], rackTile);
         placedRackTiles.push(rackTile);
-        state.board[p.r][p.c] = { letter: p.letter, blank: !!p.blank };
+        const under = state.board[p.r][p.c];
+        covered.push(under);
+        state.board[p.r][p.c] = { letter: p.letter, blank: !!p.blank, h: under ? under.h + 1 : 1, below: under };
       }
       state.scores[player] += result.total;
       const drawCount = Math.min(cells.length, state.bag.length);
@@ -317,7 +437,7 @@ export function applyMove(state, move) {
         score: result.total, bingo: result.bingo,
         cells,
         // Everything needed to retract this play if it is challenged.
-        undo: { cells, placedRackTiles, taken, score: result.total, prevScoreless },
+        undo: { cells, placedRackTiles, covered, taken, score: result.total, prevScoreless },
       };
       if (state.racks[player].length === 0 && state.bag.length === 0) {
         finishGame(state, player);
@@ -369,7 +489,7 @@ export function applyMove(state, move) {
       if (upheld && prev && prev.type === 'place' && prev.undo) {
         const placer = prev.player;
         const u = prev.undo;
-        for (const p of u.cells) state.board[p.r][p.c] = null;
+        u.cells.forEach((p, i) => { state.board[p.r][p.c] = u.covered?.[i] ?? null; });
         for (const t of u.taken) removeFromRack(state.racks[placer], t);
         for (const t of u.placedRackTiles) state.racks[placer].push(t);
         state.bag.unshift(...u.taken); // restore draw order for determinism

@@ -53,6 +53,7 @@
       <a class="home-link" href="../" title="All games" aria-label="LB Games — all games">
         <span class="lb-mark"></span>
       </a>
+      <span id="mode-chip" class="chip mode-chip hidden" title="UpWurdz: stack letters to make new words">UpWurdz</span>
       <span class="grow"></span>
       <button id="room-code-chip" class="chip" title="Copy invite link">Room: <strong id="room-code-text"></strong></button>
       <button id="btn-resign" class="chip chip-button chip-danger hidden" title="Forfeit this game">Resign</button>
@@ -82,6 +83,16 @@
           <div class="overlay-card">
             <h2 id="start-title">Ready to play?</h2>
             <p id="start-versus"></p>
+            <div id="mode-pick" class="mode-pick hidden" role="radiogroup" aria-label="Game mode">
+              <button class="mode-opt" data-mode="classic" role="radio" aria-checked="true">
+                <span class="mode-name">Classic</span>
+                <span class="mode-sub">15×15 · premium squares</span>
+              </button>
+              <button class="mode-opt" data-mode="upwurdz" role="radio" aria-checked="false">
+                <span class="mode-name">UpWurdz</span>
+                <span class="mode-sub">10×10 · stack letters up to 5 high</span>
+              </button>
+            </div>
             <p id="start-share" class="hidden">Share the room code <strong id="start-code"></strong> with a friend to begin.</p>
             <button id="btn-start" class="btn-primary hidden">Start Game</button>
             <p id="start-waiting" class="muted hidden">Waiting for the host to start the game…</p>
@@ -127,7 +138,7 @@
         <button id="btn-words" class="btn-ref">2-Letter Words</button>
       </div>
       <div id="exchange-bar" class="exchange-bar hidden">
-        <span>Select tiles to swap, then confirm.</span>
+        <span id="exchange-hint">Select tiles to swap, then confirm.</span>
         <button id="btn-exchange-go" class="btn-primary">Swap 0 tiles</button>
         <button id="btn-exchange-cancel" class="btn-ghost">Cancel</button>
       </div>
@@ -216,6 +227,11 @@
         <section class="help-section">
           <h3>Pass &amp; Shuffle</h3>
           <p><strong>Pass</strong> skips your turn (forfeits it). The game ends if both players pass twice in a row, or after six scoreless turns overall — so the Pass button turns red once you're one round away, and passing then could finish the game. <strong>Shuffle</strong> randomly reorders your rack without spending a turn.</p>
+        </section>
+        <section class="help-section">
+          <h3>UpWurdz mode</h3>
+          <p>The host can pick <strong>UpWurdz</strong> before starting: the rules of <em>Upwords</em> on a plain 10×10 board. As well as building out, you can <strong>stack</strong> a tile on top of a letter already played to turn one word into another (CAT → COT), up to <strong>5 high</strong>. You can't stack a letter on the same letter, or bury every letter of a word in one turn. The first word must cover one of the four ◆ centre squares.</p>
+          <p>The small number in a tile's corner is its <strong>stack height</strong> (no number = a single tile); taller stacks also have a thicker edge, and hovering shows the letters underneath. A word lying flat scores <strong>2 per tile</strong> (+2 with the <strong>Qu</strong> tile); once any tile in it is stacked it scores <strong>1 for every tile in every stack</strong> it uses. Using all 7 tiles is +20. There are no blanks; <strong>Exchange</strong> swaps one tile. At the end each unplayed tile costs 5.</p>
         </section>
         <section class="help-section">
           <h3>Turn notifications</h3>

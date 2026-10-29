@@ -52,6 +52,20 @@ game-independent — one login works across every LB Games title (see
    **Start Game**; the engine randomly picks who goes first and deals 7
    tiles each.
 
+### UpWurdz mode
+
+Before starting, the host picks **Classic** or **UpWurdz** on the start
+overlay (the pick rides the `start` move payload, so replays know the mode).
+UpWurdz plays by the rules of *Upwords*: a plain 10×10 board, a 100-tile set
+with a single **Qu** tile and no blanks, and tiles may be **stacked** on letters
+already played (up to 5 high, never the same letter on itself, and never
+burying every letter of a word in one turn). The first word covers one of the
+four ◆ centre squares. A flat word scores 2 per tile (+2 with Qu); a word with
+any stacked tile scores the sum of its stack heights. All 7 tiles = +20;
+exchange swaps one tile; each unplayed tile costs 5 at the end. Stack height is
+shown as a small number badge in the tile's corner (from 2 up) plus a bottom
+edge that thickens with height; hovering lists the letters underneath.
+
 ### Rules implemented
 
 - 15×15 board with the official premium squares (DL, TL, DW, TW), 100-tile
